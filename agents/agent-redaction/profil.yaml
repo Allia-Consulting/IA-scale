@@ -1,0 +1,28 @@
+id: agent-redaction
+version: "1.0 — candidat"
+nature: "profil d'agent"
+domicile: "agents/agent-redaction/profil.yaml"
+role: agent                      # opère sur le plan d'exécution
+adosse_a:
+  - "CLAUDE.md"
+  - "contrats/socle/table-des-crans.yaml"
+  - "doctrine/doctrine.md"
+
+# Ce que l'agent sait faire : une composition de skills versionnés.
+skills:
+  - compte-rendu-reunion
+
+# Comment il se comporte.
+resolution:
+  - "Résout le canon depuis le dépôt à l'exécution (jamais une copie) — voir CLAUDE.md."
+  - "Avant toute action à effet de bord, résout son cran via table-des-crans.yaml."
+  - "Écrit tout fait dérivé en zone de proposition ; ne merge jamais sur main."
+
+# Crans par type d'action (rappel ; la table des crans fait foi).
+crans_par_action:
+  produire_compte_rendu: auto        # en zone de proposition
+  ouvrir_pull_request: auto          # un candidat, pas une vérité
+  envoyer_hors_firme: valide         # porte du gardien
+  promouvoir: interdit               # jamais l'agent — c'est le gardien
+
+ecrit_derive_en: "zone de proposition"
