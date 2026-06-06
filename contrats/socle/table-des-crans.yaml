@@ -1,0 +1,93 @@
+version: "1.0 — candidat"
+statut: "contrat socle — fait foi"
+domicile: "contrats/socle/table-des-crans.yaml"
+autorite_de_promotion: "gardien du temple"
+adosse_a:
+  - "doctrine/doctrine.md (§6)"
+  - "contrats/socle/organisation.md"
+  - "contrats/socle/anonymisation.md"
+
+# cran = f( réversible ? · sort_de_la_firme ? · rayon_impact )
+crans:
+  auto:
+    conditions: "réversible ET interne ET impact local"
+    qui_decide: "l'agent, seul"
+  notifie:
+    conditions: "réversible et interne, mais engage l'image ou est largement visible"
+    qui_decide: "l'agent agit ; le gardien est informé"
+  valide:
+    conditions: "irréversible OU sort de la firme OU rayon d'impact large"
+    qui_decide: "porte humaine (gardien ou rôle désigné) avant l'action"
+  anonymisation:
+    conditions: "réutilisation de matière inter-client (porte automatique, orthogonale)"
+    qui_decide: "déclenchée par règle, sans humain ; voir anonymisation.md"
+
+# Évaluation : la première règle qui matche gagne.
+derivation:
+  - si: "sort_de_la_firme == true"
+    alors: valide
+  - si: "reversible == false"
+    alors: valide
+  - si: "rayon_impact == large"
+    alors: valide
+  - si: "visible_ou_engage_image == true"   # interne mais visible
+    alors: notifie
+  - si: "reversible == true ET interne ET rayon_impact == local"
+    alors: auto
+  - defaut: valide                          # dans le doute, porte humaine
+
+# Types d'action connus — complétés par promotion au fil de l'eau.
+actions:
+  - id: editer_fichier_en_branche
+    cran: auto
+    pourquoi: "réversible, interne, local"
+  - id: creer_espace_mission
+    cran: auto
+    exemple: "créer l'espace SharePoint d'une mission"
+  - id: ecrire_fait_derive_zone_proposition
+    cran: auto
+    pourquoi: "réversible et interne ; le dérivé n'est jamais le saisi"
+  - id: ouvrir_pull_request
+    cran: auto
+    pourquoi: "un candidat est réversible et n'atteint pas main"
+  - id: notifier_equipe
+    cran: notifie
+    exemple: "message de nomination à l'équipe"
+  - id: publier_contenu_externe
+    cran: valide
+    pourquoi: "sort de la firme"
+  - id: envoyer_livrable_client
+    cran: valide
+    pourquoi: "sort de la firme"
+  - id: merger_sur_main
+    cran: valide
+    qui: "gardien seulement"
+    pourquoi: "promotion = mise en service de la vérité"
+  - id: promouvoir_contrat_socle
+    cran: valide
+    qui: "gardien"
+  - id: promouvoir_contrat_local
+    cran: valide
+    qui: "gardien (procédure allégée)"
+  - id: modifier_design_system
+    cran: valide
+    pourquoi: "interne mais rayon d'impact large (toute la firme)"
+  - id: reutiliser_matiere_interclient
+    cran: anonymisation
+    exemple: "template tiré du livrable d'un autre client"
+  - id: deleguer_un_perimetre
+    cran: valide
+    qui: "gardien"
+    pourquoi: "modifie organisation.md et ouvre des droits — voir chaîne d'autorité"
+
+# Jamais par un agent ni par Claude — runbook humain (cf. plan §2).
+proscrites:
+  - saisir_identifiants_ou_secrets
+  - configurer_authentification_sso_oauth
+  - modifier_droits_permissions_ou_protection_de_branche
+  - parametrer_tenant_m365_securite_residence_donnees
+  - supprimer_definitivement_des_donnees
+  - prendre_engagement_juridique_ou_financier
+
+# Exception gouvernée : les droits M365 ne changent que par réconciliation au
+# moindre privilège d'une décision DÉJÀ promue (voir organisation.md §5).
