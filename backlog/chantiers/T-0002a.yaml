@@ -1,0 +1,32 @@
+id: T-0002a
+titre: "App registration Entra & octroi M365 (runbook humain)"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: runbook_humain
+cran: valide
+produit:
+  - "app registration Entra ID « allia-mcp-graph » (au moindre privilège)"
+  - "permission application Sites.Selected + consentement admin"
+  - "secret client créé et stocké hors dépôt"
+  - "octroi du rôle write à l'app sur le seul site AlliaConsuling (Graph POST /sites/{id}/permissions)"
+depend_de: []
+# depend_de vide : tâche déjà PROMUE (exécutée). La sentinelle RUNBOOK-HUMAIN sert à empêcher
+# la sélection AUTONOME par un agent d'une tâche runbook NON encore faite ; ici la tâche est
+# faite, donc inerte pour la sélection — la sentinelle serait redondante. La nature « runbook,
+# jamais par un agent » est portée par type_action: runbook_humain + la note d'exécution.
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "L'app registration « allia-mcp-graph » existe au moindre privilège (Sites.Selected uniquement)"
+  - "Le consentement admin est accordé"
+  - "Le secret client est créé et stocké hors du dépôt (jamais commité)"
+  - "Le rôle write est accordé à l'app sur le seul site AlliaConsuling"
+rayon_impact: local
+statut: promu
+execution: "runbook humain réalisé hors Git le 7 juin 2026 (portails Entra/M365) ; la décision de faire ce runbook est promue, l'exécution est manuelle par nature."
+note: >
+  Issu du découpage de l'ancien T-0002 en deux tâches (cette tâche = la partie RUNBOOK HUMAIN ;
+  le code/déploiement vit dans T-0002b). Création d'app, consentement, secret, octroi de droits :
+  jamais par un agent ni par Claude (table-des-crans : proscrites ; plan §2 ; garde-fous CLAUDE.md).
+  Réalisé hors Git par le gardien. La mise en place du privilège lui-même restait son runbook
+  (organisation.md §5) — c'est précisément l'objet de cette tâche, désormais close.
