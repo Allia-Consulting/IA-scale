@@ -16,7 +16,8 @@ criteres_acceptation:
   - "Le format respecte le design system."
   - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien)."
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: "skill releve-de-decisions produit et promu en PR #11, session fondation 7 juin 2026"
 
 # Première tâche du test A0.9 : une fois le connecteur et l'agent-gardien (bloc 4)
 # en place, l'agent l'exécute, ouvre une PR, le gardien promeut, ça se propage.
