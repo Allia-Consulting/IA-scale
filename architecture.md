@@ -61,8 +61,8 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Composant | État | Source de vérité |
 |---|---|---|
 | Dépôt de fondations (canon + code) | **FAIT** | le dépôt lui-même |
-| Protection de branche (revue + statut CI requis avant merge) | *à confirmer par le gardien* — non constatable depuis le dépôt ; indice : une PR a déjà pu merger malgré une CI rouge, donc le *required check* n'est peut-être pas activé | GitHub → Settings → Branches |
-| `CODEOWNERS` (gardien sur le socle) | **FAIT** (fichier présent) ; **handle** `@Alliaconsulting` vs organisation `Allia-Consulting` : *à confirmer par le gardien* (validité du login, sinon la revue n'est pas imposée) | `.github/CODEOWNERS` + GitHub |
+| Protection de branche (« Main-protection » sur `main`) | **FAIT** — règle active : PR obligatoire avant merge, suppression et force-push bloqués. Le **statut CI (agent-gardien) est délibérément CONSULTATIF** (non requis pour merger), par choix du gardien tant que l'agent-gardien est en v0. Qu'une PR puisse merger malgré une CI rouge est donc la conséquence **voulue** d'un statut consultatif, **pas** une absence de protection. | GitHub → Settings → Branches |
+| `CODEOWNERS` (gardien sur le socle) | **Fichier correct, dormant.** Le handle `@Alliaconsulting` est un **compte réel**, membre de l'org `Allia-Consulting`, avec accès **Write** au dépôt (donc Code Owner valide). La **revue Code Owners n'est pas activée** dans la protection de branche, par **choix du gardien** tant qu'il est seul (un solo ne peut approuver ses propres PR). **S'activera à la première délégation.** | `.github/CODEOWNERS` + GitHub |
 | Agent-gardien CI (avis d'impact, ne merge jamais) | **FAIT** | `.github/workflows/conformite.yml` |
 | Secret `ANTHROPIC_API_KEY` (clé de l'agent-gardien CI) | **FAIT** (confirmé indirectement : les avis d'impact ont été produits sur les PR récentes) | GitHub → Settings → Secrets |
 | Connecteur GitHub / résolution Claude Code (pull du canon à l'exécution) | **FAIT** | `CLAUDE.md` |
@@ -70,10 +70,10 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 ### Couche Azure / Entra
 | Composant | État | Source de vérité |
 |---|---|---|
-| App registration `allia-mcp-graph` | **À FAIRE** / *à confirmer par le gardien* (runbook ; non constatable depuis le dépôt) | portail Entra |
-| Permission application `Sites.Selected` | **À FAIRE** / *à confirmer* | portail Entra |
-| Secret client (de l'app registration) | **À FAIRE** / *à confirmer* | Entra / coffre de secrets |
-| Octroi du rôle `write` sur le site AlliaConsuling | **À FAIRE** / *à confirmer* | Graph `POST /sites/{id}/permissions` |
+| App registration `allia-mcp-graph` | **FAIT** — créée dans Entra | portail Entra |
+| Permission application `Sites.Selected` | **FAIT** — accordée, consentement admin donné | portail Entra |
+| Secret client (de l'app registration) | **FAIT** — créé et stocké hors dépôt par le gardien | Entra / coffre de secrets |
+| Octroi du rôle `write` sur le site AlliaConsuling | **FAIT** — accordé via Graph, confirmé | Graph `POST /sites/{id}/permissions` |
 | Hébergement de la fonction (Azure, événementiel) | **À FAIRE** (décidé, non déployé — Partie B.4) | portail Azure |
 
 > Tout ce bloc relève du **runbook humain** (création d'app, consentement, secret) — voir `backlog/chantiers/T-0002.yaml` (statut `à_faire`) et les garde-fous `CLAUDE.md` / `backlog/plan.md` §2.
@@ -81,8 +81,8 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 ### Couche M365
 | Composant | État | Source de vérité |
 |---|---|---|
-| Site SharePoint AlliaConsuling | **PARTIEL** — identifié et documenté ; existence réelle *à confirmer par le gardien* au tenant | `contrats/socle/modele-donnees.md` §2 bis + tenant M365 |
-| Listes du modèle de données (Missions, Temps, …) | **PARTIEL** — emplacements renseignés, **lecture documentée** ; **écriture** = `T-0002` (à faire) | `modele-donnees.md` §2 bis / §4 + tenant |
+| Site SharePoint AlliaConsuling | **FAIT** — site et listes existants au tenant | `contrats/socle/modele-donnees.md` §2 bis + tenant M365 |
+| Listes du modèle de données (Missions, Temps, …) | **PARTIEL** — listes **existantes au tenant** (lecture) **FAIT** ; **écriture** via Graph = `T-0002` (à faire) | `modele-donnees.md` §2 bis / §4 + tenant |
 | Zone de proposition | **PARTIEL** — **réelle** (Liste « Zone-de-proposition ») **À FAIRE** (`T-0002`) ; **simulée en local** (`zone-proposition/`) **FAIT** | `modele-donnees.md` §3 / §4 |
 | Audit / journalisation sur `Ressources-RH` et `CVs` | **À FAIRE** (à activer avant tout accès agent — `T-0003`, runbook) | `modele-donnees.md` §2 bis + tenant |
 | Écrans de saisie (SharePoint puis Power Apps) | **À FAIRE** (décision Partie B.1 ; non construits) | tenant M365 |
