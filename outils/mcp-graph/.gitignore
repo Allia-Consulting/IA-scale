@@ -1,0 +1,4 @@
+# Ne jamais committer de secrets ni d'environnement local résolu.
+.env
+.venv/
+__pycache__/
