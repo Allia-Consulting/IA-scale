@@ -1,0 +1,151 @@
+# Agent-gardien CI v0 — doctrine §3. Fruste mais fonctionnel. Impact fin = A0.5 Phase 2.
+#
+# Tête-agent du gardien : sur chaque PR, produit un AVIS D'IMPACT et le poste en
+# commentaire. Il FILTRE, il N'APPROUVE PAS, et ne merge JAMAIS — la promotion
+# reste la porte humaine du gardien.
+name: Agent-gardien — conformité (v0)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Le strict nécessaire : commenter la PR, lire le code. Aucun droit d'écriture sur le contenu.
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  conformite:
+    name: Avis d'impact
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # gh CLI est natif sur les runners GitHub
+    steps:
+      # (1) Checkout complet — l'historique entier sert au grep des consommateurs.
+      - name: Checkout complet
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Détecter la clé API SANS jamais l'exposer. Si absente : on avertira et on sortira proprement.
+      - name: Détecter la présence de la clé API
+        id: key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY}" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Garde-fou de configuration : clé absente => avertir, NE PAS bloquer la PR (job en succès).
+      - name: Avertir si la clé API est absente (sortie propre)
+        if: steps.key.outputs.present == 'false'
+        run: |
+          gh pr comment "$PR_NUMBER" --body "⚠️ **Agent-gardien (v0)** — le secret \`ANTHROPIC_API_KEY\` n'est pas configuré dans ce dépôt. L'avis d'impact n'a pas pu être produit.
+
+          Ceci **ne bloque pas** la PR : c'est un problème de **configuration**, pas de conformité. Pour activer l'agent-gardien : *Settings → Secrets and variables → Actions → New repository secret* (\`ANTHROPIC_API_KEY\`).
+
+          *Tête-agent du gardien — doctrine §3. Il filtre, il n'approuve pas.*"
+          echo "::warning::ANTHROPIC_API_KEY absente — avis non produit, PR non bloquée."
+
+      # (2) Installer Claude Code via le script officiel.
+      - name: Installer Claude Code
+        if: steps.key.outputs.present == 'true'
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          # Le native installer dépose le binaire dans ~/.local/bin
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Vérifier l'installation
+        if: steps.key.outputs.present == 'true'
+        run: claude --version
+
+      # (3) Récupérer la liste des fichiers modifiés dans la PR (via gh, GITHUB_TOKEN).
+      - name: Lister les fichiers modifiés
+        if: steps.key.outputs.present == 'true'
+        run: |
+          gh pr view "$PR_NUMBER" --json files --jq '.files[].path' > changed-files.txt
+          echo "Fichiers modifiés :"
+          cat changed-files.txt
+
+      # (4) Lancer Claude Code en mode non-interactif (-p) pour produire l'avis d'impact.
+      #     Outils en lecture seule autorisés explicitement (pas d'invite en CI headless).
+      - name: Produire l'avis d'impact (Claude Code non-interactif)
+        if: steps.key.outputs.present == 'true'
+        id: avis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Construire le prompt v0 (fruste — recherche par références textuelles).
+          {
+            echo "Voici les fichiers modifiés dans cette PR :"
+            sed 's/^/- /' changed-files.txt
+            echo ""
+            echo "Cherche dans le dépôt tous les fichiers qui les référencent (grep sur les noms de fichiers)."
+            echo "Pour chaque fichier modifié qui est un contrat (contrats/socle/, doctrine/, contrats/local/), liste ses consommateurs connus."
+            echo "Produis un avis d'impact structuré : (a) fichiers modifiés, (b) consommateurs détectés, (c) risque estimé (faible / à vérifier), (d) verdict pass/fail."
+            echo "Ce workflow est la tête-agent du gardien (doctrine §3) — il filtre, il n'approuve pas."
+            echo ""
+            echo "Termine impérativement ta réponse par une ligne seule, exactement de la forme : VERDICT: pass   (ou VERDICT: fail)."
+          } > prompt.txt
+
+          echo "----- Prompt envoyé -----"; cat prompt.txt; echo "-------------------------"
+
+          # Mode non-interactif : -p (print). Outils lecture seule pré-autorisés.
+          if claude -p "$(cat prompt.txt)" \
+              --output-format text \
+              --model claude-sonnet-4-6 \
+              --max-turns 25 \
+              --allowedTools "Read,Grep,Glob,Bash(grep:*),Bash(git:*),Bash(ls:*),Bash(cat:*)" \
+              > avis.md 2> claude-err.log; then
+            echo "ran=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ran=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::L'exécution de Claude Code a échoué (voir le commentaire et les logs)."
+          fi
+
+      # (5) Poster le résultat en commentaire de la PR (avis si produit, sinon notice d'erreur).
+      - name: Poster le résultat en commentaire
+        if: steps.key.outputs.present == 'true'
+        run: |
+          if [ "${{ steps.avis.outputs.ran }}" = "true" ]; then
+            {
+              echo "## 🛡️ Avis d'impact — agent-gardien (v0)"
+              echo ""
+              echo "> Tête-agent du gardien (**doctrine §3**) — il **filtre, n'approuve pas**, et ne merge jamais."
+              echo "> Analyse **fruste** par références textuelles. Impact fin = A0.5 Phase 2."
+              echo ""
+              cat avis.md
+            } > comment.md
+          else
+            {
+              echo "## 🛡️ Agent-gardien (v0) — erreur d'exécution"
+              echo ""
+              echo "Claude Code n'a pas pu produire l'avis d'impact. Extrait des logs :"
+              echo ""
+              echo '```'
+              tail -n 30 claude-err.log 2>/dev/null || echo "(pas de log)"
+              echo '```'
+              echo ""
+              echo "*Une erreur critique a été détectée — le statut CI est marqué en échec.*"
+            } > comment.md
+          fi
+          gh pr comment "$PR_NUMBER" --body-file comment.md
+
+      # (6) Statut : pass si l'avis est produit (verdict non-fail) ; fail si erreur critique
+      #     ou verdict fail détecté. Le workflow conseille — la décision de merge reste humaine.
+      - name: Marquer le statut (pass/fail)
+        if: steps.key.outputs.present == 'true'
+        run: |
+          if [ "${{ steps.avis.outputs.ran }}" != "true" ]; then
+            echo "::error::Erreur critique — avis d'impact non produit."
+            exit 1
+          fi
+          if grep -qiE '^[[:space:]]*VERDICT:[[:space:]]*fail' avis.md; then
+            echo "::error::Verdict fail — l'agent-gardien a détecté un risque à examiner."
+            exit 1
+          fi
+          echo "Verdict pass — avis d'impact produit et posté. (L'agent conseille ; le merge reste au gardien.)"
