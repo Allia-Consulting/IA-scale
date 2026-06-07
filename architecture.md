@@ -76,7 +76,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Octroi du rôle `write` sur le site AlliaConsuling | **FAIT** — accordé via Graph, confirmé | Graph `POST /sites/{id}/permissions` |
 | Hébergement de la fonction (Azure, événementiel) | **À FAIRE** (décidé, non déployé — Partie B.4) | portail Azure |
 
-> Tout ce bloc relève du **runbook humain** (création d'app, consentement, secret) — voir `backlog/chantiers/T-0002.yaml` (statut `à_faire`) et les garde-fous `CLAUDE.md` / `backlog/plan.md` §2.
+> La partie **runbook humain** de l'app M365/Entra (app registration, `Sites.Selected`, consentement admin, secret, octroi du rôle `write` sur le site) est **réalisée**. Reste à faire : le **code MCP est écrit mais non déployé** (`outils/mcp-graph/`), et l'**hébergement Azure** — la fonction qui fait tourner la logique d'écriture — reste **à faire**. Garde-fous : `CLAUDE.md` / `backlog/plan.md` §2. Suivi : `backlog/chantiers/T-0002.yaml` — **note de bookkeeping** : le statut de `T-0002` y est encore `à_faire` et **ne reflète pas cet avancement partiel** (à traiter séparément, hors de ce document).
 
 ### Couche M365
 | Composant | État | Source de vérité |
