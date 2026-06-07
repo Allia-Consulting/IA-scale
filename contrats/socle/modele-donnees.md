@@ -1,9 +1,9 @@
 # Modèle de données — Allia Consulting
 
-> **Version** : 1.3 — *promu*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.4 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/modele-donnees.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 et §8), `contrats/socle/organisation.md`.
-> **Changelog** : v1.3 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé ; seul l'en-tête de statut/version évolue ; l'état « partiellement câblé » du §2 bis/§4 reste tel quel). v1.2 — §2 bis : distinction explicite nom d'affichage (« Allia Consulting ») vs identifiant d'URL (« alliaconsuling », conservé). Aucun domicile ni câblage modifié.
+> **Changelog** : v1.4 — alignement sur le déclencheur d'anonymisation corrigé (`anonymisation.md` v1.3), 7 juin 2026 : la note de la bibliothèque « Capitalisation » (§2 bis) ne dit plus « porte anonymisation à la réutilisation inter-client » ; le canon interne reste **nominatif**, la porte joue à la **sortie externe**. Aucun domicile ni câblage modifié. v1.3 — promu via boucle de promotion (contenu inchangé ; état « partiellement câblé » du §2 bis/§4 inchangé). v1.2 — §2 bis : distinction explicite nom d'affichage (« Allia Consulting ») vs identifiant d'URL (« alliaconsuling », conservé). Aucun domicile ni câblage modifié.
 > v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → **partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002** ; ajout de l'entité **CVs** (donnée personnelle, RGPD). Les **emplacements** sont renseignés ; l'**écriture** via Graph Lists API reste à outiller (connecteur Graph MCP en écriture — `backlog/chantiers/T-0002.yaml`).
 > C'est **la couture M365** : les agents résolvent ce contrat pour savoir où lire et écrire les faits. Si M365 change, seule l'implémentation derrière ce contrat change ; les consommateurs ne bougent pas.
 
@@ -51,7 +51,7 @@ Tous les emplacements ci-dessous vivent sous ce site. Les agents les résolvent 
 | Liste « Zone-de-proposition » | site AlliaConsuling / Liste Zone-de-proposition | **écriture (dérivés)** | domicile concret de la zone de proposition (§3). **Écriture via Graph Lists API — nécessite le connecteur Graph MCP en écriture (voir `T-0002`).** En attendant : zone de proposition **simulée en local** (`zone-proposition/`). |
 | Bibliothèque « Livrables » | site AlliaConsuling / Bibliothèque Livrables | lecture/écriture selon cran | documents produits |
 | Bibliothèque « Propositions » | site AlliaConsuling / Bibliothèque Propositions | lecture/écriture selon cran | propositions commerciales |
-| Bibliothèque « Capitalisation » | site AlliaConsuling / Bibliothèque Capitalisation | lecture/écriture selon cran | matière capitalisée (canon — porte anonymisation à la réutilisation inter-client) |
+| Bibliothèque « Capitalisation » | site AlliaConsuling / Bibliothèque Capitalisation | lecture/écriture selon cran | matière capitalisée (canon interne — reste nominative ; la porte d'anonymisation joue à la **sortie externe** : publication / livrable hors firme, voir `anonymisation.md` §1) |
 | Bibliothèque « CVs » | site AlliaConsuling / Bibliothèque CVs | **lecture** | ⚠️ **données personnelles (RGPD) — journalisation à activer** |
 
 > **Garde-fous (runbook humain — hors agent).** Activer la **journalisation** sur `Ressources-RH` et `CVs` avant tout accès agent ; les droits M365 ne se règlent jamais à la main par un agent mais par réconciliation au moindre privilège d'une décision promue (`organisation.md` §5). La présence d'un domicile dans cette table ne vaut pas ouverture d'accès.

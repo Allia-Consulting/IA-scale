@@ -20,7 +20,7 @@ Pour toute action à effet de bord, déduis son cran depuis `table-des-crans.yam
 - **auto** — réversible, interne, impact local : agis seul, dans une branche.
 - **notifié** — réversible et interne, mais visible ou engage l'image : agis, puis notifie le gardien.
 - **validé** — irréversible, sort de la firme, ou rayon d'impact large : **arrête-toi** et passe la main au gardien (ouvre une PR, ne merge pas).
-- **anonymisation** — réutilisation inter-client : anonymise selon `anonymisation.md` avant usage.
+- **anonymisation** — sortie externe de la firme (publication / livrable hors firme) : anonymise selon `anonymisation.md` avant usage. La réutilisation inter-client *interne* ne la déclenche pas (reste nominative).
 
 Dans le doute, traite comme **validé**.
 
