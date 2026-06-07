@@ -1,4 +1,4 @@
-version: "1.3 — promu"
+version: "1.4 — promu"
 statut: "contrat socle — fait foi"
 domicile: "contrats/socle/table-des-crans.yaml"
 autorite_de_promotion: "gardien du temple"
@@ -6,7 +6,7 @@ adosse_a:
   - "doctrine/doctrine.md (§6)"
   - "contrats/socle/organisation.md"
   - "contrats/socle/anonymisation.md"
-# Changelog : v1.3 — CORRECTION du déclencheur d'anonymisation (version machine), 7 juin 2026 : la porte se déclenche à la SORTIE EXTERNE de la firme (publication externe / livrable hors firme), plus sur le « change_de_destinataire » ni sur la réutilisation inter-client interne (qui reste nominative). Aligne anonymisation.md v1.3. v1.2 — promu (contenu inchangé). v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran).
+# Changelog : v1.4 — cosmétique, 7 juin 2026 : renommage de l'id d'action « reutiliser_matiere_interclient » → « reutiliser_matiere_interne » (le cran est auto depuis v1.3 ; le nom reflète désormais qu'il s'agit de réutilisation INTERNE, nominative). Aucun cran, condition ni comportement modifié ; aucune autre référence à cet id dans le dépôt. v1.3 — CORRECTION du déclencheur d'anonymisation (version machine) : la porte se déclenche à la SORTIE EXTERNE de la firme (publication externe / livrable hors firme), plus sur le « change_de_destinataire » ni sur la réutilisation inter-client interne (qui reste nominative). Aligne anonymisation.md v1.3. v1.2 — promu (contenu inchangé). v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran).
 
 # cran = f( réversible ? · sort_de_la_firme ? · rayon_impact )
 crans:
@@ -80,7 +80,7 @@ actions:
   - id: modifier_design_system
     cran: valide
     pourquoi: "interne mais rayon d'impact large (toute la firme)"
-  - id: reutiliser_matiere_interclient
+  - id: reutiliser_matiere_interne
     cran: auto
     pourquoi: "réutilisation INTERNE (autre mission / autre client, sans sortie de firme) : réversible, interne, local — reste NOMINATIF, pas d'anonymisation (avantage qui compose)"
     note: "L'anonymisation ne se déclenche qu'à la SORTIE EXTERNE — voir publier_contenu_externe / envoyer_livrable_client et anonymisation.md §1. La réutilisation inter-client interne ne la déclenche plus (correction v1.3)."
