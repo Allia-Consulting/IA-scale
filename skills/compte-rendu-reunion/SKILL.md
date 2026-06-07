@@ -1,7 +1,8 @@
 # Compte rendu de réunion — Skill
 
 > **id** : `compte-rendu-reunion`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
+> **Version** : 1.0 — *promu*. **Nature** : skill.
+> **Changelog** : v1.0 — promu via boucle de promotion (procédure allégée), 7 juin 2026 ; exécution du chantier T-0004 par un agent (test de sortie A0.9). Numéro de version conservé (1.0) : artefact déjà livré et cité « v1.0 » par le dérivé `CR-test-A0.6`. Contenu inchangé ; seul l'en-tête de statut évolue.
 > **Domicile** : `skills/compte-rendu-reunion/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `doctrine/doctrine.md` (§6, §7), `contrats/socle/table-des-crans.yaml`, `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/modele-donnees.md`, `CLAUDE.md`.
 
@@ -143,4 +144,4 @@ Prochain point le 26/03.
 
 ## 10. Évolution
 
-Ce skill est un **candidat** ; il est promu par le **gardien** en **procédure allégée** (contrat à portée locale, `doctrine.md` §5). Toute évolution suit la boucle de promotion (`doctrine.md` §7) avec **montée de version** en en-tête. Retour arrière = repointage.
+Ce skill est **promu** (procédure allégée, contrat à portée locale, `doctrine.md` §5). Toute évolution future suit la boucle de promotion (`doctrine.md` §7) avec **montée de version** en en-tête. Retour arrière = repointage.
