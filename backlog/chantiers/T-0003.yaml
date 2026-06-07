@@ -1,0 +1,22 @@
+id: T-0003
+titre: "Activer la journalisation M365 sur Ressources-RH et CVs"
+capacite: "Corporate & conformité / Gouvernance IA responsable"
+phase: 1
+type_action: runbook_humain
+cran: valide
+produit:
+  - "journal d'audit M365 actif sur la liste Ressources-RH (site AlliaConsuling)"
+  - "journal d'audit M365 actif sur la bibliothèque CVs (site AlliaConsuling)"
+  - "vérification que chaque accès agent est tracé et consultable"
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+  - "contrats/socle/anonymisation.md"
+criteres_acceptation:
+  - "Le journal d'audit SharePoint est activé sur Ressources-RH"
+  - "Le journal d'audit SharePoint est activé sur la bibliothèque CVs"
+  - "Un accès test agent est visible dans le journal dans les 24h"
+echeance: "avant arrivée des premiers collaborateurs"
+rayon_impact: local
+statut: à_faire
+note: "Décision du gardien : agents autorisés en lecture sur Ressources-RH et CVs. Contrepartie RGPD obligatoire avant accès réel. Runbook humain — ni Claude ni un agent ne configurent les journaux d'audit M365."
