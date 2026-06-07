@@ -1,6 +1,6 @@
 # Doctrine de gouvernance de l'entreprise augmentée — Allia Consulting
 
-> **Version** : 1.2 — *promu*. **Changelog** : v1.2 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé depuis le candidat v1.1 ; seul l'en-tête de statut/version évolue). v1.1 — enrichie en lien avec la présentation « Talents & recrutement » (ajout du §10 bis) ; §6/§9 alignées sur `anonymisation.md` v1.1.
+> **Version** : 1.3 — *promu*. **Changelog** : v1.3 — promu via boucle de promotion, 7 juin 2026 : §4 — étanchéité des deux plans explicitée (modifier une règle = PR ; travail métier = jamais de PR) ; §6 — porte de sortie de firme tenue par un rôle métier habilité (jamais au titre de gardien) + ligne du cran anonymisation alignée sur la « sortie externe » ; §9 — critère d'anonymisation aligné sur la « sortie externe » (fin de la logique « changement de destinataire / inter-client »). v1.2 — promu (contenu inchangé depuis le candidat v1.1). v1.1 — enrichie en lien avec la présentation « Talents & recrutement » (ajout du §10 bis).
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), chemin `/doctrine/doctrine.md`. **Ce fichier markdown est la version canonique.** Le PDF qui a circulé en est un *aperçu rendu* — un consommateur, jamais un double éditable.
 > **Autorité de promotion** : Gardien du temple.
@@ -71,6 +71,13 @@ Le système se lit sur deux plans qu'il ne faut jamais confondre.
 
 **Règle d'or** : le gardien n'est jamais dans la boucle d'exécution d'une affaire. Il fixe les règles que l'exécution applique. C'est ce qui rend l'échelle tenable : on ne sollicite pas le gardien à chaque mission, seulement quand une règle change.
 
+**Ce qui passe par chaque plan — sans ambiguïté.**
+
+- **Plan doctrine = modifier une RÈGLE** (un skill, la doctrine, le design system, les crans, une délégation) : cela passe par la **boucle de promotion** — une PR et le merge du gardien (§7).
+- **Plan d'exécution = produire du travail MÉTIER** (un compte rendu, un kick-off, une proposition, la capitalisation d'une mission) : cela ne passe **jamais** par une PR, et le gardien n'y intervient **jamais** (rappel de la règle d'or ci-dessus).
+
+**Un livrable ou une publication ne passe jamais par GitHub ; seule la modification d'une règle y passe.**
+
 ## 5. Les contrats : socle et local
 
 Un contrat est la frontière d'une capacité : ce qu'elle publie (et que d'autres consomment) et ce qu'elle consomme. On distingue deux natures, parce qu'elles n'ont pas le même propriétaire.
@@ -99,12 +106,14 @@ Chaque type d'action porte un cran. Le cran se déduit de trois questions :
 | **auto** | réversible **et** interne **et** impact local | L'agent, seul | Créer l'espace SharePoint d'une mission |
 | **notifié** | réversible et interne, mais engage l'image ou est largement visible | L'agent agit ; le gardien est informé | Envoyer le message de nomination à l'équipe |
 | **validé** | irréversible **ou** sort de la firme **ou** rayon d'impact large | Porte humaine (gardien ou rôle désigné) avant l'action | Promouvoir un contrat socle ; envoyer un livrable au client |
-| **anonymisation** (porte automatique) | réutilisation inter-client, entrée au canon partagé, ou publication externe — voir `anonymisation.md` pour le déclencheur complet | Déclenchée par règle, sans humain | Générer un template à partir du livrable d'un autre client |
+| **anonymisation** (porte automatique) | **sortie externe de la firme** : publication externe ou livrable rendu hors firme — voir `anonymisation.md` pour le déclencheur complet | Déclenchée par règle, sans humain | Publier sur le site un insight tiré d'une mission |
 
 Deux compléments indissociables :
 
 - **Le rayon d'impact compte autant que la réversibilité.** Une action peut être interne et lourde de conséquences (modifier le design system touche toute l'organisation). Les changements à large impact passent par le cran *validé*, même internes. On les rend réversibles (pull + versionnement) pour garder une porte proportionnée plutôt que de tout verrouiller.
 - **L'anonymisation est une règle exécutable, pas une intention.** « Anonymiser quand nécessaire » doit préciser quels champs, quel seuil et quel déclencheur. C'est une exigence de conformité (RGPD, AI Act), pas une bonne pratique.
+
+**Qui tient la porte de sortie de firme.** Pour une action qui **sort de la firme** (livrable client, publication), la porte humaine du cran *validé* est tenue par **un rôle métier habilité** sur la mission ou le périmètre concerné : un animateur/associé délégué, **ou le fondateur lui-même agissant au titre de son rôle d'associé**. Cette validation relève du rôle **métier**, jamais du rôle de gardien. Qu'une même personne — le fondateur — porte les deux rôles ne les confond pas : il valide une sortie client **comme associé**, pas comme gardien ; ce qui reste exclu, c'est que le gardien intervienne dans une affaire **en tant que** gardien (règle d'or §4). La distinction porte sur le **rôle au titre duquel on agit**, pas sur la personne. Cette validation métier est **informelle** (mail, Teams, interface Claude) ; elle n'est **jamais** une PR GitHub. La doctrine en reste à la règle **abstraite** (« rôle métier habilité ») ; la **grille concrète** d'habilitation — quels grades, sous quelle délégation — vit dans `contrats/socle/organisation.md` (réalisation volatile, §2), jamais ici.
 
 ## 7. La boucle de promotion
 
@@ -133,7 +142,7 @@ Comment une nouvelle version d'un bout du SI entre en service. C'est le cœur op
 
 ## 9. Confidentialité, conformité et qualité
 
-- **Confidentialité.** Les données restent dans M365, sans isolation par mission. La protection passe par l'anonymisation, exécutable et tracée, déclenchée au changement de destinataire — réutilisation inter-client, entrée au canon partagé ou publication externe (§6 ; déclencheur complet : `contrats/socle/anonymisation.md` §1).
+- **Confidentialité.** Les données restent dans M365, sans isolation par mission. La protection passe par l'anonymisation, exécutable et tracée, déclenchée à la **sortie externe de la firme** (publication externe, livrable rendu hors firme) — et **non** sur la réutilisation inter-client interne, qui reste nominative (§6 ; déclencheur complet : `contrats/socle/anonymisation.md` §1).
 - **Apprentissage inter-missions.** L'intelligence se compose entre missions (le véritable avantage qui compose), au prix d'une discipline d'anonymisation conforme RGPD, AI Act et NDA.
 - **Qualité — non optionnelle.** Comme les agents agissent en autonomie, lisent à travers les missions et apprennent entre elles, la seule barrière restante est l'évaluation et les garde-fous. L'autonomie augmente l'exigence d'évaluation et d'observabilité ; elle ne la réduit pas. Le gardien-agent filtre le faible risque contre politique ; le reste remonte à l'humain.
 
@@ -178,4 +187,4 @@ Pour que le lecteur sache ce qui est délibérément reporté :
 
 ---
 
-*Fin de la doctrine de gouvernance v1.2 (promu). Ce document est un contrat socle : il évolue par la boucle de promotion (§7), sous l'autorité du gardien du temple.*
+*Fin de la doctrine de gouvernance v1.3 (promu). Ce document est un contrat socle : il évolue par la boucle de promotion (§7), sous l'autorité du gardien du temple.*

@@ -1,8 +1,8 @@
 # Relevé de décisions — Skill
 
 > **id** : `releve-de-decisions`
-> **Version** : 1.0 — *promu*. **Nature** : skill.
-> **Changelog** : v1.0 — promu via boucle de promotion (procédure allégée), 7 juin 2026 ; alignement de l'en-tête sur le statut backlog (T-0001 déjà `promu`, PR #11). Numéro de version conservé (1.0) : c'est l'artefact livré et promu en PR #11, référencé tel quel par T-0001 et les dérivés en zone de proposition. Contenu inchangé.
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — **CORRECTION du §7 (anonymisation)**, 7 juin 2026 : aligné sur `anonymisation.md` v1.3 — un relevé réutilisé **en interne** (même pour un autre client) reste **nominatif** ; l'anonymisation ne se déclenche qu'à la **sortie externe de la firme**. v1.0 — promu via boucle de promotion (procédure allégée) ; alignement sur le statut backlog (T-0001 `promu`, PR #11). Artefact référencé « v1.0 » par T-0001 et les dérivés.
 > **Domicile** : `skills/releve-de-decisions/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `doctrine/doctrine.md` (§6, §7), `contrats/socle/table-des-crans.yaml`, `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/modele-donnees.md`, `skills/compte-rendu-reunion/SKILL.md` (référence de format), `CLAUDE.md`.
 
@@ -67,11 +67,10 @@ Le relevé est un **dérivé** : il s'écrit dans la **zone de proposition** (`m
 
 ## 7. Anonymisation
 
-Par défaut, un relevé **reste dans sa mission** (usage interne, même client) → **pas d'anonymisation** : le destinataire ne change pas. La porte se déclenche dès que la matière **change de destinataire** (critère décisif d'`anonymisation.md` §1) :
+Par défaut, un relevé **reste nominatif** : tant qu'il circule **à l'intérieur de la firme** — même mission, même client, **ou réutilisé pour une autre mission / un autre client en interne** — **pas d'anonymisation** (c'est l'avantage qui compose, `anonymisation.md` §1). La porte se déclenche dès que la matière **quitte la firme vers l'extérieur** (critère décisif d'`anonymisation.md` §1) :
 
-- le relevé **sort de la firme** ;
-- il **sert un autre client** ;
-- il **entre au canon partagé** (template, exemple, benchmark).
+- le relevé **est publié hors de la firme** ;
+- le relevé **est rendu hors de la firme** (livrable client).
 
 Dans ces cas, appliquer `anonymisation.md` (§1→§4) **avant** usage. Attention particulière : un libellé de décision peut contenir un nom de client, un montant, une échéance datée — autant de quasi-identifiants à généraliser.
 

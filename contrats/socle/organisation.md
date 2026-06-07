@@ -1,10 +1,11 @@
 # Organisation & délégations — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
+> **Version** : 1.1 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), `/contrats/socle/organisation.md`.
 > **Autorité de promotion** : Gardien du temple.
 > **Portée** : Toute l'organisation Allia.
+> **Changelog** : v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
 
 La doctrine définit *les règles et les rôles* (en abstrait). Le plan définit *le chantier*. Ce document définit **qui répond de quoi** : il lie les rôles abstraits de la doctrine à des périmètres concrets et à leurs titulaires, et il gouverne la délégation. C'est la « réalisation » de la gouvernance, rendue canonique et gouvernable — ce que la doctrine laisse délibérément de côté pour rester stable (principe « capacités stables, réalisation volatile »).
 
@@ -49,6 +50,17 @@ La firme repose aujourd'hui sur une personne. Par défaut, **le gardien (fondate
 
 *Aucun nom de futur collaborateur n'est inventé : les lignes futures restent en attente jusqu'à une délégation réelle.*
 
+## 3 bis. Gardien et associé : deux rôles, une même personne aujourd'hui
+
+*Décision d'organisation (nouvelle).* Au-delà des quatre rôles de la doctrine, la firme reconnaît le rôle **associé** comme rôle **métier** — celui qui pratique le conseil et peut être responsable d'une mission — **distinct** du rôle de **gardien**, qui gouverne les règles (skills, doctrine, design, délégations, infrastructure).
+
+Aujourd'hui, le **fondateur porte les deux rôles simultanément** : gardien *et* associé. Ils ne se confondent pas, parce qu'ils n'opèrent pas sur le même plan (doctrine §4) :
+
+- **comme gardien**, il promeut des règles (plan doctrine) — jamais dans une affaire ;
+- **comme associé**, il pratique le métier (plan d'exécution) et peut **tenir une porte de sortie de firme** (livrable client, publication) au titre de cette responsabilité métier.
+
+La distinction porte sur le **rôle au titre duquel on agit**, pas sur la personne. C'est ce qui rend légitime qu'il valide lui-même une sortie client : il agit alors **comme associé**, jamais en tant que gardien (doctrine §6, règle d'or §4).
+
 ## 4. Ce qu'une délégation accorde — et n'accorde pas
 
 Déléguer l'animation d'un périmètre P à une personne Y :
@@ -59,6 +71,21 @@ Déléguer l'animation d'un périmètre P à une personne Y :
 Une délégation est elle-même un **acte de promotion** sur ce contrat (gardien seul). La **révocation** est un repointage — une seule action, comme tout retour arrière.
 
 À l'échelle 50-200 (fédération de la promotion, doctrine §10), le gardien pourra déléguer en plus le **droit de promotion local** par domaine ; c'est ici qu'il sera enregistré, le gardien conservant le socle.
+
+## 4 bis. Habilitation des portes de sortie de firme
+
+*Décision d'organisation (nouvelle).* La doctrine pose la règle **abstraite** : une sortie de firme (livrable client, publication) est validée par un **rôle métier habilité** (doctrine §6), sans nommer de grade. C'est **ici** que cette habilitation se **concrétise** — cohérent avec « capacités stables, réalisation volatile » : les grades relèvent de la réalisation et vivent hors de la doctrine.
+
+**Tenir une porte de sortie de firme exige deux conditions CUMULATIVES :**
+
+1. un **grade habilité** — **manager, senior manager, directeur, ou associé** ;
+2. la **responsabilité déléguée** sur la mission ou le périmètre concerné.
+
+**Grades NON habilités** : consultant junior, consultant, consultant senior.
+
+**Le grade est nécessaire mais non suffisant.** Un grade habilité ne peut tenir la porte que des **missions dont il a la responsabilité déléguée** : le grade est un **plancher de capacité** ; la **délégation** rattache à l'affaire. Aucun des deux ne suffit seul.
+
+**Où vit cette grille.** La doctrine définit la règle abstraite (« rôle métier habilité ») ; **`organisation.md` porte la grille concrète**. Un changement de grille de grades se fait **ici**, **jamais** dans la doctrine.
 
 ## 5. Droits d'accès — décision dans le guide, droits réconciliés dans M365
 
@@ -93,7 +120,7 @@ Tant que la firme est solo, il n'y a rien à réconcilier : le modèle se *conç
 
 ## 7. Confidentialité
 
-Ce contrat est interne à la firme et référence les personnes par identifiant ; aucun dossier RH n'y est dupliqué. Les identités et leurs détails restent dans M365, sous contrôle d'accès. La règle d'anonymisation (contrat socle dédié) gouverne la réutilisation inter-client ; elle ne s'applique pas ici, qui relève de la donnée d'organisation interne — mais l'accès y est restreint au strict nécessaire.
+Ce contrat est interne à la firme et référence les personnes par identifiant ; aucun dossier RH n'y est dupliqué. Les identités et leurs détails restent dans M365, sous contrôle d'accès. La règle d'anonymisation (contrat socle dédié) gouverne la **sortie externe de la firme** (publication, livrable rendu hors firme), non la réutilisation inter-client interne ; elle ne s'applique pas ici, qui relève de la donnée d'organisation interne — mais l'accès y est restreint au strict nécessaire.
 
 ## 8. Articulation avec les grades
 

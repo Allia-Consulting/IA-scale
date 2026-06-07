@@ -1,8 +1,8 @@
 # Compte rendu de réunion — Skill
 
 > **id** : `compte-rendu-reunion`
-> **Version** : 1.0 — *promu*. **Nature** : skill.
-> **Changelog** : v1.0 — promu via boucle de promotion (procédure allégée), 7 juin 2026 ; exécution du chantier T-0004 par un agent (test de sortie A0.9). Numéro de version conservé (1.0) : artefact déjà livré et cité « v1.0 » par le dérivé `CR-test-A0.6`. Contenu inchangé ; seul l'en-tête de statut évolue.
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — **CORRECTION du §7 (anonymisation)**, 7 juin 2026 : aligné sur `anonymisation.md` v1.3 — un CR réutilisé **en interne** (même pour un autre client) reste **nominatif** ; l'anonymisation ne se déclenche qu'à la **sortie externe de la firme**. v1.0 — promu via boucle de promotion (procédure allégée) ; exécution du chantier T-0004 (test de sortie A0.9). Artefact cité « v1.0 » par le dérivé `CR-test-A0.6`.
 > **Domicile** : `skills/compte-rendu-reunion/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `doctrine/doctrine.md` (§6, §7), `contrats/socle/table-des-crans.yaml`, `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/modele-donnees.md`, `CLAUDE.md`.
 
@@ -81,13 +81,12 @@ Le CR est un **dérivé** : il s'écrit dans la **zone de proposition** (`modele
 
 ## 7. Anonymisation
 
-Par défaut, un CR **reste dans sa mission** (usage interne, même client) → **pas d'anonymisation** : le destinataire ne change pas. La porte se déclenche dès que la matière **change de destinataire** — c'est le critère décisif d'`anonymisation.md` §1 :
+Par défaut, un CR **reste nominatif** : tant qu'il circule **à l'intérieur de la firme** — même mission, même client, **ou réutilisé pour une autre mission / un autre client en interne** — **pas d'anonymisation** (c'est l'avantage qui compose, `anonymisation.md` §1). La porte se déclenche dès que la matière **quitte la firme vers l'extérieur** — critère décisif d'`anonymisation.md` §1 :
 
-- le CR **sort de la firme** (publication, diffusion externe) ;
-- le CR **sert un autre client** ;
-- le CR **entre au canon partagé** (template, exemple, benchmark).
+- le CR **est publié hors de la firme** (site, diffusion externe) ;
+- le CR **est rendu hors de la firme** (livrable client).
 
-Dans ces cas, appliquer `anonymisation.md` (§1 déclencheur, §2 champs, §3 seuil, §4 transformation) **avant** tout usage. L'anonymisation est un préalable, pas un substitut à la promotion du gardien.
+Dans ces cas, appliquer `anonymisation.md` (§1 déclencheur, §2 champs, §3 seuil, §4 transformation) **avant** tout usage. L'anonymisation est un préalable, pas un substitut à la porte humaine du cran *validé* (rôle métier habilité, `doctrine.md` §6).
 
 ## 8. Critères de qualité (Definition of Done)
 
