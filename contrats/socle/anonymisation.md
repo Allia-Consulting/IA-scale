@@ -1,8 +1,9 @@
 # Anonymisation — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/anonymisation.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§6 et §9).
+> **Changelog** : v1.1 — déclencheur décidé par le gardien (§1) : trois cas (inter-client, entrée au canon partagé, publication externe) ; critère décisif = « changement de destinataire ».
 > ⚠️ **Exigence de conformité (RGPD, AI Act, NDA).** Ce document est un candidat *exécutable* ; ses paramètres juridiques doivent être validés par le gardien, idéalement avec un conseil. Je ne suis pas juriste.
 
 ## 0. Objet
@@ -11,7 +12,11 @@ Rendre l'anonymisation **exécutable**, pas une intention : dire **quand** elle 
 
 ## 1. Déclencheur — quand
 
-La porte se déclenche **sans humain**, dès qu'il y a **réutilisation de matière inter-client** : toute matière issue d'une mission ou d'un client utilisée pour un autre client, ou promue dans le canon partagé (template, benchmark, skill, exemple). Tant qu'une matière reste dans sa mission d'origine, la porte ne se déclenche pas.
+Déclenche l'anonymisation, sans humain, dans trois cas : (a) réutilisation de matière d'un client pour un autre client ; (b) entrée dans le canon partagé (template, benchmark, skill, exemple) ; (c) toute publication externe à l'organisation (livrable client, publication, site).
+
+Ne déclenche pas : réutilisation chez le même client / dans la même mission ; matière purement interne n'ayant jamais touché de donnée client.
+
+Critère décisif : « la matière change-t-elle de destinataire » (autre client, canon, extérieur), et non « interne vs externe ».
 
 ## 2. Champs à traiter — quoi
 
@@ -38,7 +43,11 @@ Retrait, remplacement par des marqueurs neutres (« Client A », « secteur indu
 
 Porte **automatique** (déclenchée par règle), orthogonale aux crans. Elle est un **préalable**, pas un substitut : l'artefact anonymisé qui rejoint le canon passe quand même par la promotion du gardien (cran *validé*).
 
-## 7. Décisions du gardien à confirmer
+## 7. Décisions du gardien
+
+- **Déclencheur : décidé (v1.1).** Les trois cas et le critère « changement de destinataire » sont arrêtés en §1.
+
+Restent à confirmer :
 
 1. La liste exacte des champs (à compléter selon vos missions types).
 2. Le paramètre de seuil (niveau de généralisation acceptable).
