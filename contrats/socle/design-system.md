@@ -1,9 +1,9 @@
 # Allia Consulting — Design System
 
-> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/design-system.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§5), `contrats/socle/anonymisation.md` (§7).
-> **Changelog** : v1.1 — en-tête aligné sur le format socle standard ; domicile canonique corrigé (§9) ; renvoi normatif vers `anonymisation.md` ajouté (§7). **Aucun token visuel modifié** (couleurs, typo, espacements inchangés).
+> **Changelog** : v1.2 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé ; seul l'en-tête de statut/version évolue). v1.1 — en-tête aligné sur le format socle standard ; domicile canonique corrigé (§9) ; renvoi normatif vers `anonymisation.md` ajouté (§7). **Aucun token visuel modifié** (couleurs, typo, espacements inchangés).
 
 Ce document définit les fondations visuelles et les composants de l'identité numérique d'Allia Consulting. Il sert de référence unique pour toute production web, design ou frontend du cabinet. Les tokens sont extraits directement de la maquette de référence afin de garantir leur exactitude.
 

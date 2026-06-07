@@ -8,7 +8,15 @@ produit:
   - "journal d'audit M365 actif sur la liste Ressources-RH (site AlliaConsuling)"
   - "journal d'audit M365 actif sur la bibliothèque CVs (site AlliaConsuling)"
   - "vérification que chaque accès agent est tracé et consultable"
-depend_de: []
+depend_de: ["RUNBOOK-HUMAIN"]
+# RUNBOOK-HUMAIN : sentinelle de garde-fou (P3.8). Identifiant de dépendance RÉSERVÉ, sans
+#   fichier chantiers/*.yaml correspondant : son statut ne peut donc jamais être « promu ».
+#   Par la règle du plan §4 (« un agent ne traite que des tâches dont les deps sont promu »),
+#   cette tâche devient mécaniquement NON sélectionnable en autonomie par un agent — ce qui est
+#   l'intention, puisqu'« activer la journalisation d'audit M365 » est une action proscrite
+#   (table-des-crans.yaml : parametrer_tenant_m365_securite_residence_donnees). Voir T-0002 pour
+#   la description complète de la convention. statut reste « à_faire » (la tâche est à faire,
+#   mais par le gardien, pas par un agent).
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
   - "contrats/socle/anonymisation.md"

@@ -1,6 +1,6 @@
 # Doctrine de gouvernance de l'entreprise augmentée — Allia Consulting
 
-> **Version** : 1.1 — *candidat*. Enrichie en lien avec la présentation « Talents & recrutement » (ajout du §10 bis) ; §6/§9 alignées sur `anonymisation.md` v1.1. À promouvoir par le gardien du temple via la boucle de promotion (§7).
+> **Version** : 1.2 — *promu*. **Changelog** : v1.2 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé depuis le candidat v1.1 ; seul l'en-tête de statut/version évolue). v1.1 — enrichie en lien avec la présentation « Talents & recrutement » (ajout du §10 bis) ; §6/§9 alignées sur `anonymisation.md` v1.1.
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), chemin `/doctrine/doctrine.md`. **Ce fichier markdown est la version canonique.** Le PDF qui a circulé en est un *aperçu rendu* — un consommateur, jamais un double éditable.
 > **Autorité de promotion** : Gardien du temple.
@@ -178,4 +178,4 @@ Pour que le lecteur sache ce qui est délibérément reporté :
 
 ---
 
-*Fin de la doctrine de gouvernance v1.1 (candidat). Ce document est un contrat socle : il évolue par la boucle de promotion (§7), sous l'autorité du gardien du temple.*
+*Fin de la doctrine de gouvernance v1.2 (promu). Ce document est un contrat socle : il évolue par la boucle de promotion (§7), sous l'autorité du gardien du temple.*

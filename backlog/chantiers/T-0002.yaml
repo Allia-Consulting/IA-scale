@@ -8,7 +8,13 @@ produit:
   - "un serveur MCP exposant list_items (GET) et create_list_item (POST) sur Microsoft Graph"
   - "app registration Entra ID avec Sites.Selected sur AlliaConsuling (runbook humain)"
   - "mise à jour de modele-donnees.md avec les endpoints réels"
-depend_de: ["A0.7-read"]
+depend_de: ["T-0003", "RUNBOOK-HUMAIN"]
+# T-0003 : dépendance RÉELLE et traçable — remplace l'ancien "A0.7-read" (non résoluble :
+#   aucun chantier de ce nom n'existe, donc la règle "deps promu" du plan §4 ne pouvait pas
+#   le résoudre). Le critère d'acceptation ci-dessous « Journalisation active sur Ressources-RH
+#   et CVs avant accès agent » EST le livrable de T-0003 → la dépendance est donc fondée et
+#   pointe vers un chantier réel et versionné.
+# RUNBOOK-HUMAIN : sentinelle (voir note) — interdit la sélection autonome par un agent.
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
 criteres_acceptation:
@@ -18,4 +24,19 @@ criteres_acceptation:
   - "Journalisation active sur Ressources-RH et CVs avant accès agent"
 rayon_impact: local
 statut: à_faire
-note: "Chantier identifié en session fondation 7 juin 2026 lors du câblage A0.7. Le code du serveur MCP peut être préparé en candidat (Claude Code), mais l'app registration et le déploiement restent runbook humain (plan §2 + garde-fous CLAUDE.md)."
+note: >
+  Chantier identifié en session fondation 7 juin 2026 lors du câblage A0.7. Le code du serveur
+  MCP peut être préparé en candidat (Claude Code), mais l'app registration, le secret et le
+  déploiement restent runbook humain (plan §2 + garde-fous CLAUDE.md) — c'est pourquoi cette
+  tâche porte la sentinelle RUNBOOK-HUMAIN.
+
+  SENTINELLE « RUNBOOK-HUMAIN » (garde-fou P3.8) : identifiant de dépendance RÉSERVÉ qui ne
+  correspond volontairement à aucun fichier chantiers/*.yaml. Comme aucun chantier de ce nom
+  n'existe, son statut ne peut jamais être « promu » ; or la règle du plan §4 veut qu'« un agent
+  ne traite que des tâches dont les dépendances sont promu ». Conséquence : toute tâche listant
+  RUNBOOK-HUMAIN dans depend_de est mécaniquement NON sélectionnable en autonomie par un agent,
+  sans rien ajouter au schéma promu (statut reste dans l'énum à_faire|candidat|promu|abandonné,
+  depend_de reste une liste d'identifiants). Le gardien peut toujours confier explicitement la
+  partie agent-compatible (le code MCP) ; la sentinelle bloque la seule sélection autonome, pas
+  le travail dirigé par le gardien. Note : la formalisation de cette convention dans plan.md §4
+  (qui est promu) demandera un candidat séparé sur le plan — non inclus ici.
