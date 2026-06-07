@@ -1,4 +1,4 @@
-version: "1.0 — candidat"
+version: "1.1 — candidat"
 statut: "contrat socle — fait foi"
 domicile: "contrats/socle/table-des-crans.yaml"
 autorite_de_promotion: "gardien du temple"
@@ -6,6 +6,7 @@ adosse_a:
   - "doctrine/doctrine.md (§6)"
   - "contrats/socle/organisation.md"
   - "contrats/socle/anonymisation.md"
+# Changelog : v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran). Aucun cran ni action modifié.
 
 # cran = f( réversible ? · sort_de_la_firme ? · rayon_impact )
 crans:
@@ -23,6 +24,11 @@ crans:
     qui_decide: "déclenchée par règle, sans humain ; voir anonymisation.md"
 
 # Évaluation : la première règle qui matche gagne.
+# PORTE ANONYMISATION — orthogonale : évaluée À PART, en plus du cran dérivé ci-dessous.
+# Elle ne remplace pas le cran ; elle s'ajoute. Voir anonymisation.md §1.
+anonymisation_gate:
+  - si: "change_de_destinataire == true"   # inter-client OU entrée canon OU publication externe
+    alors: "appliquer anonymisation.md AVANT l'action (en plus du cran)"
 derivation:
   - si: "sort_de_la_firme == true"
     alors: valide
