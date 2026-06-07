@@ -1,0 +1,16 @@
+# CODEOWNERS — le gardien du temple est propriétaire de tout le socle.
+# Propriétaire : @Alliaconsulting (le gardien).
+# Une PR touchant un chemin ci-dessous requiert la revue de son propriétaire.
+
+# Par défaut : le gardien sur tout le dépôt
+*                          @Alliaconsulting
+
+# Socle (fait foi) — gardien
+/doctrine/                 @Alliaconsulting
+/contrats/socle/           @Alliaconsulting
+/backlog/                  @Alliaconsulting
+/.github/                  @Alliaconsulting
+
+# Contrats locaux : l'animateur propose, le gardien promeut (procédure allégée).
+# En déléguant un périmètre, ajoute l'animateur À CÔTÉ du gardien, par exemple :
+# /contrats/local/communication/   @animateur-communication @Alliaconsulting
