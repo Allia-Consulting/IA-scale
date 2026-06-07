@@ -10,6 +10,7 @@ depend_de: []
 contrats_concernes:
   - "contrats/socle/design-system.md"
   - "contrats/socle/anonymisation.md"
+  # contrats promus — prêt pour A0.9
 criteres_acceptation:
   - "Le skill extrait, depuis un compte rendu, la liste des décisions et leur statut (prise / à confirmer)."
   - "Le format respecte le design system."

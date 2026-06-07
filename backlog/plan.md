@@ -1,6 +1,7 @@
 # Plan de construction du SI augmenté — Allia
 
-> Statut : candidat v0.2 · à promouvoir comme **contrat socle** une fois validé par le gardien. *(v0.2 : alignement sur la feuille de route et les grades de la présentation « Talents & recrutement ».)*
+> Statut : promu — contrat socle · fait foi.
+> Changelog : v0.2 → promu : passage par la boucle de promotion (session fondation 7 juin 2026). *(v0.2 : alignement sur la feuille de route et les grades de la présentation « Talents & recrutement ».)*
 > Domicile cible : `dépôt de fondations (GitHub)`, chemin `/backlog/plan.md`.
 > Adossé à : `/doctrine/doctrine.md`. La doctrine dit *le pourquoi et les règles* ; ce plan dit *le comment et le chantier*. Les deux forment le canon socle que Claude Code résout à l'exécution.
 > Ce document est écrit pour deux lecteurs : **toi** (le gardien, qui exécute l'amorçage) et **les agents** (qui consommeront ensuite les tâches qu'il référence). Il ne se modifie pas dans une copie : il évolue par la boucle de promotion (§11).
