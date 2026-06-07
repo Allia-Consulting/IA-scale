@@ -1,9 +1,10 @@
 # Modèle de données — Allia Consulting
 
-> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.2 — *candidat*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/modele-donnees.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 et §8), `contrats/socle/organisation.md`.
-> **Changelog** : v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → **partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002** ; ajout de l'entité **CVs** (donnée personnelle, RGPD). Les **emplacements** sont renseignés ; l'**écriture** via Graph Lists API reste à outiller (connecteur Graph MCP en écriture — `backlog/chantiers/T-0002.yaml`).
+> **Changelog** : v1.2 — §2 bis : distinction explicite nom d'affichage (« Allia Consulting ») vs identifiant d'URL (« alliaconsuling », conservé). Aucun domicile ni câblage modifié.
+> v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → **partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002** ; ajout de l'entité **CVs** (donnée personnelle, RGPD). Les **emplacements** sont renseignés ; l'**écriture** via Graph Lists API reste à outiller (connecteur Graph MCP en écriture — `backlog/chantiers/T-0002.yaml`).
 > C'est **la couture M365** : les agents résolvent ce contrat pour savoir où lire et écrire les faits. Si M365 change, seule l'implémentation derrière ce contrat change ; les consommateurs ne bougent pas.
 
 ## 0. Objet
@@ -30,7 +31,11 @@ Dire où vit chaque **fait** dans M365, et garantir que tout fait **dérivé** p
 
 ## 2 bis. Domiciles M365 réels (partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002)
 
-**Site SharePoint** : `https://alliaconsuling.sharepoint.com/sites/AlliaConsuling`
+**Site SharePoint**
+- Nom d'affichage : *Allia Consulting*
+- Identifiant d'URL (figé à la création, conservé tel quel) : `https://alliaconsuling.sharepoint.com/sites/AlliaConsuling`
+
+> L'identifiant d'URL « alliaconsuling » (sans « t ») est volontairement conservé : il résout correctement et un identifiant technique n'a pas vocation à être renommé. Le nom lisible du site est « Allia Consulting ». Ne pas confondre les deux ni « corriger » l'URL.
 
 Tous les emplacements ci-dessous vivent sous ce site. Les agents les résolvent via MCP M365 ; aucune copie n'est faite dans le dépôt (les *données* vivent ici, les *règles* dans Git).
 
