@@ -93,3 +93,5 @@ proscrites:
 
 # Exception gouvernée : les droits M365 ne changent que par réconciliation au
 # moindre privilège d'une décision DÉJÀ promue (voir organisation.md §5).
+
+# test A0.5 — vérification agent-gardien CI
