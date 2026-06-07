@@ -11,6 +11,7 @@ adosse_a:
 # Ce que l'agent sait faire : une composition de skills versionnés.
 skills:
   - compte-rendu-reunion
+  - releve-de-decisions   # skill promu (T-0001) ; rend invocable la capacité emblématique du test A0.9
 
 # Comment il se comporte.
 resolution:

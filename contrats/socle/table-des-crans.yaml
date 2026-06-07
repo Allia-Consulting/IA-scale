@@ -1,4 +1,4 @@
-version: "1.1 — candidat"
+version: "1.2 — promu"
 statut: "contrat socle — fait foi"
 domicile: "contrats/socle/table-des-crans.yaml"
 autorite_de_promotion: "gardien du temple"
@@ -6,7 +6,7 @@ adosse_a:
   - "doctrine/doctrine.md (§6)"
   - "contrats/socle/organisation.md"
   - "contrats/socle/anonymisation.md"
-# Changelog : v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran). Aucun cran ni action modifié.
+# Changelog : v1.2 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé ; seul l'en-tête de statut/version évolue). v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran). Aucun cran ni action modifié.
 
 # cran = f( réversible ? · sort_de_la_firme ? · rayon_impact )
 crans:

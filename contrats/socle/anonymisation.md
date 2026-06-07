@@ -1,9 +1,9 @@
 # Anonymisation — Allia Consulting
 
-> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/anonymisation.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§6 et §9).
-> **Changelog** : v1.1 — déclencheur décidé par le gardien (§1) : trois cas (inter-client, entrée au canon partagé, publication externe) ; critère décisif = « changement de destinataire ».
+> **Changelog** : v1.2 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé ; seul l'en-tête de statut/version évolue ; les réserves juridiques du §7 restent ouvertes). v1.1 — déclencheur décidé par le gardien (§1) : trois cas (inter-client, entrée au canon partagé, publication externe) ; critère décisif = « changement de destinataire ».
 > ⚠️ **Exigence de conformité (RGPD, AI Act, NDA).** Ce document est un candidat *exécutable* ; ses paramètres juridiques doivent être validés par le gardien, idéalement avec un conseil. Je ne suis pas juriste.
 
 ## 0. Objet

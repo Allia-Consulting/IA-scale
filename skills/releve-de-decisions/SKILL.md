@@ -1,7 +1,8 @@
 # Relevé de décisions — Skill
 
 > **id** : `releve-de-decisions`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
+> **Version** : 1.0 — *promu*. **Nature** : skill.
+> **Changelog** : v1.0 — promu via boucle de promotion (procédure allégée), 7 juin 2026 ; alignement de l'en-tête sur le statut backlog (T-0001 déjà `promu`, PR #11). Numéro de version conservé (1.0) : c'est l'artefact livré et promu en PR #11, référencé tel quel par T-0001 et les dérivés en zone de proposition. Contenu inchangé.
 > **Domicile** : `skills/releve-de-decisions/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `doctrine/doctrine.md` (§6, §7), `contrats/socle/table-des-crans.yaml`, `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/modele-donnees.md`, `skills/compte-rendu-reunion/SKILL.md` (référence de format), `CLAUDE.md`.
 
@@ -115,4 +116,4 @@ Source : CR « Cadrage phase 1, projet Atlas » du 12/03
 
 ## 10. Évolution
 
-Ce skill est un **candidat** ; il est promu par le **gardien** en **procédure allégée** (portée locale, `doctrine.md` §5). Toute évolution suit la boucle de promotion (`doctrine.md` §7) avec **montée de version** en en-tête. Retour arrière = repointage.
+Ce skill est **promu** (procédure allégée, portée locale, `doctrine.md` §5). Toute évolution future suit la boucle de promotion (`doctrine.md` §7) avec **montée de version** en en-tête. Retour arrière = repointage.
