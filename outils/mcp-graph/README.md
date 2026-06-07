@@ -1,7 +1,7 @@
 # Serveur MCP — connecteur Microsoft Graph (Allia)
 
 > **Statut** : code de candidat — **ne se connecte à rien** tant que le gardien ne l'a pas configuré ni branché.
-> **Rattachement** : chantier `backlog/chantiers/T-0002.yaml` · couture M365 `contrats/socle/modele-donnees.md` (§2 bis, §3, §4).
+> **Rattachement** : chantier `backlog/chantiers/T-0002b.yaml` · couture M365 `contrats/socle/modele-donnees.md` (§2 bis, §3, §4).
 > **Périmètre de ce livrable** : le code + ce README. Rien d'autre (voir « Hors de ce livrable »).
 
 ## Ce que c'est
@@ -61,7 +61,7 @@ Branchement à un client MCP (ex. Claude Code) : déclarer un serveur stdio dont
 
 ## Hors de ce livrable (signalé, non fait)
 
-- **Mise à jour de `modele-donnees.md`** avec les endpoints/identifiants réels : viendra **après** le déploiement (étape ultérieure de T-0002), pas ici.
+- **Mise à jour de `modele-donnees.md`** avec les endpoints/identifiants réels : viendra **après** le déploiement (étape ultérieure de T-0002b), pas ici.
 - **App registration, consentement, octroi `write`, secret** : runbook du gardien.
 - **Journalisation M365** sur `Ressources-RH` / `CVs` (chantier `T-0003`) : prérequis à tout accès agent sur ces données, côté tenant.
 - **Aucune connexion réelle ni déploiement** n'a été effectué : ce code est inerte jusqu'à configuration.

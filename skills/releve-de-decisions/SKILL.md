@@ -1,8 +1,8 @@
 # Relevé de décisions — Skill
 
 > **id** : `releve-de-decisions`
-> **Version** : 1.1 — *promu*. **Nature** : skill.
-> **Changelog** : v1.1 — **CORRECTION du §7 (anonymisation)**, 7 juin 2026 : aligné sur `anonymisation.md` v1.3 — un relevé réutilisé **en interne** (même pour un autre client) reste **nominatif** ; l'anonymisation ne se déclenche qu'à la **sortie externe de la firme**. v1.0 — promu via boucle de promotion (procédure allégée) ; alignement sur le statut backlog (T-0001 `promu`, PR #11). Artefact référencé « v1.0 » par T-0001 et les dérivés.
+> **Version** : 1.2 — *promu*. **Nature** : skill.
+> **Changelog** : v1.2 — repointage du renvoi de câblage vers `T-0002b` après le découpage (PR #23) du chantier d'écriture Graph, 7 juin 2026 : le renvoi du §6 pointe désormais vers `T-0002b` (déploiement / écriture réelle). Aucun changement de comportement du skill. v1.1 — **CORRECTION du §7 (anonymisation)**, 7 juin 2026 : aligné sur `anonymisation.md` v1.3 — un relevé réutilisé **en interne** (même pour un autre client) reste **nominatif** ; l'anonymisation ne se déclenche qu'à la **sortie externe de la firme**. v1.0 — promu via boucle de promotion (procédure allégée) ; alignement sur le statut backlog (T-0001 `promu`, PR #11). Artefact référencé « v1.0 » par T-0001 et les dérivés.
 > **Domicile** : `skills/releve-de-decisions/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `doctrine/doctrine.md` (§6, §7), `contrats/socle/table-des-crans.yaml`, `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/modele-donnees.md`, `skills/compte-rendu-reunion/SKILL.md` (référence de format), `CLAUDE.md`.
 
@@ -63,7 +63,7 @@ Source : <CR « <objet> » du <date> | notes brutes>
 
 ## 6. Zone de proposition
 
-Le relevé est un **dérivé** : il s'écrit dans la **zone de proposition** (`modele-donnees.md` §3), jamais dans la source ; sa promotion en vérité est une **étape tracée**. **État du câblage** : l'écriture M365 n'est pas encore outillée (`modele-donnees.md` §4 — *partiellement câblé* ; écriture Graph = `T-0002`). En attendant, la zone de proposition est **simulée en local** (`zone-proposition/`).
+Le relevé est un **dérivé** : il s'écrit dans la **zone de proposition** (`modele-donnees.md` §3), jamais dans la source ; sa promotion en vérité est une **étape tracée**. **État du câblage** : l'écriture M365 n'est pas encore outillée (`modele-donnees.md` §4 — *partiellement câblé* ; écriture Graph = `T-0002b`). En attendant, la zone de proposition est **simulée en local** (`zone-proposition/`).
 
 ## 7. Anonymisation
 

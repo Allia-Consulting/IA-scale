@@ -1,6 +1,6 @@
 """Serveur MCP — connecteur Microsoft Graph (lecture liste + écriture zone de proposition).
 
-Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002.yaml`.
+Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`.
 
 Ce serveur expose DEUX opérations à un agent, via le Model Context Protocol :
 
