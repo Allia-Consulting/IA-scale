@@ -19,7 +19,7 @@ crans:
     conditions: "irréversible OU sort de la firme OU rayon d'impact large"
     qui_decide: "porte humaine (gardien ou rôle désigné) avant l'action"
   anonymisation:
-    conditions: "réutilisation de matière inter-client (porte automatique, orthogonale)"
+    conditions: "réutilisation inter-client, entrée au canon partagé, ou publication externe — porte automatique, orthogonale ; déclencheur détaillé dans anonymisation.md §1"
     qui_decide: "déclenchée par règle, sans humain ; voir anonymisation.md"
 
 # Évaluation : la première règle qui matche gagne.
@@ -56,9 +56,11 @@ actions:
   - id: publier_contenu_externe
     cran: valide
     pourquoi: "sort de la firme"
+    # Publication externe : passe AUSSI la porte d'anonymisation (cas (c), anonymisation.md §1).
   - id: envoyer_livrable_client
     cran: valide
     pourquoi: "sort de la firme"
+    # Livrable client = publication externe : passe AUSSI la porte d'anonymisation (cas (c), anonymisation.md §1).
   - id: merger_sur_main
     cran: valide
     qui: "gardien seulement"

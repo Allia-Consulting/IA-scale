@@ -1,6 +1,6 @@
 # Doctrine de gouvernance de l'entreprise augmentée — Allia Consulting
 
-> **Version** : 1.1 — *candidat*. Enrichie en lien avec la présentation « Talents & recrutement » (ajout du §10 bis). À promouvoir par le gardien du temple via la boucle de promotion (§7).
+> **Version** : 1.1 — *candidat*. Enrichie en lien avec la présentation « Talents & recrutement » (ajout du §10 bis) ; §6/§9 alignées sur `anonymisation.md` v1.1. À promouvoir par le gardien du temple via la boucle de promotion (§7).
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), chemin `/doctrine/doctrine.md`. **Ce fichier markdown est la version canonique.** Le PDF qui a circulé en est un *aperçu rendu* — un consommateur, jamais un double éditable.
 > **Autorité de promotion** : Gardien du temple.
@@ -99,7 +99,7 @@ Chaque type d'action porte un cran. Le cran se déduit de trois questions :
 | **auto** | réversible **et** interne **et** impact local | L'agent, seul | Créer l'espace SharePoint d'une mission |
 | **notifié** | réversible et interne, mais engage l'image ou est largement visible | L'agent agit ; le gardien est informé | Envoyer le message de nomination à l'équipe |
 | **validé** | irréversible **ou** sort de la firme **ou** rayon d'impact large | Porte humaine (gardien ou rôle désigné) avant l'action | Promouvoir un contrat socle ; envoyer un livrable au client |
-| **anonymisation** (porte automatique) | réutilisation de matière inter-client | Déclenchée par règle, sans humain | Générer un template à partir du livrable d'un autre client |
+| **anonymisation** (porte automatique) | réutilisation inter-client, entrée au canon partagé, ou publication externe — voir `anonymisation.md` pour le déclencheur complet | Déclenchée par règle, sans humain | Générer un template à partir du livrable d'un autre client |
 
 Deux compléments indissociables :
 
@@ -133,7 +133,7 @@ Comment une nouvelle version d'un bout du SI entre en service. C'est le cœur op
 
 ## 9. Confidentialité, conformité et qualité
 
-- **Confidentialité.** Les données restent dans M365, sans isolation par mission. La protection passe par l'anonymisation déclenchée à la réutilisation inter-client (§6), exécutable et tracée.
+- **Confidentialité.** Les données restent dans M365, sans isolation par mission. La protection passe par l'anonymisation, exécutable et tracée, déclenchée au changement de destinataire — réutilisation inter-client, entrée au canon partagé ou publication externe (§6 ; déclencheur complet : `contrats/socle/anonymisation.md` §1).
 - **Apprentissage inter-missions.** L'intelligence se compose entre missions (le véritable avantage qui compose), au prix d'une discipline d'anonymisation conforme RGPD, AI Act et NDA.
 - **Qualité — non optionnelle.** Comme les agents agissent en autonomie, lisent à travers les missions et apprennent entre elles, la seule barrière restante est l'évaluation et les garde-fous. L'autonomie augmente l'exigence d'évaluation et d'observabilité ; elle ne la réduit pas. Le gardien-agent filtre le faible risque contre politique ; le reste remonte à l'humain.
 

@@ -1,8 +1,9 @@
 # Allia Consulting — Design System
 
-> **Projet** : Allia Consulting, nativement IA à l'échelle
-> **Version** : 1.0 — Extraction du design system depuis les contenus éditoriaux v5.0
-> **Macro-narrative** : *Cabinet de conseil nativement IA agentique*
+> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Domicile** : `contrats/socle/design-system.md`. **Autorité de promotion** : gardien du temple.
+> **Adossé à** : `doctrine/doctrine.md` (§5), `contrats/socle/anonymisation.md` (§7).
+> **Changelog** : v1.1 — en-tête aligné sur le format socle standard ; domicile canonique corrigé (§9) ; renvoi normatif vers `anonymisation.md` ajouté (§7). **Aucun token visuel modifié** (couleurs, typo, espacements inchangés).
 
 Ce document définit les fondations visuelles et les composants de l'identité numérique d'Allia Consulting. Il sert de référence unique pour toute production web, design ou frontend du cabinet. Les tokens sont extraits directement de la maquette de référence afin de garantir leur exactitude.
 
@@ -290,6 +291,8 @@ Le design ne se sépare jamais du discours. Quatre règles éditoriales engagent
 3. **Anonymisation totale, contexte maximal** — Cas clients sans nom mais maximalement spécifiés (secteur, taille, géo, chiffres).
 4. **Signature collective** — Allia signe institutionnellement. Compensation GEO : densité factuelle, FAQ structurée, Schema.org.
 
+> **Renvoi normatif — anonymisation.** Le design *reflète* l'anonymisation (cas clients sans nom, contexte maximal), il ne la *définit pas*. La règle qui fait foi — déclencheur, champs, seuil, transformation — est `contrats/socle/anonymisation.md` (§1 et §7). En cas de divergence, ce contrat prime sur le présent document.
+
 ---
 
 ## 8. Accessibilité — points de vigilance
@@ -303,8 +306,8 @@ Le design ne se sépare jamais du discours. Quatre règles éditoriales engagent
 
 ## 9. Notes d'implémentation GitHub
 
-- Déposer ce fichier sous `/design-system/README.md` ou `/docs/design-system.md` dans le dépôt de gestion.
-- Les variables CSS de la section 2 peuvent être extraites dans un `tokens.css` partagé.
-- Toute évolution de palette ou de typo doit faire l'objet d'une montée de version (en-tête de ce document).
+- **Domicile canonique** : `contrats/socle/design-system.md` (ce fichier). C'est l'unique source de vérité du design system. On le **consomme**, on ne le **copie pas** : les surfaces (sites, outils, dépôts de gestion) référencent cette version et la résolvent à l'exécution, plutôt que d'en garder un double éditable.
+- Les variables CSS de la section 2 peuvent être extraites dans un `tokens.css` partagé — généré *à partir de* ce fichier, jamais édité en parallèle.
+- Toute évolution (palette, typo, composants) suit la **boucle de promotion** : candidat → avis d'impact → promotion par le gardien, avec montée de version en en-tête. Retour arrière = repointage.
 
 *Document généré comme référence de design system pour le projet « Allia Consulting, nativement IA à l'échelle ».*
