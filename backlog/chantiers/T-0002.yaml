@@ -1,0 +1,21 @@
+id: T-0002
+titre: "Connecteur Graph MCP en écriture (zone-de-proposition réelle)"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "un serveur MCP exposant list_items (GET) et create_list_item (POST) sur Microsoft Graph"
+  - "app registration Entra ID avec Sites.Selected sur AlliaConsuling (runbook humain)"
+  - "mise à jour de modele-donnees.md avec les endpoints réels"
+depend_de: ["A0.7-read"]
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "L'agent lit la liste Missions via Graph et liste les éléments réels"
+  - "L'agent crée un item dans Zone-de-proposition sans toucher les sources"
+  - "L'app registration est au moindre privilège (Sites.Selected uniquement)"
+  - "Journalisation active sur Ressources-RH et CVs avant accès agent"
+rayon_impact: local
+statut: à_faire
+note: "Chantier identifié en session fondation 7 juin 2026 lors du câblage A0.7. Le code du serveur MCP peut être préparé en candidat (Claude Code), mais l'app registration et le déploiement restent runbook humain (plan §2 + garde-fous CLAUDE.md)."

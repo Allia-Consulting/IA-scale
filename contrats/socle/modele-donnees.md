@@ -3,7 +3,7 @@
 > **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/modele-donnees.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 et §8), `contrats/socle/organisation.md`.
-> **Changelog** : v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → câblés (session fondation 7 juin 2026) ; ajout de l'entité **CVs** (donnée personnelle, RGPD).
+> **Changelog** : v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → **partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002** ; ajout de l'entité **CVs** (donnée personnelle, RGPD). Les **emplacements** sont renseignés ; l'**écriture** via Graph Lists API reste à outiller (connecteur Graph MCP en écriture — `backlog/chantiers/T-0002.yaml`).
 > C'est **la couture M365** : les agents résolvent ce contrat pour savoir où lire et écrire les faits. Si M365 change, seule l'implémentation derrière ce contrat change ; les consommateurs ne bougent pas.
 
 ## 0. Objet
@@ -18,7 +18,7 @@ Dire où vit chaque **fait** dans M365, et garantir que tout fait **dérivé** p
 
 ## 2. Les entités (les faits)
 
-| Entité | Description | Domicile M365 *(câblé — session fondation 7 juin 2026)* | Identifiant stable | Nature |
+| Entité | Description | Domicile M365 *(partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002)* | Identifiant stable | Nature |
 |---|---|---|---|---|
 | Mission | une affaire | Liste « Missions » | code mission | source |
 | Temps | temps passé | Liste « Temps » | id saisie | source |
@@ -28,7 +28,7 @@ Dire où vit chaque **fait** dans M365, et garantir que tout fait **dérivé** p
 | Compte / Client | référentiel des clients | Liste « Comptes » | id compte | source |
 | CVs | CV d'une ressource | Bibliothèque « CVs » | nom du fichier | source · **données personnelles (RGPD)** |
 
-## 2 bis. Domiciles M365 réels (câblés — session fondation 7 juin 2026)
+## 2 bis. Domiciles M365 réels (partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002)
 
 **Site SharePoint** : `https://alliaconsuling.sharepoint.com/sites/AlliaConsuling`
 
@@ -43,7 +43,7 @@ Tous les emplacements ci-dessous vivent sous ce site. Les agents les résolvent 
 | Liste « Comptes » | site AlliaConsuling / Liste Comptes | lecture/écriture selon cran | référentiel clients |
 | Liste « Ressources-Profil » | site AlliaConsuling / Liste Ressources-Profil | **lecture** | profil de ressource (compétences, séniorité) |
 | Liste « Ressources-RH » | site AlliaConsuling / Liste Ressources-RH | **accès restreint** | ⚠️ **journalisation à activer** — données RH sensibles |
-| Liste « Zone-de-proposition » | site AlliaConsuling / Liste Zone-de-proposition | **écriture (dérivés)** | domicile concret de la zone de proposition (§3) |
+| Liste « Zone-de-proposition » | site AlliaConsuling / Liste Zone-de-proposition | **écriture (dérivés)** | domicile concret de la zone de proposition (§3). **Écriture via Graph Lists API — nécessite le connecteur Graph MCP en écriture (voir `T-0002`).** En attendant : zone de proposition **simulée en local** (`zone-proposition/`). |
 | Bibliothèque « Livrables » | site AlliaConsuling / Bibliothèque Livrables | lecture/écriture selon cran | documents produits |
 | Bibliothèque « Propositions » | site AlliaConsuling / Bibliothèque Propositions | lecture/écriture selon cran | propositions commerciales |
 | Bibliothèque « Capitalisation » | site AlliaConsuling / Bibliothèque Capitalisation | lecture/écriture selon cran | matière capitalisée (canon — porte anonymisation à la réutilisation inter-client) |
@@ -57,6 +57,6 @@ Un espace **distinct de la source** où les agents écrivent les faits dérivés
 
 ## 4. État du câblage
 
-Les domiciles concrets (site, listes, bibliothèques) sont **câblés — session fondation 7 juin 2026** (voir §2 bis). Le modèle n'est plus seulement *logique* : les emplacements réels sont renseignés.
+Les domiciles concrets (site, listes, bibliothèques) sont **partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002** (voir §2 bis). Les **emplacements** sont renseignés (lecture documentée) ; l'**écriture** dans les listes — notamment `Zone-de-proposition` — requiert un connecteur **Graph MCP en écriture**, identifié comme chantier `T-0002`. En attendant, la zone de proposition est **simulée en local** (`zone-proposition/`).
 
 Restent à confirmer par le gardien (runbook humain, hors agent) : l'activation de la **journalisation** sur `Ressources-RH` et `CVs`, et la projection des **droits d'accès** au moindre privilège (`organisation.md` §5). Aucun droit ne se règle à la main par un agent.
