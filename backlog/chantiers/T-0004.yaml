@@ -1,0 +1,41 @@
+id: T-0004
+titre: "Promouvoir le skill « compte rendu de réunion » (alignement candidat→promu)"
+capacite: "Connaissance, contenu & IP / Méthodes & offres (skills)"
+phase: 0
+type_action: edition_contrat_local
+cran: valide            # proposition en branche = auto (agent) ; promotion du skill = gardien (procédure allégée)
+produit:
+  - "skills/compte-rendu-reunion/SKILL.md : en-tête « 1.0 — candidat » → « 1.0 — promu » + ligne de changelog datée ; corps inchangé"
+depend_de: []
+# Aucune dépendance en attente : les contrats consommés ci-dessous sont TOUS promus depuis la PR #15
+# (doctrine 1.2, table-des-crans 1.2, anonymisation 1.2, design-system 1.2, modele-donnees 1.3).
+# Tâche volontairement SANS sentinelle RUNBOOK-HUMAIN : elle est agent-exécutable (édition en
+# branche + ouverture de PR = cran auto ; seule la promotion finale est la porte du gardien).
+contrats_concernes:
+  - "contrats/socle/design-system.md"
+  - "contrats/socle/anonymisation.md"
+  - "contrats/socle/table-des-crans.yaml"
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "L'en-tête du skill passe de « 1.0 — candidat » à « 1.0 — promu » (numéro de version conservé : c'est l'artefact déjà livré, cité « v1.0 » par le dérivé CR-test-A0.6)."
+  - "Une ligne de changelog datée « promu via boucle de promotion » est ajoutée ; le corps du skill (objet, procédure, format, exemple) reste byte-inchangé."
+  - "La phrase de statut de la section 10 « Évolution » est alignée (ne dit plus « Ce skill est un candidat »)."
+  - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien) ; rayon effectif nul (promotion à contenu inchangé)."
+  - "L'agent n'a pas mergé : il a ouvert une PR (candidat). La promotion reste la décision du gardien."
+rayon_impact: local
+statut: à_faire
+note: >
+  Pilote du TEST DE SORTIE A0.9 (plan §5). Cette tâche existe pour qu'un agent puisse dérouler
+  la boucle complète de bout en bout : pull (résoudre le canon) → action (préparer la promotion
+  du skill en branche) → candidat (ouvrir une PR) → l'agent-gardien poste l'avis d'impact →
+  le gardien promeut (merge) → propagation (le run suivant pull la nouvelle version) →
+  retour arrière possible en une action (repointage).
+
+  Pourquoi compte-rendu-reunion : (1) c'est l'entrée canonique de releve-de-decisions (déjà
+  promu, T-0001), pourtant le skill CR est resté « candidat » — incohérence d'altitude ;
+  (2) l'agent-gardien l'a explicitement signalé sur la PR #15 (consommateur des contrats socle
+  non promu). Promouvoir CR ferme ce manque. La tâche est minimale, réversible et à rayon local :
+  un bon support de démonstration A0.9 sans confondre la boucle avec une revue de contenu.
+
+  Mode opératoire attendu de l'agent : reproduire à l'identique le geste appliqué à
+  releve-de-decisions en PR #15 (en-tête + changelog + phrase §10), version 1.0 conservée.
