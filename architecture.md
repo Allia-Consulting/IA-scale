@@ -44,7 +44,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
    *Pourquoi* : l'interne reste **nominatif** — c'est l'avantage qui compose (apprentissage inter-missions). Le déclencheur exact et le critère font foi dans `contrats/socle/anonymisation.md` §1 (et la version machine `contrats/socle/table-des-crans.yaml`).
 
 4. **La logique d'écriture ne tourne PAS sur le poste du fondateur.**
-   *Pourquoi* : l'infrastructure doit **tourner sans lui** (événementiel, disponible, sans dépendance à une machine personnelle). **Hébergement cible : Azure.** **État : décidé, non déployé** (le code du connecteur existe — `outils/mcp-graph/` ; son déploiement reste un runbook, `backlog/chantiers/T-0002.yaml`).
+   *Pourquoi* : l'infrastructure doit **tourner sans lui** (événementiel, disponible, sans dépendance à une machine personnelle). **Hébergement cible : Azure.** **État : décidé, non déployé** (le code du connecteur existe — `outils/mcp-graph/` ; son déploiement reste un runbook, `backlog/chantiers/T-0002b.yaml`).
 
 5. **Calcul pur vs travail de jugement** — deux natures d'exécution à ne pas confondre :
    - **calcul pur** : fonction **déterministe** (ex. un P&L) — entrées → sortie reproductible, pas de jugement ;
@@ -76,14 +76,14 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Octroi du rôle `write` sur le site AlliaConsuling | **FAIT** — accordé via Graph, confirmé | Graph `POST /sites/{id}/permissions` |
 | Hébergement de la fonction (Azure, événementiel) | **À FAIRE** (décidé, non déployé — Partie B.4) | portail Azure |
 
-> La partie **runbook humain** de l'app M365/Entra (app registration, `Sites.Selected`, consentement admin, secret, octroi du rôle `write` sur le site) est **réalisée**. Reste à faire : le **code MCP est écrit mais non déployé** (`outils/mcp-graph/`), et l'**hébergement Azure** — la fonction qui fait tourner la logique d'écriture — reste **à faire**. Garde-fous : `CLAUDE.md` / `backlog/plan.md` §2. Suivi : `backlog/chantiers/T-0002.yaml` — **note de bookkeeping** : le statut de `T-0002` y est encore `à_faire` et **ne reflète pas cet avancement partiel** (à traiter séparément, hors de ce document).
+> La partie **runbook humain** de l'app M365/Entra (app registration, `Sites.Selected`, consentement admin, secret, octroi du rôle `write` sur le site) est **réalisée** — chantier **`T-0002a`** (`promu`). Reste à faire : le **code MCP est écrit mais non déployé** (`outils/mcp-graph/`), et l'**hébergement Azure** — la fonction qui fait tourner la logique d'écriture — reste **à faire** : chantier **`T-0002b`** (`à_faire`). Garde-fous : `CLAUDE.md` / `backlog/plan.md` §2. *(Le découpage de l'ancien chantier en `T-0002a` / `T-0002b` a résolu la note de bookkeeping antérieure : les statuts du backlog reflètent désormais l'avancement.)*
 
 ### Couche M365
 | Composant | État | Source de vérité |
 |---|---|---|
 | Site SharePoint AlliaConsuling | **FAIT** — site et listes existants au tenant | `contrats/socle/modele-donnees.md` §2 bis + tenant M365 |
-| Listes du modèle de données (Missions, Temps, …) | **PARTIEL** — listes **existantes au tenant** (lecture) **FAIT** ; **écriture** via Graph = `T-0002` (à faire) | `modele-donnees.md` §2 bis / §4 + tenant |
-| Zone de proposition | **PARTIEL** — **réelle** (Liste « Zone-de-proposition ») **À FAIRE** (`T-0002`) ; **simulée en local** (`zone-proposition/`) **FAIT** | `modele-donnees.md` §3 / §4 |
+| Listes du modèle de données (Missions, Temps, …) | **PARTIEL** — listes **existantes au tenant** (lecture) **FAIT** ; **écriture** via Graph = `T-0002b` (à faire) | `modele-donnees.md` §2 bis / §4 + tenant |
+| Zone de proposition | **PARTIEL** — **réelle** (Liste « Zone-de-proposition ») **À FAIRE** (`T-0002b`) ; **simulée en local** (`zone-proposition/`) **FAIT** | `modele-donnees.md` §3 / §4 |
 | Audit / journalisation sur `Ressources-RH` et `CVs` | **À FAIRE** (à activer avant tout accès agent — `T-0003`, runbook) | `modele-donnees.md` §2 bis + tenant |
 | Écrans de saisie (SharePoint puis Power Apps) | **À FAIRE** (décision Partie B.1 ; non construits) | tenant M365 |
 
@@ -93,7 +93,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Skill `compte-rendu-reunion` | **FAIT** — promu (v1.1) | `skills/compte-rendu-reunion/SKILL.md` |
 | Skill `releve-de-decisions` | **FAIT** — promu (v1.1) | `skills/releve-de-decisions/SKILL.md` |
 | Profil `agent-redaction` (compose les deux skills) | **FAIT** (présent ; en-tête candidat v1.0) | `agents/agent-redaction/profil.yaml` |
-| Serveur MCP Graph (`list_items`, `create_list_item`) | **PARTIEL** — **codé, non déployé** (code dormant) | `outils/mcp-graph/` + `T-0002` |
+| Serveur MCP Graph (`list_items`, `create_list_item`) | **PARTIEL** — **codé, non déployé** (code dormant) | `outils/mcp-graph/` + `T-0002b` |
 | Agent métier « kick-off » | **À FAIRE** — **conçu, non construit** | `backlog/plan.md` §6 (T-1.2) |
 
 ---
