@@ -1,9 +1,9 @@
 # Anonymisation — Allia Consulting
 
-> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.3 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/anonymisation.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§6 et §9).
-> **Changelog** : v1.2 — promu via boucle de promotion, 7 juin 2026 (contenu inchangé ; seul l'en-tête de statut/version évolue ; les réserves juridiques du §7 restent ouvertes). v1.1 — déclencheur décidé par le gardien (§1) : trois cas (inter-client, entrée au canon partagé, publication externe) ; critère décisif = « changement de destinataire ».
+> **Changelog** : v1.3 — **CORRECTION du déclencheur** (§1), 7 juin 2026 : l'anonymisation se déclenche à la **sortie externe de la firme** (publication externe, livrable rendu hors firme), et **non** sur la réutilisation inter-client **interne** — qui reste **nominative** (c'est l'avantage qui compose, doctrine §9). L'inter-client interne n'était pas censé déclencher l'anonymisation ; le critère décisif devient « la matière quitte-t-elle la firme vers l'extérieur ? ». v1.2 — promu via boucle de promotion (contenu inchangé). v1.1 — déclencheur décidé par le gardien (§1) ; critère antérieur (corrigé en v1.3) = « changement de destinataire ».
 > ⚠️ **Exigence de conformité (RGPD, AI Act, NDA).** Ce document est un candidat *exécutable* ; ses paramètres juridiques doivent être validés par le gardien, idéalement avec un conseil. Je ne suis pas juriste.
 
 ## 0. Objet
@@ -12,11 +12,16 @@ Rendre l'anonymisation **exécutable**, pas une intention : dire **quand** elle 
 
 ## 1. Déclencheur — quand
 
-Déclenche l'anonymisation, sans humain, dans trois cas : (a) réutilisation de matière d'un client pour un autre client ; (b) entrée dans le canon partagé (template, benchmark, skill, exemple) ; (c) toute publication externe à l'organisation (livrable client, publication, site).
+Déclenche l'anonymisation, sans humain, à la **sortie externe de la firme** :
 
-Ne déclenche pas : réutilisation chez le même client / dans la même mission ; matière purement interne n'ayant jamais touché de donnée client.
+- toute **publication externe** (site internet, marketing, publication) ;
+- tout **livrable rendu hors de la firme** (livrable client).
 
-Critère décisif : « la matière change-t-elle de destinataire » (autre client, canon, extérieur), et non « interne vs externe ».
+**Ne déclenche pas** la **réutilisation inter-client interne** : une matière qui circule entre missions ou entre clients, *à l'intérieur de la firme*, reste **nominative**. C'est l'avantage qui compose — l'apprentissage inter-missions (doctrine §9).
+
+**Critère décisif** : « la matière **quitte-t-elle la firme vers l'extérieur** ? » — et **non** « change-t-elle de client ? ».
+
+**Exemple validé.** Un agent capitalise une mission et génère un insight destiné au **site** (sortie externe) → l'anonymisation est **appliquée**, et un message part au **responsable communication**, qui valide la publication (validation **métier**, hors GitHub). En revanche, la même matière réutilisée d'une mission à l'autre **à l'intérieur de la firme** reste **nominative** : aucune anonymisation.
 
 ## 2. Champs à traiter — quoi
 
@@ -45,7 +50,7 @@ Porte **automatique** (déclenchée par règle), orthogonale aux crans. Elle est
 
 ## 7. Décisions du gardien
 
-- **Déclencheur : décidé (v1.1).** Les trois cas et le critère « changement de destinataire » sont arrêtés en §1.
+- **Déclencheur : décidé et corrigé (v1.3).** Le déclenchement est la **sortie externe de la firme** (publication externe, livrable hors firme) ; la réutilisation inter-client **interne** ne déclenche pas et reste nominative. Critère décisif arrêté en §1 : « la matière quitte-t-elle la firme vers l'extérieur ? ». *(Corrige le critère antérieur « changement de destinataire » de la v1.1.)*
 
 Restent à confirmer :
 
