@@ -1,8 +1,9 @@
 # Modèle de données — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/modele-donnees.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 et §8), `contrats/socle/organisation.md`.
+> **Changelog** : v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → câblés (session fondation 7 juin 2026) ; ajout de l'entité **CVs** (donnée personnelle, RGPD).
 > C'est **la couture M365** : les agents résolvent ce contrat pour savoir où lire et écrire les faits. Si M365 change, seule l'implémentation derrière ce contrat change ; les consommateurs ne bougent pas.
 
 ## 0. Objet
@@ -17,19 +18,45 @@ Dire où vit chaque **fait** dans M365, et garantir que tout fait **dérivé** p
 
 ## 2. Les entités (les faits)
 
-| Entité | Description | Domicile M365 *(à câbler au bloc 6)* | Identifiant stable | Nature |
+| Entité | Description | Domicile M365 *(câblé — session fondation 7 juin 2026)* | Identifiant stable | Nature |
 |---|---|---|---|---|
-| Mission | une affaire | site / liste « Missions » | code mission | source |
-| Temps | temps passé | liste « Temps » | id saisie | source |
-| Imputation | rattachement temps → mission | liste « Imputations » | id | source / dérivé |
-| Livrable | document produit | bibliothèque de la mission | id document | source |
-| Frais | frais de mission | liste « Frais » | id | source |
-| Compte / Client | référentiel des clients | liste « Comptes » | id compte | source |
+| Mission | une affaire | Liste « Missions » | code mission | source |
+| Temps | temps passé | Liste « Temps » | id saisie | source |
+| Imputation | rattachement temps → mission | Liste « Imputations » | id | source / dérivé |
+| Livrable | document produit | Bibliothèque « Livrables » | id document | source |
+| Frais | frais de mission | Liste « Frais » | id | source |
+| Compte / Client | référentiel des clients | Liste « Comptes » | id compte | source |
+| CVs | CV d'une ressource | Bibliothèque « CVs » | nom du fichier | source · **données personnelles (RGPD)** |
+
+## 2 bis. Domiciles M365 réels (câblés — session fondation 7 juin 2026)
+
+**Site SharePoint** : `https://alliaconsuling.sharepoint.com/sites/AlliaConsuling`
+
+Tous les emplacements ci-dessous vivent sous ce site. Les agents les résolvent via MCP M365 ; aucune copie n'est faite dans le dépôt (les *données* vivent ici, les *règles* dans Git).
+
+| Ressource M365 | Chemin | Accès agent | Notes |
+|---|---|---|---|
+| Liste « Missions » | site AlliaConsuling / Liste Missions | lecture/écriture selon cran | source des affaires |
+| Liste « Temps » | site AlliaConsuling / Liste Temps | lecture/écriture selon cran | — |
+| Liste « Imputations » | site AlliaConsuling / Liste Imputations | lecture/écriture selon cran | rattachement temps → mission |
+| Liste « Frais » | site AlliaConsuling / Liste Frais | lecture/écriture selon cran | — |
+| Liste « Comptes » | site AlliaConsuling / Liste Comptes | lecture/écriture selon cran | référentiel clients |
+| Liste « Ressources-Profil » | site AlliaConsuling / Liste Ressources-Profil | **lecture** | profil de ressource (compétences, séniorité) |
+| Liste « Ressources-RH » | site AlliaConsuling / Liste Ressources-RH | **accès restreint** | ⚠️ **journalisation à activer** — données RH sensibles |
+| Liste « Zone-de-proposition » | site AlliaConsuling / Liste Zone-de-proposition | **écriture (dérivés)** | domicile concret de la zone de proposition (§3) |
+| Bibliothèque « Livrables » | site AlliaConsuling / Bibliothèque Livrables | lecture/écriture selon cran | documents produits |
+| Bibliothèque « Propositions » | site AlliaConsuling / Bibliothèque Propositions | lecture/écriture selon cran | propositions commerciales |
+| Bibliothèque « Capitalisation » | site AlliaConsuling / Bibliothèque Capitalisation | lecture/écriture selon cran | matière capitalisée (canon — porte anonymisation à la réutilisation inter-client) |
+| Bibliothèque « CVs » | site AlliaConsuling / Bibliothèque CVs | **lecture** | ⚠️ **données personnelles (RGPD) — journalisation à activer** |
+
+> **Garde-fous (runbook humain — hors agent).** Activer la **journalisation** sur `Ressources-RH` et `CVs` avant tout accès agent ; les droits M365 ne se règlent jamais à la main par un agent mais par réconciliation au moindre privilège d'une décision promue (`organisation.md` §5). La présence d'un domicile dans cette table ne vaut pas ouverture d'accès.
 
 ## 3. La zone de proposition
 
-Un espace **distinct de la source** (liste, bibliothèque ou dossier dédié) où les agents écrivent les faits dérivés — marge calculée, imputation proposée, template anonymisé. La promotion déplace le fait vers la source, de façon tracée. **On n'écrit jamais un dérivé directement dans la source.**
+Un espace **distinct de la source** où les agents écrivent les faits dérivés — marge calculée, imputation proposée, template anonymisé. Domicile concret câblé : **Liste « Zone-de-proposition »** (§2 bis). La promotion déplace le fait vers la source, de façon tracée. **On n'écrit jamais un dérivé directement dans la source.**
 
-## 4. Décisions du gardien à confirmer (au bloc 6)
+## 4. État du câblage
 
-Les domiciles concrets (noms réels de sites, listes, bibliothèques) seront **câblés quand on connectera M365** (bloc 6). Aujourd'hui, le modèle est *logique* ; les emplacements réels restent « à confirmer ». Le moment venu, je pourrai explorer ta structure SharePoint pour pré-remplir cette table — avec ton accord.
+Les domiciles concrets (site, listes, bibliothèques) sont **câblés — session fondation 7 juin 2026** (voir §2 bis). Le modèle n'est plus seulement *logique* : les emplacements réels sont renseignés.
+
+Restent à confirmer par le gardien (runbook humain, hors agent) : l'activation de la **journalisation** sur `Ressources-RH` et `CVs`, et la projection des **droits d'accès** au moindre privilège (`organisation.md` §5). Aucun droit ne se règle à la main par un agent.
