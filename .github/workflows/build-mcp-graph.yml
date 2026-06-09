@@ -1,0 +1,93 @@
+# Preuve de conteneurisation — MCP Graph (T-0002b-2, part agent).
+#
+# OUTILLAGE DE VÉRIFICATION (même nature que conformite.yml) — PAS du déploiement.
+# Sur chaque PR/push touchant le connecteur, ce workflow BUILD l'image linux/amd64 EN LOCAL dans
+# le runner, prouve `import server` (l'angle mort de T-0002b-1 : custom_route / stateless_http /
+# run(transport="streamable-http") existent-ils dans le SDK résolu ?), puis sonde /healthz.
+# Il NE POUSSE RIEN, ne se connecte à aucun registre, ne détient aucun secret. L'image ne quitte
+# jamais le runner (load: true, push: false). La création de l'ACR et le push restent un RUNBOOK
+# HUMAIN (porte du gardien), hors de ce workflow.
+name: Build MCP Graph — preuve image (build pur, sans push)
+
+on:
+  pull_request:
+    paths:
+      - 'outils/mcp-graph/**'
+      - '.github/workflows/build-mcp-graph.yml'
+  push:
+    paths:
+      - 'outils/mcp-graph/**'
+      - '.github/workflows/build-mcp-graph.yml'
+
+# Strict minimum : lire le code. Aucune écriture, aucun jeton de registre, aucun OIDC.
+permissions:
+  contents: read
+
+jobs:
+  build-et-preuve:
+    name: Build amd64 + import réel + sonde /healthz
+    runs-on: ubuntu-latest   # déjà amd64 — image mono-plateforme, pas besoin de QEMU
+    steps:
+      # (1) Récupérer le code.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # (2) Buildx (moteur de build ; ne pousse rien par lui-même).
+      - name: Configurer Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # (3) Construire l'image et la CHARGER dans le daemon local du runner (load: true, push: false).
+      #     L'image reste sur le runner : elle ne part vers aucun registre.
+      - name: Build image (linux/amd64, local — aucun push)
+        uses: docker/build-push-action@v6
+        with:
+          context: outils/mcp-graph
+          file: outils/mcp-graph/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: allia-mcp-graph:test
+
+      # (4) PREUVE (a) — IMPORT RÉEL. Avec les vraies dépendances installées dans l'image, on importe
+      #     le module : cela exécute `FastMCP(..., stateless_http=True)` et le décorateur
+      #     `@mcp.custom_route("/healthz", ...)` au chargement. Si l'API du SDK diffère, l'import échoue
+      #     ICI (échec dur) — c'est exactement l'angle mort que T-0002b-1 n'avait pas pu lever.
+      - name: Preuve (a) — import réel du serveur
+        run: |
+          set -euo pipefail
+          docker run --rm allia-mcp-graph:test python -c "import server; print('import OK')"
+
+      # (5) PREUVE (b) — DÉMARRAGE + SONDE /healthz. On démarre le conteneur SANS aucune config M365
+      #     (le serveur doit démarrer inerte ; /healthz est liveness pur). Si /healthz répond 200
+      #     {"status":"ok"}, on prouve aussi — par construction — que le serveur écoute bien sur
+      #     0.0.0.0:8000 (sinon le curl depuis le runner échouerait).
+      - name: Preuve (b) — démarrage + sonde /healthz (host 0.0.0.0, sans config M365)
+        run: |
+          set -euo pipefail
+          docker run -d --name mcp-test -p 8000:8000 allia-mcp-graph:test
+          ok=""
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/healthz -o /tmp/health.json 2>/dev/null; then
+              ok="yes"; break
+            fi
+            sleep 1
+          done
+          echo "----- logs du conteneur -----"
+          docker logs mcp-test || true
+          echo "-----------------------------"
+          if [ -z "$ok" ]; then
+            echo "::error::/healthz n'a pas répondu (200) — le serveur n'écoute pas sur 0.0.0.0:8000. Voir logs ci-dessus (cas du désaccord SDK : FASTMCP_HOST non honoré ?)."
+            exit 1
+          fi
+          echo "Réponse /healthz : $(cat /tmp/health.json)"
+          # Vérifie le corps exact attendu : {"status":"ok"}.
+          if ! grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' /tmp/health.json; then
+            echo "::error::Corps /healthz inattendu (attendu {\"status\":\"ok\"})."
+            exit 1
+          fi
+          echo "Sonde /healthz OK — 200 + {\"status\":\"ok\"} sans config M365 (liveness pur)."
+
+      # (6) Jeter le conteneur (l'image et le conteneur ne survivent pas au runner).
+      - name: Nettoyer le conteneur de test
+        if: always()
+        run: docker rm -f mcp-test || true

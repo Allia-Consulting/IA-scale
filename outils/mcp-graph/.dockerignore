@@ -1,0 +1,10 @@
+# Ce qui ne doit JAMAIS entrer dans l'image (aucun secret, aucun environnement local résolu).
+.env
+.env.example
+.venv/
+__pycache__/
+*.pyc
+README.md
+.gitignore
+Dockerfile
+.dockerignore
