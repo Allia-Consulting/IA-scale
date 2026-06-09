@@ -1,17 +1,22 @@
 # Serveur MCP — connecteur Microsoft Graph (Allia)
 
-> **Statut** : code de candidat — **ne se connecte à rien** tant que le gardien ne l'a pas configuré ni branché.
-> **Rattachement** : chantier `backlog/chantiers/T-0002b.yaml` · couture M365 `contrats/socle/modele-donnees.md` (§2 bis, §3, §4).
-> **Périmètre de ce livrable** : le code + ce README. Rien d'autre (voir « Hors de ce livrable »).
+> **Statut** : code de candidat — **ne se connecte à rien** tant qu'il n'est ni configuré ni branché.
+> **Rattachement** : chantier `backlog/chantiers/T-0002b.yaml` (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée) · couture M365 `contrats/socle/modele-donnees.md` (§2 bis, §3, §4).
+> **Périmètre de ce livrable** : le code + ce README + `.env.example`. Rien d'autre (voir « Hors de ce livrable »).
 
 ## Ce que c'est
 
-Un petit serveur [Model Context Protocol](https://modelcontextprotocol.io) qui donne à un agent **deux** opérations sur Microsoft Graph, et deux seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **deux** opérations sur Microsoft Graph, et deux seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
 | `list_items(list_id, top=50)` | **lecture** | `GET /sites/{site}/lists/{list}/items?$expand=fields` — lit les éléments d'une liste SharePoint du site AlliaConsuling. |
 | `create_list_item(fields)` | **écriture** | `POST /sites/{site}/lists/{PROPOSITION}/items` — crée un élément **uniquement** dans la liste « Zone-de-proposition ». |
+
+## Transport HTTP streamable et endpoint de santé
+
+- **Transport** : HTTP **streamable** — endpoint MCP `/mcp` (sous-chemin par défaut du SDK). Le serveur est instancié **stateless** (`FastMCP(..., stateless_http=True)`) : pas de session persistante côté serveur, exigence de l'hébergement Azure Container Apps (déploiement = chantier `T-0002b-3`).
+- **Santé** : endpoint **séparé** `/healthz` — `GET` → `200 {"status": "ok"}`, **liveness pur** (ne touche pas Graph, n'acquiert aucun jeton). Les sondes de l'hébergement visent `/healthz`, **jamais** `/mcp` (qui attend du JSON-RPC POST).
 
 ## Le garde-fou structurel : on n'écrit que dans la zone de proposition
 
@@ -22,46 +27,47 @@ Un petit serveur [Model Context Protocol](https://modelcontextprotocol.io) qui d
 
 Il est donc *structurellement* impossible d'écrire dans une source : l'écriture ne peut viser que la zone de proposition. `list_items` (lecture) reste libre de viser n'importe quelle liste du site, selon le cran applicable.
 
-## Configuration (par le gardien, à l'exécution — aucun secret dans le dépôt)
+## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
-Le serveur lit sa configuration **dans l'environnement**, au moment d'un appel d'outil (jamais à l'import). Variables attendues (voir `.env.example` ; copier en `.env`, qui est ignoré par git) :
+L'authentification vers Microsoft Graph passe par une **identité managée** (managed identity), **jamais** par un secret applicatif. Le credential est choisi à l'exécution selon `AZURE_ENV` :
+
+- **`prod`** (défaut sûr) : `ManagedIdentityCredential(client_id=AZURE_CLIENT_ID)` — l'identité **user-assigned** `id-allia-mcp-graph`. Type **spécifique** (et non `DefaultAzureCredential` nu) : on évite qu'une chaîne de fallback ramasse silencieusement une autre identité (moindre privilège strict).
+- **`local`** : `DefaultAzureCredential()` — découvre `az login` / VS Code (l'identité managée n'existe pas hors d'Azure).
+
+Le jeton est acquis sur le scope `https://graph.microsoft.com/.default` et aucun autre. **Aucun secret Graph n'est lu, stocké ni injecté.** Les droits effectifs sont bornés en amont par l'octroi `Sites.Selected` + `write` sur le **seul** site AlliaConsuling, accordé à l'identité managée (runbook du gardien `T-0002a-bis`, fait) — **non fait ici**.
+
+> **Deux frontières à ne pas confondre.** Ce qui précède concerne la **sortie** (le service appelle Graph) : zéro secret. **Qui a le droit d'appeler le service** (`/mcp`) est une **autre** frontière — l'authentification d'**entrée** (Easy Auth de l'hébergement), portée par le chantier `T-0002b-4`, **hors de ce code**. Ce connecteur Graph ne reprend, lui, **aucun** secret.
+
+## Configuration (à l'exécution — aucun secret dans le dépôt)
+
+Le serveur lit sa configuration **dans l'environnement**, au moment d'un appel d'outil (jamais à l'import). Variables attendues (voir `.env.example` ; copier en `.env`, ignoré par git) :
 
 | Variable | Rôle |
 |---|---|
-| `GRAPH_TENANT_ID` | Tenant Entra ID de la firme. |
-| `GRAPH_CLIENT_ID` | App registration au moindre privilège (`Sites.Selected`). |
-| `GRAPH_CLIENT_SECRET` | Secret client de l'app registration. **Injecté à l'exécution, jamais commité.** |
+| `AZURE_ENV` | `local` \| `prod` — pilote le choix du credential (défaut `prod` si absente). |
+| `AZURE_CLIENT_ID` | clientId **public** de l'identité managée user-assigned `id-allia-mcp-graph` (lu en prod ; défaut intégré au code si absent). **Pas un secret.** |
 | `GRAPH_SITE_ID` | Identifiant Graph du site AlliaConsuling (`host,siteGuid,webGuid`). |
 | `GRAPH_PROPOSITION_LIST_ID` | Identifiant de la liste « Zone-de-proposition » — **seule cible d'écriture**. |
 
-Aucune de ces valeurs n'est fournie dans le dépôt. Le code échoue avec un message clair (`ConfigManquante`) si une variable manque — il ne devine ni ne stocke rien.
+Le code échoue avec un message clair (`ConfigManquante`) si `GRAPH_SITE_ID` ou `GRAPH_PROPOSITION_LIST_ID` manque — il ne devine ni ne stocke rien. **Aucun secret n'apparaît dans cette liste** : l'auth Graph est portée par l'identité managée.
 
-## Modèle d'autorisation : `Sites.Selected` (moindre privilège)
-
-Le code attend un **jeton applicatif** (flux `client_credentials`, scope `https://graph.microsoft.com/.default`) porté par une app registration ayant la permission **application `Sites.Selected`**, à qui le gardien a accordé le rôle **`write` sur le seul site AlliaConsuling** :
-
-```http
-POST https://graph.microsoft.com/v1.0/sites/{GRAPH_SITE_ID}/permissions
-{ "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<CLIENT_ID>", "displayName": "<APP>" } } ] }
-```
-
-Ainsi l'app ne peut toucher qu'un site, et ce serveur n'y écrit qu'une liste. La création de l'app registration, le consentement admin, l'octroi du rôle et le stockage du secret sont le **runbook du gardien** — **non faits ici** (plan §2 ; garde-fous `CLAUDE.md`).
-
-## Installation et exécution (quand le gardien décide de le brancher)
+## Installation et exécution (quand le service est branché)
 
 ```bash
 cd outils/mcp-graph
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 # renseigner .env à partir de .env.example, puis :
-python server.py            # transport stdio — lancé par le client MCP
+python server.py            # transport HTTP streamable (endpoint /mcp ; /healthz pour les sondes)
 ```
 
-Branchement à un client MCP (ex. Claude Code) : déclarer un serveur stdio dont la commande est `python /chemin/outils/mcp-graph/server.py`, en lui passant l'environnement ci-dessus. Tant que ce n'est pas fait, **le serveur dort**.
+En local hors Azure, poser `AZURE_ENV=local` (le credential découvre `az login`). En production, l'hébergement (Container Apps, `T-0002b-3`) fournit l'identité managée et `AZURE_ENV=prod`. Tant que la configuration M365 n'est pas renseignée, **le serveur dort** (aucun appel réseau à l'import).
 
 ## Hors de ce livrable (signalé, non fait)
 
-- **Mise à jour de `modele-donnees.md`** avec les endpoints/identifiants réels : viendra **après** le déploiement (étape ultérieure de T-0002b), pas ici.
-- **App registration, consentement, octroi `write`, secret** : runbook du gardien.
+- **Conteneurisation** (Dockerfile, image, ACR) : chantier `T-0002b-2`.
+- **Déploiement Container App** (min 1 réplica, attache de l'identité managée, ingress) : chantier `T-0002b-3` (runbook).
+- **Authentification d'ENTRÉE** (app registration « serveur » Easy Auth + secret serveur ; app registration « client ») : chantiers `T-0002b-4` / `T-0002b-5` (runbooks). C'est une frontière distincte du flux Graph.
+- **Mise à jour de `modele-donnees.md`** avec les endpoints/identifiants réels : **après** le déploiement (étape ultérieure de `T-0002b`), pas ici.
 - **Journalisation M365** sur `Ressources-RH` / `CVs` (chantier `T-0003`) : prérequis à tout accès agent sur ces données, côté tenant.
 - **Aucune connexion réelle ni déploiement** n'a été effectué : ce code est inerte jusqu'à configuration.
