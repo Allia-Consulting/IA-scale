@@ -1,0 +1,35 @@
+id: T-0005
+titre: "Mémoire d'organisation : batch Cowork nocturne → synthèse hebdo candidate"
+capacite: "Connaissance, contenu & IP / Mémoire d'organisation"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "batch Cowork nocturne (jeudi→vendredi) qui écoute les conversations Claude + Teams de la semaine et produit UNE synthèse candidate"
+  - "écriture de la synthèse en zone de proposition avec champ d'origine « mémoire hebdo » (simulée en local zone-proposition/memoire/ tant que T-0002b n'est pas déployé)"
+  - "rituel de validation ligne à ligne le vendredi (non-validé = oublié)"
+depend_de: []
+# Aucune dépendance dure de chantier. PRÉREQUIS NORMATIF (non bloquant pour la sélection,
+#   mais à respecter) : la PROMOTION du contrat socle candidat contrats/socle/memoire-organisation.md
+#   par le gardien — le batch exécute ce contrat. L'écriture RÉELLE en M365 attend T-0002b ; en
+#   attendant, écriture SIMULÉE EN LOCAL (zone-proposition/memoire/). L'écriture continue est
+#   abandonnée (décision 8 juin 2026) au profit d'une synthèse hebdomadaire candidate.
+contrats_concernes:
+  - "contrats/socle/memoire-organisation.md"
+  - "contrats/socle/modele-donnees.md"
+  - "contrats/socle/anonymisation.md"
+criteres_acceptation:
+  - "Le batch s'exécute la nuit du jeudi au vendredi et produit UNE synthèse candidate de la semaine"
+  - "La synthèse est écrite en zone de proposition, champ d'origine « mémoire hebdo » (locale tant que T-0002b non déployé)"
+  - "La synthèse reste INTERNE et NOMINATIVE ; toute sortie externe d'un fragment passe la porte d'anonymisation (anonymisation.md §1)"
+  - "Le vendredi, une validation ligne à ligne est possible ; le non-validé est oublié (pas de rétention par défaut)"
+  - "L'agent n'écrit jamais la mémoire comme une source et ne promeut jamais"
+rayon_impact: local
+statut: à_faire
+note: >
+  Matérialise la capacité « mémoire d'organisation » (organisation.md §2 ; contrat
+  contrats/socle/memoire-organisation.md, candidat). Mécanisme retenu (session doctrine
+  8 juin 2026) : batch nocturne hebdomadaire produisant UNE synthèse candidate — l'écriture
+  continue est abandonnée (ni relisible, ni gouvernable à la promotion). Domicile transitoire :
+  zone-proposition/memoire/ (simulation locale) en attendant l'écriture réelle (T-0002b).
+  Le dérivé n'est jamais le saisi : la synthèse est candidate, validée ligne à ligne le vendredi.

@@ -1,0 +1,35 @@
+id: T-0007
+titre: "Onboarding & intégration : capacité chapeau (3 réconciliations d'une décision promue)"
+capacite: "Capacités habilitantes / Onboarding & intégration"
+phase: 4
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "capacité chapeau orchestrant, pour une décision promue « X devient collaborateur du périmètre P », trois réconciliations d'une même vérité :"
+  - "  - matériel : parc (ABM/Intune) — voir parc-collaborateur.md / réconciliateur T-0008"
+  - "  - droits : Entra/SSO — via le réconciliateur de droits (organisation.md §5 ; plan §9 T-4.3)"
+  - "  - connaissance : Claude/Git — accès au canon et à la mémoire d'organisation"
+  - "déclencheur : passage candidat → collaborateur (création de l'identité Entra)"
+depend_de: ["T-0008"]
+# Onboarding compose des réconciliateurs qui doivent exister d'abord :
+#   - matériel : réconciliateur politique→Intune = T-0008 (Phase 3/4) ;
+#   - droits   : réconciliateur de droits = plan §9 T-4.3 (Phase 4) — pas encore éclaté en chantier.
+# Tant que ces réconciliateurs ne sont pas promus, l'onboarding ne peut pas être bâti de bout en bout.
+# NON couplé à T-0003 ni à la liste de recrutement (voir note).
+contrats_concernes:
+  - "contrats/socle/organisation.md"
+  - "contrats/socle/parc-collaborateur.md"
+criteres_acceptation:
+  - "Une décision promue « X devient collaborateur de P » déclenche les trois réconciliations sans saisie manuelle de droit ni de config"
+  - "Le déclencheur est le passage candidat → collaborateur (création identité Entra), PAS l'entrée en liste de recrutement"
+  - "Chaque réconciliation est au moindre privilège et tracée ; retour arrière par repointage"
+rayon_impact: large
+statut: à_faire
+note: >
+  Capacité ajoutée à la carte (organisation.md §2, v1.2). C'est une capacité CHAPEAU : elle
+  n'invente pas de nouveau pouvoir, elle ORCHESTRE trois réconciliations d'une même décision
+  déjà promue (matériel / droits / connaissance). DÉCOUPLAGE VOLONTAIRE : la liste de recrutement
+  reste un PROCESSUS HUMAIN, non couplée à cette capacité ni à T-0003 — on évite de coupler
+  l'onboarding à la lecture RH (T-0003) et au pipeline de recrutement. Le déclencheur est strictement
+  le passage candidat → collaborateur (création de l'identité Entra). Phase 4 : dépend des
+  réconciliateurs (parc T-0008 ; droits plan §9 T-4.3) qui n'existent pas encore.

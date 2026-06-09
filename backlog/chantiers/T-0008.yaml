@@ -1,0 +1,31 @@
+id: T-0008
+titre: "Réconciliateur politique de parc → Intune (Phase 3/4 — inscrit au backlog, non construit)"
+capacite: "Socle d'exploitation / Parc & gestion de poste"
+phase: 3
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "réconciliateur au moindre privilège qui projette la POLITIQUE de parc promue (parc-collaborateur.md) sur Intune, en idempotent (n'applique que le delta)"
+  - "parallèle au réconciliateur de DROITS (organisation.md §5 ; plan §9 T-4.3) : même chaîne guide → Claude → M365, appliquée aux APPAREILS"
+depend_de: []
+# Inscrit au BACKLOG, PAS à construire maintenant (Phase 3/4). Aucune dépendance dure tant
+# qu'il n'est pas ordonnancé. PRÉREQUIS NORMATIF : promotion de parc-collaborateur.md (la
+# politique à projeter). La mise en place du privilège du réconciliateur (app/identité, octrois)
+# reste un RUNBOOK HUMAIN (organisation.md §5, plan §2), jamais un agent.
+contrats_concernes:
+  - "contrats/socle/parc-collaborateur.md"
+  - "contrats/socle/organisation.md"
+criteres_acceptation:
+  - "Le réconciliateur lit la politique de parc promue et projette le delta sur Intune, en idempotent"
+  - "Au moindre privilège : il ne sait gérer QUE le parc, rien d'autre ; tout changement tracé"
+  - "La porte humaine reste à la PROMOTION de la politique ; le déploiement reste sous contrôle du gardien"
+  - "Aucun paramètre de poste n'est saisi à la main : tout est dérivé d'une décision promue"
+rayon_impact: large
+statut: à_faire
+note: >
+  Chantier de PHASE 3/4 (parallèle au réconciliateur de droits, plan §9 T-4.3, et à la couche de
+  résolution automatique de Phase 3). INSCRIT AU BACKLOG, À NE PAS CONSTRUIRE EN PHASE 1 — c'est
+  la décision de la session doctrine du 8 juin 2026 : pour le parc, on canonise d'abord la POLITIQUE
+  (parc-collaborateur.md, candidat) et on exécute par RUNBOOK HUMAIN (T-0006) ; l'automatisation
+  politique→Intune vient plus tard. C'est l'application aux APPAREILS de la chaîne d'autorité
+  guide → Claude → M365 (doctrine §8, ligne candidate v1.4).

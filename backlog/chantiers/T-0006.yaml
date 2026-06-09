@@ -1,0 +1,33 @@
+id: T-0006
+titre: "Parc collaborateur : configuration effective ABM/Intune/Entra (runbook humain)"
+capacite: "Socle d'exploitation / Parc & gestion de poste"
+phase: 1
+type_action: runbook_humain
+cran: valide
+produit:
+  - "configuration effective dans Apple Business Manager (rattachement matériel → firme)"
+  - "profils Intune (apps déployées, posture de sécurité, conformité) conformes à la politique"
+  - "groupes Entra d'enrôlement par profil de poste, au moindre privilège"
+depend_de: ["RUNBOOK-HUMAIN"]
+# RUNBOOK-HUMAIN : sentinelle de garde-fou (cf. T-0003, T-0002a, T-0002a-bis). Configurer le
+#   tenant, la sécurité d'un parc, ABM/Intune ou des groupes/droits Entra sont des actions
+#   PROSCRITES à un agent et à Claude (table-des-crans.yaml : parametrer_tenant_m365_securite_residence_donnees ;
+#   modifier_droits_permissions_ou_protection_de_branche). C'est le runbook du gardien. La tâche
+#   est donc NON sélectionnable en autonomie (statut de la sentinelle jamais « promu », plan §4).
+contrats_concernes:
+  - "contrats/socle/parc-collaborateur.md"
+  - "contrats/socle/organisation.md"
+criteres_acceptation:
+  - "La configuration effective ABM/Intune/Entra reflète la politique promue de parc-collaborateur.md"
+  - "Les groupes Entra d'enrôlement sont projetés au moindre privilège (organisation.md §5) ; ressources liées aux groupes, pas aux individus"
+  - "Aucun droit ni paramètre n'a été saisi par un agent : tout vient d'une décision promue dans le guide"
+echeance: "avant arrivée des premiers collaborateurs équipés"
+rayon_impact: local
+statut: à_faire
+note: >
+  Exécution de la POLITIQUE canonisée dans contrats/socle/parc-collaborateur.md (candidat).
+  On canonise la politique (le guide), pas l'exécution : cette tâche est le RUNBOOK HUMAIN qui
+  applique la politique dans ABM/Intune/Entra. PRÉREQUIS NORMATIF : promotion de
+  parc-collaborateur.md par le gardien. La réconciliation AUTOMATIQUE politique→Intune (qui
+  remplacerait une partie de ce runbook) est le chantier Phase 3/4 T-0008 — non construite ici.
+  Chaîne d'autorité guide → Claude → M365 étendue aux APPAREILS (doctrine §8, ligne candidate v1.4).
