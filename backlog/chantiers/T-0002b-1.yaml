@@ -6,8 +6,8 @@ type_action: edition_code
 cran: auto            # édition de code en branche (editer_fichier_en_branche → auto) ; la FUSION reste la porte du gardien (PR)
 produit:
   - "transport MCP : stdio → STREAMABLE HTTP (endpoint /mcp), SDK Python MCP en mode stateless (stateless_http=True)"
-  - "endpoint de santé SÉPARÉ /healthz (GET simple), distinct de /mcp (JSON-RPC POST)"
-  - "bascule sortie Graph : ClientSecretCredential → DefaultAzureCredential"
+  - "endpoint de santé SÉPARÉ /health (GET simple → 200 {\"status\":\"ok\"}), distinct de /mcp (JSON-RPC POST) — voir contrat_interface §3"
+  - "bascule sortie Graph : ClientSecretCredential → sélection par AZURE_ENV (ManagedIdentityCredential(client_id) en prod, DefaultAzureCredential en local) — voir contrat_interface §1"
   - "suppression de la variable GRAPH_CLIENT_SECRET (zéro secret côté Graph) ; Key Vault optionnel pour ce service"
 depend_de: []
 # Sous-tâche de la chapeau T-0002b. Édition de code (outils/mcp-graph/server.py + README) : cran AUTO en
@@ -16,10 +16,11 @@ depend_de: []
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
 criteres_acceptation:
-  - "server.py expose /mcp en streamable HTTP (stateless_http=True) et /healthz séparé"
-  - "L'authentification SORTIE Graph utilise DefaultAzureCredential ; GRAPH_CLIENT_SECRET n'existe plus"
+  - "server.py expose /mcp en streamable HTTP (stateless_http=True) et /health séparé (200 {\"status\":\"ok\"}, liveness pur)"
+  - "Sortie Graph : credential sélectionné par AZURE_ENV — ManagedIdentityCredential(client_id=f2a3c40a-a447-4295-90da-76d6b0898d61) en prod, DefaultAzureCredential en local ; GRAPH_CLIENT_SECRET n'existe plus"
   - "Le garde-fou d'écriture (création uniquement en Zone-de-proposition) est conservé"
-  - "README outils/mcp-graph mis à jour (transport HTTP, /healthz, identité managée) ; aucun secret dans le dépôt"
+  - "README outils/mcp-graph mis à jour (transport HTTP, /health, identité managée) ; aucun secret dans le dépôt"
+  - "Toutes les disparitions de la liste fermée du contrat_interface §5 sont vérifiées (cochage à la review)"
   - "L'agent ouvre une PR (candidat) ; il ne merge pas"
 rayon_impact: local
 statut: à_faire
@@ -30,3 +31,79 @@ note: >
   (Easy Auth, secret serveur) n'est PAS du code applicatif : elle est portée par Container Apps
   (T-0002b-4), pas par server.py. Tâche agent-exécutable (cran auto en branche) ; non faite dans la
   PR de conception.
+
+# CONTRAT D'INTERFACE — figé AVANT le code. La future PR de code (T-0002b-1) DOIT s'y conformer ;
+# en cas de divergence avec les champs produit/criteres ci-dessus, CE contrat fait foi pour le code.
+contrat_interface: |
+  Contrat d'interface de T-0002b-1 — figé avant écriture du code. Sept points + contraintes aval
+  + critère de promotion. Aucun ne contredit le canon promu (double frontière de secret : zéro
+  secret Graph / secret serveur Easy Auth ; identité managée ; min 1 réplica).
+
+  §1. SÉLECTION DU CREDENTIAL (pilotée par variable d'environnement)
+    - PRODUCTION : ManagedIdentityCredential(client_id="f2a3c40a-a447-4295-90da-76d6b0898d61")
+      — clientId de l'identité managée user-assigned id-allia-mcp-graph (créée le 9 juin 2026).
+      (clientId, PAS le principalId f5a56d8f-...). Type SPÉCIFIQUE, PAS DefaultAzureCredential nu :
+      la doc Microsoft recommande le type exact pour empêcher la chaîne de fallback de ramasser
+      silencieusement une autre identité (moindre privilège strict).
+    - LOCAL (l'identité managée n'existe pas hors Azure) : DefaultAzureCredential()
+      (découvre az login / VS Code).
+    - Pilotage : variable AZURE_ENV (local | prod). Défaut sûr si absente : prod.
+
+  §2. SCOPE GRAPH
+    - Tokens Graph acquis avec le scope https://graph.microsoft.com/.default et AUCUN autre.
+      (Droits effectifs déjà bornés en amont par l'octroi Sites.Selected + write sur le seul site
+      AlliaConsuling, fait le 9 juin.)
+
+  §3. ENDPOINT DE SANTÉ
+    - GET /health (PAS /healthz — alignement sur la convention de la doc Microsoft « Deploy a Python
+      MCP server to Azure Container Apps », pour coller au déploiement T-0002b-3).
+    - Réponse 200 + corps JSON {"status": "ok"}.
+    - Liveness PUR : ne touche pas Graph, n'acquiert pas de token.
+    - Contrainte dure (doc Microsoft) : endpoint SÉPARÉ de /mcp. Un endpoint MCP attend du JSON-RPC
+      POST et ne convient pas comme sonde. Ne jamais pointer la sonde vers /mcp.
+    - Pas de /readyz pour l'instant (un seul endpoint de santé).
+
+  §4. ENDPOINT MCP /mcp
+    - Serveur instancié stateless : FastMCP("...", stateless_http=True).
+    - L'endpoint streamable HTTP du SDK Python MCP est par défaut le sous-chemin /mcp quand le serveur
+      est monté à la racine. Retenir ce défaut, ne pas le recâbler.
+    - Pas de session persistante côté serveur (stateless — exigence Container Apps).
+
+  §5. CE QUI DOIT DISPARAÎTRE (cœur de la future PR de code — liste fermée, cochage à la review)
+    Après T-0002b-1, ZÉRO secret côté flux Graph :
+    - Toute occurrence de GRAPH_CLIENT_SECRET (server.py, .env.example, README).
+    - Tout usage de ClientSecretCredential (remplacé par §1).
+    - Toute lecture d'un secret Graph depuis l'environnement ou un fichier.
+    - Toute mention du transport stdio comme mode nominal dans le README (réécrit en HTTP streamable).
+    Frontière à NE PAS sur-corriger : le « zéro secret » concerne le flux GRAPH (sortie). Le secret
+    serveur Easy Auth (ENTRÉE) est une AUTRE frontière, portée par T-0002b-4, HORS périmètre de cette
+    tâche. Le README ne doit jamais laisser entendre que le connecteur Graph reprend un secret.
+
+  §6. VARIABLES D'ENVIRONNEMENT APRÈS RÉÉCRITURE (.env.example — liste fermée)
+    RESTE / APPARAÎT :
+    - AZURE_CLIENT_ID = f2a3c40a-a447-4295-90da-76d6b0898d61 (clientId de l'identité managée ;
+      lu par le credential en prod).
+    - AZURE_ENV = local | prod (défaut prod si absente ; pilote §1).
+    PART (supprimer de .env.example et de tout code) :
+    - GRAPH_CLIENT_SECRET.
+    - GRAPH_TENANT_ID / GRAPH_CLIENT_ID SI ET SEULEMENT SI plus aucun chemin de code ne les utilise
+      après bascule sur l'identité managée (ne pas supprimer une variable encore lue).
+
+  §7. PÉRIMÈTRE & CRAN
+    - Fichiers que la FUTURE PR de code touchera : outils/mcp-graph/server.py,
+      outils/mcp-graph/README.md, outils/mcp-graph/.env.example. Rien d'autre.
+    - Cran de la tâche : AGENT / auto pour la préparation (écriture de code) → PR → promotion gardien.
+      Jamais de merge agent.
+    - Pas un runbook humain : aucune création de ressource, aucun secret, aucune config tenant.
+      Écriture de code pure.
+
+  CONTRAINTES AVAL (pour T-0002b-2 / T-0002b-3 — NE PAS traiter dans T-0002b-1)
+    Rappels issus de la doc « Host MCP servers on Azure Container Apps » : image Linux/amd64 uniquement,
+    pas de conteneur privilégié ; stateless only ; toutes les dépendances dans l'image ; auth d'entrée
+    à implémenter côté hébergement (Easy Auth, T-0002b-4).
+
+  CRITÈRE DE PROMOTION (de la future PR de code)
+    La PR de code n'est promouvable que si les §1–§4 et §6 sont satisfaits ET que toutes les
+    disparitions de la liste fermée §5 sont vérifiées (cochage à la review) — soit ZÉRO secret côté
+    flux Graph confirmé. Le périmètre §7 (code+README+.env.example) n'est pas débordé. Promotion =
+    porte du gardien ; l'agent ouvre une PR, ne merge jamais.
