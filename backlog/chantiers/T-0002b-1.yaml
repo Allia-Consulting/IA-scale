@@ -6,8 +6,8 @@ type_action: edition_code
 cran: auto            # édition de code en branche (editer_fichier_en_branche → auto) ; la FUSION reste la porte du gardien (PR)
 produit:
   - "transport MCP : stdio → STREAMABLE HTTP (endpoint /mcp), SDK Python MCP en mode stateless (stateless_http=True)"
-  - "endpoint de santé SÉPARÉ /health (GET simple → 200 {\"status\":\"ok\"}), distinct de /mcp (JSON-RPC POST) — voir contrat_interface §3"
-  - "bascule sortie Graph : ClientSecretCredential → sélection par AZURE_ENV (ManagedIdentityCredential(client_id) en prod, DefaultAzureCredential en local) — voir contrat_interface §1"
+  - "endpoint de santé SÉPARÉ /healthz (GET simple), distinct de /mcp (JSON-RPC POST)"
+  - "bascule sortie Graph : ClientSecretCredential → DefaultAzureCredential"
   - "suppression de la variable GRAPH_CLIENT_SECRET (zéro secret côté Graph) ; Key Vault optionnel pour ce service"
 depend_de: []
 # Sous-tâche de la chapeau T-0002b. Édition de code (outils/mcp-graph/server.py + README) : cran AUTO en
@@ -16,11 +16,10 @@ depend_de: []
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
 criteres_acceptation:
-  - "server.py expose /mcp en streamable HTTP (stateless_http=True) et /health séparé (200 {\"status\":\"ok\"}, liveness pur)"
-  - "Sortie Graph : credential sélectionné par AZURE_ENV — ManagedIdentityCredential(client_id=f2a3c40a-a447-4295-90da-76d6b0898d61) en prod, DefaultAzureCredential en local ; GRAPH_CLIENT_SECRET n'existe plus"
+  - "server.py expose /mcp en streamable HTTP (stateless_http=True) et /healthz séparé"
+  - "L'authentification SORTIE Graph utilise DefaultAzureCredential ; GRAPH_CLIENT_SECRET n'existe plus"
   - "Le garde-fou d'écriture (création uniquement en Zone-de-proposition) est conservé"
-  - "README outils/mcp-graph mis à jour (transport HTTP, /health, identité managée) ; aucun secret dans le dépôt"
-  - "Toutes les disparitions de la liste fermée du contrat_interface §5 sont vérifiées (cochage à la review)"
+  - "README outils/mcp-graph mis à jour (transport HTTP, /healthz, identité managée) ; aucun secret dans le dépôt"
   - "L'agent ouvre une PR (candidat) ; il ne merge pas"
 rayon_impact: local
 statut: à_faire
@@ -55,8 +54,8 @@ contrat_interface: |
       AlliaConsuling, fait le 9 juin.)
 
   §3. ENDPOINT DE SANTÉ
-    - GET /health (PAS /healthz — alignement sur la convention de la doc Microsoft « Deploy a Python
-      MCP server to Azure Container Apps », pour coller au déploiement T-0002b-3).
+    - GET /healthz (endpoint de santé séparé de /mcp ; aligné sur le vocabulaire promu —
+      architecture.md B.4 bis, T-0002b et T-0002b-3 emploient /healthz, pour coller au déploiement T-0002b-3).
     - Réponse 200 + corps JSON {"status": "ok"}.
     - Liveness PUR : ne touche pas Graph, n'acquiert pas de token.
     - Contrainte dure (doc Microsoft) : endpoint SÉPARÉ de /mcp. Un endpoint MCP attend du JSON-RPC
