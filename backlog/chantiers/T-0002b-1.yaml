@@ -1,0 +1,32 @@
+id: T-0002b-1
+titre: "MCP Graph : réécriture du code stdio → HTTP streamable + identité managée"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: edition_code
+cran: auto            # édition de code en branche (editer_fichier_en_branche → auto) ; la FUSION reste la porte du gardien (PR)
+produit:
+  - "transport MCP : stdio → STREAMABLE HTTP (endpoint /mcp), SDK Python MCP en mode stateless (stateless_http=True)"
+  - "endpoint de santé SÉPARÉ /healthz (GET simple), distinct de /mcp (JSON-RPC POST)"
+  - "bascule sortie Graph : ClientSecretCredential → DefaultAzureCredential"
+  - "suppression de la variable GRAPH_CLIENT_SECRET (zéro secret côté Graph) ; Key Vault optionnel pour ce service"
+depend_de: []
+# Sous-tâche de la chapeau T-0002b. Édition de code (outils/mcp-graph/server.py + README) : cran AUTO en
+# branche. NON EXÉCUTÉE dans la PR de conception (qui ne touche pas server.py) — c'est une tâche
+# ultérieure distincte. La fusion du code reste la porte du gardien (PR), comme tout artefact.
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "server.py expose /mcp en streamable HTTP (stateless_http=True) et /healthz séparé"
+  - "L'authentification SORTIE Graph utilise DefaultAzureCredential ; GRAPH_CLIENT_SECRET n'existe plus"
+  - "Le garde-fou d'écriture (création uniquement en Zone-de-proposition) est conservé"
+  - "README outils/mcp-graph mis à jour (transport HTTP, /healthz, identité managée) ; aucun secret dans le dépôt"
+  - "L'agent ouvre une PR (candidat) ; il ne merge pas"
+rayon_impact: local
+statut: à_faire
+note: >
+  Sous-tâche CODE de la chapeau T-0002b. Réécrit outils/mcp-graph/ pour le modèle HTTP distant
+  (architecture.md B.4 bis). Frontière de SORTIE Graph = zéro secret (identité managée) : c'est ICI
+  que server.py passe à DefaultAzureCredential et perd GRAPH_CLIENT_SECRET. La frontière d'ENTRÉE
+  (Easy Auth, secret serveur) n'est PAS du code applicatif : elle est portée par Container Apps
+  (T-0002b-4), pas par server.py. Tâche agent-exécutable (cran auto en branche) ; non faite dans la
+  PR de conception.

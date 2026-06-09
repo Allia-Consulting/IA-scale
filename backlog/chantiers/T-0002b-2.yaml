@@ -1,0 +1,29 @@
+id: T-0002b-2
+titre: "MCP Graph : conteneurisation (Dockerfile = agent ; ACR = runbook humain)"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide          # nature MIXTE : le Dockerfile est agent-éditable (auto) ; la création ACR + push est runbook (validé)
+produit:
+  - "(agent — cran auto) Dockerfile Linux/amd64 pour le serveur MCP HTTP (outils/mcp-graph/), build local validable"
+  - "(runbook humain) création d'un registre de conteneurs Azure (ACR)"
+  - "(runbook humain) build/push de l'image dans l'ACR"
+depend_de: ["T-0002b-1"]
+# Sous-tâche de la chapeau T-0002b. NATURE MIXTE explicitement distinguée (consigne) :
+#   - Dockerfile = CODE, agent-éditable en branche (cran auto, editer_fichier_en_branche) ;
+#   - création de l'ACR + push de l'image = RUNBOOK HUMAIN (config Azure : proscrite à l'agent,
+#     table-des-crans.yaml). PAS de sentinelle RUNBOOK-HUMAIN sur la tâche pour que l'agent puisse
+#     préparer le Dockerfile ; la part ACR/push reste la porte du gardien (signalée dans produit).
+# Dépend de T-0002b-1 : on conteneurise le code HTTP réécrit.
+contrats_concernes: []
+criteres_acceptation:
+  - "Le Dockerfile (Linux/amd64) construit une image qui démarre le serveur MCP HTTP (/mcp + /healthz)"
+  - "L'ACR existe (runbook humain) et l'image y est poussée (runbook humain)"
+  - "Aucun secret n'est embarqué dans l'image (identité managée côté Graph ; Easy Auth côté entrée, hors image)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Sous-tâche IMAGE de la chapeau T-0002b. Distinction nette des deux natures : le Dockerfile relève
+  de l'agent (édition de code, cran auto) ; la création de l'ACR et le push relèvent du RUNBOOK HUMAIN
+  (configuration d'infrastructure Azure — proscrite à un agent et à Claude). Prérequis du déploiement
+  T-0002b-3 (l'image doit exister dans l'ACR).

@@ -1,35 +1,35 @@
 id: T-0002a-bis
-titre: "Ré-octroi du rôle write Sites.Selected à l'identité managée (runbook humain)"
+titre: "Ré-octroi du rôle write Sites.Selected à l'identité managée user-assigned (runbook humain)"
 capacite: "Socle d'exploitation / Orchestration des agents"
 phase: 1
 type_action: runbook_humain
 cran: valide
 produit:
-  - "octroi du rôle write à l'identité managée du service (principal Entra DISTINCT de l'app registration allia-mcp-graph) sur le SEUL site AlliaConsuling, via Graph POST /sites/{id}/permissions"
-  - "vérification que le service, sous DefaultAzureCredential, écrit bien dans la Liste « Zone-de-proposition »"
-depend_de: ["RUNBOOK-HUMAIN"]
-# RUNBOOK-HUMAIN : sentinelle de garde-fou (cf. T-0003, T-0002a). Identifiant de dépendance
-#   RÉSERVÉ, sans fichier chantiers/*.yaml correspondant : son statut ne peut jamais être
-#   « promu ». Par la règle du plan §4, cette tâche est donc NON sélectionnable en autonomie
-#   par un agent — ce qui est l'intention : « octroyer un rôle à un principal » est une action
-#   PROSCRITE (table-des-crans.yaml : modifier_droits_permissions_ou_protection_de_branche ;
-#   configurer_authentification ; parametrer_tenant). C'est le runbook du gardien, jamais l'agent.
+  - "identité managée USER-ASSIGNED « id-allia-mcp-graph » (principal Entra DISTINCT de l'app registration allia-mcp-graph)"
+  - "octroi write au principal de l'identité, sur le SEUL site AlliaConsuling, en DEUX étapes : (1) app role assignment Entra Sites.Selected au service principal de l'identité ; (2) Graph POST /sites/{id}/permissions avec le clientId de l'identité dans application.id"
+depend_de: []
+# depend_de vide : tâche déjà FAITE (exécutée le 9 juin 2026). Même convention que T-0002a :
+# la sentinelle RUNBOOK-HUMAIN sert à empêcher la sélection AUTONOME d'un runbook NON encore fait ;
+# ici la tâche est faite, donc inerte pour la sélection — la sentinelle serait redondante. La nature
+# « runbook, jamais par un agent » est portée par type_action: runbook_humain + la note d'exécution.
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
 criteres_acceptation:
-  - "Le principal de l'identité managée du service existe (provisionné lors du déploiement T-0002b)"
-  - "Le rôle write est accordé à CE principal sur le seul site AlliaConsuling (Sites.Selected, moindre privilège)"
-  - "Aucun secret applicatif n'intervient : l'octroi vise l'identité managée, pas un secret client"
-  - "Un test d'écriture en Zone-de-proposition réussit sous l'identité managée"
-echeance: "au déploiement T-0002b"
+  - "L'identité managée user-assigned « id-allia-mcp-graph » existe (choisie user-assigned : découplée du cycle de vie du conteneur, droits octroyables AVANT déploiement)"
+  - "Étape (1) : app role assignment Sites.Selected accordé au service principal de l'identité (au moindre privilège)"
+  - "Étape (2) : POST /sites/{id}/permissions accorde write au clientId de l'identité, sur le seul site AlliaConsuling"
+  - "Aucun secret applicatif n'intervient : l'octroi vise l'identité managée, pas un secret client (frontière de SORTIE Graph = zéro secret)"
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: "runbook humain réalisé hors Git le 9 juin 2026 (portails Azure/Entra + Graph) ; séquence en deux étapes propre à une identité managée (app role assignment puis POST permissions avec clientId). La décision est promue, l'exécution est manuelle par nature."
 note: >
-  CONSÉQUENCE DIRECTE de la décision « identité managée » (8 juin 2026, architecture.md B.4 bis).
-  L'identité managée est un PRINCIPAL ENTRA DISTINCT de l'app registration allia-mcp-graph créée
-  en T-0002a : l'octroi write Sites.Selected accordé à l'ancienne app NE SE TRANSFÈRE PAS. Il faut
-  RÉ-OCTROYER write au principal de l'identité managée, sur le seul site AlliaConsuling, au moindre
-  privilège. RUNBOOK HUMAIN — comme T-0002a, la création/modification de droits sur un principal est
-  PROSCRITE à un agent et à Claude (garde-fous CLAUDE.md ; plan §2 ; organisation.md §5 : le runbook
-  de mise en place du privilège reste celui du gardien). Ordonnancement : provisionnement de l'identité
-  managée (1re étape de T-0002b) → CE ré-octroi → écriture réelle. Prérequis de l'écriture réelle de T-0002b.
+  CONSÉQUENCE DIRECTE de la décision « identité managée » (architecture.md B.4 bis). L'identité managée
+  est un PRINCIPAL ENTRA DISTINCT de l'app registration allia-mcp-graph (T-0002a) : l'octroi write
+  Sites.Selected accordé à l'ancienne app NE SE TRANSFÈRE PAS. ÉCART décision↔exécution tracé : pour
+  une IDENTITÉ MANAGÉE, ce n'est pas le simple POST /sites/{id}/permissions d'une app registration —
+  il faut d'abord un app role assignment Sites.Selected au service principal de l'identité, PUIS le
+  POST /sites/{id}/permissions avec le clientId de l'identité. Choix USER-ASSIGNED (et non
+  system-assigned) tranché le 9 juin : identité découplée du conteneur (survit aux redéploiements) et
+  droits octroyables avant déploiement. RUNBOOK HUMAIN — créer/modifier des droits sur un principal est
+  PROSCRIT à un agent et à Claude (garde-fous CLAUDE.md ; plan §2 ; organisation.md §5). Prérequis du
+  déploiement T-0002b-3 (l'identité, déjà autorisée, sera attachée à la Container App).
