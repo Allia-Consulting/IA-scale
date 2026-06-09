@@ -69,7 +69,16 @@ ENV_SITE_ID = "GRAPH_SITE_ID"
 ENV_PROPOSITION_LIST_ID = "GRAPH_PROPOSITION_LIST_ID"
 
 # stateless_http=True : pas de session persistante côté serveur (exigence Container Apps).
-mcp = FastMCP("allia-graph-proposition", stateless_http=True)
+# host/port portés ICI (le SDK résolu n'accepte host/port NI via l'env FASTMCP_HOST, NI dans run() —
+# run(host=,port=) lève TypeError ; seul le constructeur les accepte). Défaut sûr 0.0.0.0 : interface
+# joignable par l'ingress/les sondes d'un conteneur (127.0.0.1 du SDK était le piège), surchargeable
+# par FASTMCP_HOST / FASTMCP_PORT.
+mcp = FastMCP(
+    "allia-graph-proposition",
+    stateless_http=True,
+    host=os.environ.get("FASTMCP_HOST", "0.0.0.0"),
+    port=int(os.environ.get("FASTMCP_PORT", "8000")),
+)
 
 
 class ConfigManquante(RuntimeError):
@@ -198,11 +207,6 @@ def create_list_item(fields: dict[str, Any]) -> dict[str, Any]:
 
 if __name__ == "__main__":
     # Transport HTTP STREAMABLE (endpoint /mcp par défaut du SDK ; /healthz pour les sondes).
-    # Host réglé ICI (le SDK n'applique pas FASTMCP_HOST de l'environnement) : défaut 0.0.0.0
-    # — interface joignable par l'ingress/les sondes d'un conteneur (127.0.0.1 du SDK était le piège) ;
-    # reste pilotable par FASTMCP_HOST / FASTMCP_PORT. Aucune connexion réseau tant qu'un outil n'est pas appelé.
-    mcp.run(
-        transport="streamable-http",
-        host=os.environ.get("FASTMCP_HOST", "0.0.0.0"),
-        port=int(os.environ.get("FASTMCP_PORT", "8000")),
-    )
+    # run() NU : ce SDK n'accepte pas host/port dans run() (TypeError) — ils sont portés par le
+    # constructeur FastMCP(...) ci-dessus. Aucune connexion réseau tant qu'un outil n'est pas appelé.
+    mcp.run(transport="streamable-http")
