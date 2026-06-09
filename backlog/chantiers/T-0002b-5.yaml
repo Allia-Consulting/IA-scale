@@ -1,0 +1,26 @@
+id: T-0002b-5
+titre: "MCP Graph : app registration « client » (principe appelant unique) + tokens — runbook humain"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: runbook_humain
+cran: valide
+produit:
+  - "app registration « client » dédiée = UN SEUL principe appelant, partagé par Claude Code (aujourd'hui) et le batch mémoire (demain)"
+  - "obtention des tokens OAuth 2.0 permettant d'appeler /mcp à travers Easy Auth"
+depend_de: ["T-0002b-4", "RUNBOOK-HUMAIN"]
+# Sous-tâche de la chapeau T-0002b. RUNBOOK HUMAIN → sentinelle RUNBOOK-HUMAIN (proscrites :
+#   créer une app registration, configurer l'authentification, obtenir/stocker des tokens).
+# Dépend de T-0002b-4 : le client s'authentifie contre l'auth serveur Easy Auth (qui doit exister).
+# UN SEUL principe appelant (consigne) : pas un principe par utilisateur — partagé Claude Code + batch mémoire.
+contrats_concernes: []
+criteres_acceptation:
+  - "Une app registration « client » unique existe (principe appelant partagé)"
+  - "Des tokens OAuth 2.0 valides permettent d'appeler /mcp ; un appel sans token reçoit 401"
+  - "Claude Code aujourd'hui, puis le batch mémoire (T-0005) demain, utilisent CE même principe appelant"
+rayon_impact: local
+statut: à_faire
+note: >
+  Sous-tâche AUTH CLIENT de la chapeau T-0002b. Un seul principe appelant (app registration « client »)
+  partagé par tous les consommateurs internes du service (Claude Code, puis batch mémoire T-0005) — pas
+  de secret/identité par utilisateur. Runbook humain — créer app, configurer auth, obtenir des tokens
+  sont PROSCRITS à un agent et à Claude (garde-fous CLAUDE.md ; plan §2 ; table-des-crans.yaml).

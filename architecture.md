@@ -46,12 +46,27 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 4. **La logique d'écriture ne tourne PAS sur le poste du fondateur.**
    *Pourquoi* : l'infrastructure doit **tourner sans lui** (événementiel, disponible, sans dépendance à une machine personnelle). **Hébergement cible : Azure.** **État : décidé, non déployé** (le code du connecteur existe — `outils/mcp-graph/` ; son déploiement reste un runbook, `backlog/chantiers/T-0002b.yaml`).
 
-4 bis. **Cible Azure précisée : Container Apps (scale-to-zero, événementiel), App Service en repli ; identité managée, pas de secret.** *(Décision du 8 juin 2026.)*
-   *Pourquoi* : un service **événementiel** qui dort à zéro coût et se réveille à la demande colle au profil d'usage (écriture occasionnelle en zone de proposition) ; **Container Apps** offre ce scale-to-zero, **App Service** est le repli si une contrainte l'impose. Surtout, le service prend une **identité managée** (managed identity) : Azure injecte le jeton, **aucun secret n'est porté par l'application**. Conséquences, à exécuter dans `T-0002b` (code, à faire) et son runbook `T-0002a-bis` (octroi, à faire) :
-   - `server.py` passe de `ClientSecretCredential` à **`DefaultAzureCredential`** ;
-   - la variable **`GRAPH_CLIENT_SECRET` est supprimée** (plus aucun secret client à stocker ni injecter) ;
-   - **Key Vault devient *optionnel*** pour ce service (il ne détient plus de secret applicatif à protéger).
-   - **L'identité managée est un principal Entra DISTINCT** de l'app registration `allia-mcp-graph` de `T-0002a`. Le rôle `write` `Sites.Selected` accordé à l'ancienne app **ne se transfère pas** : il faut **ré-octroyer `write` au principal de l'identité managée** sur le seul site AlliaConsuling. C'est un **runbook humain** (`backlog/chantiers/T-0002a-bis.yaml`, à_faire) — jamais un agent ne configure une permission (garde-fous `CLAUDE.md` ; `table-des-crans.yaml` : proscrites).
+4 bis. **MCP en SERVICE HTTP distant sur Container Apps (min 1 réplica) ; zéro secret côté Graph (identité managée), un secret serveur côté entrée (Easy Auth).** *(Décision du 8 juin 2026 — modèle d'hébergement précisé le 9 juin 2026, d'après la doc Microsoft « Host/Secure MCP servers on Azure Container Apps ».)*
+   *Pourquoi* : le connecteur devient un **service HTTP distant** (et non plus un serveur stdio lancé localement), pour qu'à terme ~10 collaborateurs l'utilisent **sans dépendre du poste du fondateur** (exigence B.4).
+
+   **Modèle d'hébergement.**
+   - **Standalone container app** ; transport MCP **streamable HTTP** (endpoint **`/mcp`**) ; TLS assuré par l'ingress Container Apps ; SDK Python MCP en mode **stateless** (`stateless_http=True`).
+   - **Endpoint de santé séparé** : **`/healthz`**, distinct de `/mcp` (les sondes font des **GET** simples ; `/mcp` attend du **JSON-RPC POST**).
+   - **Scaling : min 1 réplica** (usage interactif réactif). *(Ceci **corrige** la cible d'échelle antérieure — un service interactif doit répondre **sans démarrage à froid** ; **App Service** reste le repli si une contrainte l'impose.)*
+   - **Réseau** : public **+ restrictions** (IP restrictions / CORS au besoin) ; durcissement VNet / internal-only **repoussé en Phase 2/3**.
+
+   **La double frontière de secret — deux régimes distincts, à ne jamais confondre :**
+   - **Sortie vers Graph** (le service écrit dans M365) : **ZÉRO SECRET**, via l'identité managée **user-assigned `id-allia-mcp-graph`** (`DefaultAzureCredential`). **Inchangé** depuis le 8 juin — le connecteur Graph ne reprend **aucun** secret applicatif. Conséquences code (sous-tâche `T-0002b-1`, non exécutée ici) : `server.py` passe de `ClientSecretCredential` à **`DefaultAzureCredential`** ; **`GRAPH_CLIENT_SECRET` supprimée** ; **Key Vault optionnel** pour ce service.
+   - **Entrée du service** (qui a le droit d'appeler `/mcp`) : **UN secret serveur**, porté par une app registration **« serveur »** via la **built-in auth Entra ID (« Easy Auth »)** de Container Apps. Tout appel porte un **bearer token OAuth 2.0**, sinon **401**. C'est **un** secret serveur **unique** (runbook humain), **pas** un secret par utilisateur, et **sans rapport avec le flux Graph**.
+   - **Principe appelant** : **un seul** (app registration **« client »** dédiée), partagé par **Claude Code aujourd'hui** et le **batch mémoire demain** (runbook humain : création app + obtention de tokens).
+
+   > ⚠️ **« Zéro secret » borné, pas annulé.** Le « zéro secret » du 8 juin concernait la **sortie Graph** (identité managée) — il **reste vrai**. La frontière d'**entrée** Easy Auth introduit, elle, **un** secret serveur : frontière **nouvelle**, distincte du flux Graph. Formulation de référence : *« zéro secret côté Graph (identité managée) ; un secret serveur côté entrée Easy Auth, distinct du flux Graph »*.
+
+   **Deux écarts décision ↔ exécution constatés le 9 juin 2026 (tracés) :**
+   - **Séquence d'octroi pour une IDENTITÉ MANAGÉE** ≠ celle d'une app registration. Ce n'est pas le simple `POST /sites/{id}/permissions` : il faut **(1)** un **app role assignment** Entra `Sites.Selected` au **service principal de l'identité**, **puis (2)** le `POST /sites/{id}/permissions` avec le **`clientId` de l'identité** dans `application.id`. Les deux ont été **faits le 9 juin** (`T-0002a-bis`, **fait**).
+   - **Choix user-assigned (et non system-assigned)**, tranché le 9 juin. *Pourquoi* : identité **découplée du cycle de vie du conteneur** (elle survit aux redéploiements) et **droits octroyables AVANT déploiement** (on prépare l'octroi sans attendre que l'app existe).
+
+   *Conséquence chantier* : `T-0002b` devient une **tâche-chapeau** redécoupée en sous-tâches **`T-0002b-1..5`** (code HTTP · image · déploiement · auth serveur · auth client) — voir `backlog/chantiers/`. *(Rappel d'en-tête : ce document **décrit**, il ne **gouverne pas** ; les crans et la nature « runbook humain » font foi dans `table-des-crans.yaml` et `CLAUDE.md`.)*
 
 5. **Calcul pur vs travail de jugement** — deux natures d'exécution à ne pas confondre :
    - **calcul pur** : fonction **déterministe** (ex. un P&L) — entrées → sortie reproductible, pas de jugement ;
@@ -68,7 +83,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 
 ## Partie C — Inventaire du SI
 
-> **État au 8 juin 2026 — se périme, vérifier les sources.** Légende : **FAIT** / **PARTIEL** / **À FAIRE** / *à confirmer par le gardien* (état non constatable depuis le dépôt). Chaque ligne indique **où vérifier la vérité**.
+> **État au 9 juin 2026 — se périme, vérifier les sources.** Légende : **FAIT** / **PARTIEL** / **À FAIRE** / *à confirmer par le gardien* (état non constatable depuis le dépôt). Chaque ligne indique **où vérifier la vérité**.
 
 ### Couche GitHub / canon
 | Composant | État | Source de vérité |
@@ -87,11 +102,14 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Permission application `Sites.Selected` | **FAIT** — accordée, consentement admin donné | portail Entra |
 | Secret client (de l'app registration) | **FAIT** — créé et stocké hors dépôt par le gardien. ⚠️ **Devient inutile** avec l'identité managée (Partie B.4 bis) : `GRAPH_CLIENT_SECRET` supprimé, Key Vault optionnel. | Entra / coffre de secrets |
 | Octroi du rôle `write` sur le site AlliaConsuling (app registration) | **FAIT** — accordé via Graph, confirmé | Graph `POST /sites/{id}/permissions` |
-| Identité managée du service (principal Entra distinct) | **À FAIRE** (Partie B.4 bis — créée avec l'hébergement Container Apps) | portail Azure / Entra |
-| Ré-octroi du rôle `write` au principal de l'identité managée | **À FAIRE** — **runbook humain** `T-0002a-bis` (`à_faire`) : l'identité managée est un **principal distinct**, l'octroi de `T-0002a` ne se transfère pas | Graph `POST /sites/{id}/permissions` |
-| Hébergement de la fonction (Azure **Container Apps**, scale-to-zero ; App Service en repli) | **À FAIRE** (décidé, non déployé — Partie B.4 / B.4 bis) | portail Azure |
+| Identité managée **user-assigned `id-allia-mcp-graph`** (principal Entra distinct) | **FAIT** — créée le 9 juin (user-assigned : découplée du cycle de vie du conteneur, droits octroyables avant déploiement — B.4 bis) | portail Azure / Entra |
+| Ré-octroi `write` au principal de l'identité managée | **FAIT** — runbook `T-0002a-bis` réalisé le 9 juin : **(1)** app role assignment `Sites.Selected` au service principal de l'identité, **(2)** `POST /sites/{id}/permissions` avec le `clientId` de l'identité | Graph (app role assignment + `POST /sites/{id}/permissions`) |
+| Hébergement (Azure **Container Apps**, **min 1 réplica** ; App Service en repli) | **À FAIRE** — `T-0002b-3` (runbook) ; min 1 réplica car usage interactif (B.4 bis) | portail Azure |
+| Service MCP **HTTP distant** (`/mcp` streamable + `/healthz`, stateless) | **À FAIRE** — code `T-0002b-1`, image `T-0002b-2`, déploiement `T-0002b-3` | `outils/mcp-graph/` + `T-0002b-*` |
+| App registration **« serveur »** Easy Auth (built-in auth Entra) + secret serveur | **À FAIRE** — **runbook humain** `T-0002b-4` (frontière d'**entrée** ; un secret serveur, distinct du flux Graph) | portail Entra / Container Apps |
+| App registration **« client »** (principe appelant unique) + tokens | **À FAIRE** — **runbook humain** `T-0002b-5` (partagé Claude Code + batch mémoire) | portail Entra |
 
-> La partie **runbook humain** de l'app M365/Entra (app registration, `Sites.Selected`, consentement admin, secret, octroi du rôle `write` sur le site) est **réalisée** — chantier **`T-0002a`** (`promu`). Reste à faire : le **code MCP est écrit mais non déployé** (`outils/mcp-graph/`), l'**hébergement Azure** — désormais **Container Apps**, scale-to-zero, sous **identité managée** (B.4 bis) — et, conséquence de l'identité managée, le **ré-octroi `write`** au nouveau principal : chantiers **`T-0002b`** (déploiement + bascule du code vers `DefaultAzureCredential`, `à_faire`) et **`T-0002a-bis`** (runbook d'octroi, `à_faire`). À noter : **`T-0002b` est désormais DÉCOUPLÉ de `T-0003`** — il écrit en **Zone-de-proposition**, pas dans `Ressources-RH`/`CVs` ; `T-0003` reste prérequis de la lecture RH réelle, plus de `T-0002b`. Garde-fous : `CLAUDE.md` / `backlog/plan.md` §2.
+> La partie **runbook humain** de l'app M365/Entra (app registration, `Sites.Selected`, consentement admin, secret, octroi du rôle `write` sur le site) est **réalisée** — chantier **`T-0002a`** (`promu`) — et le **ré-octroi `write` à l'identité managée** est **fait le 9 juin** — **`T-0002a-bis`** (`fait`). Reste à faire le **service MCP HTTP distant** : `T-0002b` est désormais une **tâche-chapeau** redécoupée en **`T-0002b-1`** (code stdio→HTTP streamable, `/healthz`, bascule `DefaultAzureCredential`, suppression `GRAPH_CLIENT_SECRET` — agent), **`T-0002b-2`** (image : Dockerfile = agent ; ACR = runbook), **`T-0002b-3`** (déploiement Container App min 1 réplica, attache identité managée — runbook), **`T-0002b-4`** (app reg « serveur » Easy Auth + secret — runbook), **`T-0002b-5`** (app reg « client » + tokens — runbook). À noter : **`T-0002b` reste DÉCOUPLÉ de `T-0003`** — il écrit en **Zone-de-proposition**, pas dans `Ressources-RH`/`CVs` ; `T-0003` reste prérequis de la lecture RH réelle. Garde-fous : `CLAUDE.md` / `backlog/plan.md` §2.
 
 ### Couche M365
 | Composant | État | Source de vérité |

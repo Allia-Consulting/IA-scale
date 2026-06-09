@@ -1,0 +1,30 @@
+id: T-0002b-3
+titre: "MCP Graph : déploiement Container App (min 1 réplica, identité managée) — runbook humain"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: runbook_humain
+cran: valide
+produit:
+  - "environnement Container Apps + container app à partir de l'image (T-0002b-2)"
+  - "scaling MIN 1 RÉPLICA (usage interactif réactif — le service ne dort pas)"
+  - "attache de l'identité managée USER-ASSIGNED id-allia-mcp-graph (déjà autorisée — T-0002a-bis, fait)"
+  - "ingress public + restrictions (IP restrictions / CORS au besoin)"
+depend_de: ["T-0002b-2", "T-0002a-bis", "RUNBOOK-HUMAIN"]
+# Sous-tâche de la chapeau T-0002b. RUNBOOK HUMAIN (déployer/configurer de l'infra Azure = proscrit à
+#   l'agent, table-des-crans.yaml) → sentinelle RUNBOOK-HUMAIN (non sélectionnable en autonomie).
+# Dépend de : T-0002b-2 (image disponible) ET T-0002a-bis (octroi write à l'identité managée, FAIT —
+#   l'identité, déjà autorisée, est simplement attachée à la container app).
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "La container app tourne à partir de l'image ACR, min 1 réplica, sans dépendre du poste du fondateur"
+  - "L'identité managée user-assigned id-allia-mcp-graph est attachée ; la sortie Graph fonctionne (zéro secret)"
+  - "L'ingress public répond en TLS ; restrictions d'accès posées au besoin"
+  - "/healthz répond aux sondes ; /mcp répond au JSON-RPC POST"
+rayon_impact: local
+statut: à_faire
+note: >
+  Sous-tâche DÉPLOIEMENT de la chapeau T-0002b. Min 1 réplica (usage interactif — corrige la cible
+  d'échelle antérieure). L'identité managée user-assigned a été CHOISIE (vs system-assigned) précisément
+  pour être attachable ici alors que ses droits ont déjà été octroyés en amont (T-0002a-bis, fait).
+  Durcissement réseau (VNet/internal-only) repoussé Phase 2/3. Runbook humain — config Azure.
