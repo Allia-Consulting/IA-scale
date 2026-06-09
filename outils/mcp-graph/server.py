@@ -1,11 +1,20 @@
 """Serveur MCP — connecteur Microsoft Graph (lecture liste + écriture zone de proposition).
 
-Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`.
+Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
+(sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose DEUX opérations à un agent, via le Model Context Protocol :
+Ce serveur expose DEUX opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items        : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item  : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
+
+Transport & santé :
+
+    * Transport MCP : HTTP STREAMABLE (endpoint `/mcp`, sous-chemin par défaut du SDK), serveur
+      instancié STATELESS (`stateless_http=True`) — exigence Azure Container Apps (pas de session
+      persistante côté serveur). Lancement : `mcp.run(transport="streamable-http")`.
+    * Endpoint de santé SÉPARÉ `/healthz` : `GET` → `200 {"status": "ok"}`, liveness PUR (ne touche
+      pas Graph, n'acquiert aucun jeton). Une sonde ne vise JAMAIS `/mcp` (qui attend du JSON-RPC POST).
 
 Garde-fous inscrits dans le code (pas seulement en prose) :
 
@@ -14,17 +23,24 @@ Garde-fous inscrits dans le code (pas seulement en prose) :
       variable d'environnement GRAPH_PROPOSITION_LIST_ID ; `create_list_item` n'accepte
       AUCUN identifiant de liste de l'appelant. Il est donc structurellement impossible
       d'écrire ailleurs que dans la zone de proposition.
-    * AUCUN secret en dur. Tous les identifiants (tenant, client, secret, site, liste) sont
-      injectés à l'exécution par le gardien via l'environnement (voir README et .env.example).
-    * Moindre privilège : le code attend un jeton applicatif obtenu par flux client_credentials
-      sur une app registration disposant de `Sites.Selected` (application), à qui le gardien
-      a accordé le rôle `write` sur le SEUL site AlliaConsuling. La création de l'app
-      registration, le consentement admin et le stockage du secret sont le RUNBOOK du gardien
-      (plan §2, garde-fous CLAUDE.md) — NON faits ici.
+    * SORTIE Graph = ZÉRO SECRET. L'authentification vers Microsoft Graph passe par une
+      IDENTITÉ MANAGÉE (managed identity), pas par un secret applicatif :
+        - en PROD : ManagedIdentityCredential(client_id=...) — identité user-assigned, type
+          SPÉCIFIQUE (et non DefaultAzureCredential nu) pour empêcher la chaîne de fallback de
+          ramasser silencieusement une autre identité (moindre privilège strict) ;
+        - en LOCAL : DefaultAzureCredential() — découvre `az login` / VS Code (l'identité
+          managée n'existe pas hors d'Azure).
+      Sélection pilotée par la variable AZURE_ENV (`local` | `prod` ; défaut sûr : `prod`).
+      Aucun secret Graph n'est lu, stocké ni injecté. (La frontière d'ENTRÉE du service — qui a
+      le droit d'appeler `/mcp` — est une AUTRE frontière, l'auth Easy Auth de l'hébergement,
+      portée par `T-0002b-4`, HORS de ce code.)
+    * Moindre privilège : le jeton est acquis sur le scope `https://graph.microsoft.com/.default`
+      et aucun autre. Les droits effectifs sont déjà bornés en amont par l'octroi `Sites.Selected`
+      + `write` sur le SEUL site AlliaConsuling (runbook du gardien `T-0002a-bis`, fait) — NON ici.
 
 Ce fichier « dort » : il ne se connecte à rien tant que les variables d'environnement ne sont
 pas renseignées et qu'un client MCP ne le lance pas. L'import et l'inspection ne déclenchent
-aucun appel réseau (la configuration n'est lue qu'au moment d'un appel d'outil).
+aucun appel réseau (le credential et la configuration ne sont lus qu'au moment d'un appel d'outil).
 """
 
 from __future__ import annotations
@@ -33,45 +49,56 @@ import os
 from typing import Any
 
 import httpx
-from azure.identity import ClientSecretCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
-GRAPH_SCOPE = "https://graph.microsoft.com/.default"  # flux application (client_credentials)
+GRAPH_SCOPE = "https://graph.microsoft.com/.default"  # scope unique (moindre privilège)
 
-# Variables d'environnement attendues (injectées par le gardien à l'exécution — jamais ici).
-ENV_TENANT_ID = "GRAPH_TENANT_ID"
-ENV_CLIENT_ID = "GRAPH_CLIENT_ID"
-ENV_CLIENT_SECRET = "GRAPH_CLIENT_SECRET"  # noqa: S105 — nom de variable, pas un secret
+# clientId PUBLIC de l'identité managée user-assigned « id-allia-mcp-graph » (créée le 9 juin 2026).
+# Un clientId est un identifiant PUBLIC, PAS un secret. Sert de défaut si AZURE_CLIENT_ID est absente.
+# (clientId, PAS le principalId.)
+MANAGED_IDENTITY_CLIENT_ID = "f2a3c40a-a447-4295-90da-76d6b0898d61"
+
+# Variables d'environnement attendues (injectées à l'exécution — jamais ici, aucun secret).
+ENV_AZURE_ENV = "AZURE_ENV"                # local | prod (défaut prod) — pilote le credential
+ENV_AZURE_CLIENT_ID = "AZURE_CLIENT_ID"    # clientId de l'identité managée (défaut: MANAGED_IDENTITY_CLIENT_ID)
 ENV_SITE_ID = "GRAPH_SITE_ID"
 ENV_PROPOSITION_LIST_ID = "GRAPH_PROPOSITION_LIST_ID"
 
-mcp = FastMCP("allia-graph-proposition")
+# stateless_http=True : pas de session persistante côté serveur (exigence Container Apps).
+mcp = FastMCP("allia-graph-proposition", stateless_http=True)
 
 
 class ConfigManquante(RuntimeError):
     """Levée quand une variable d'environnement requise est absente."""
 
 
+@mcp.custom_route("/healthz", methods=["GET"])
+async def healthz(request: Request) -> JSONResponse:
+    """Endpoint de santé — liveness PUR.
+
+    Séparé de `/mcp` (contrat §3). Ne touche pas Graph, n'acquiert aucun jeton :
+    une sonde de l'hébergement (Container Apps) doit pouvoir l'appeler sans config M365.
+    """
+    return JSONResponse({"status": "ok"})
+
+
 def _config() -> dict[str, str]:
-    """Lit la configuration depuis l'environnement. Échoue clairement si une variable manque.
+    """Lit la configuration M365 depuis l'environnement. Échoue clairement si une variable manque.
 
     Appelée au moment de l'exécution d'un outil (jamais à l'import) : le serveur reste
-    inerte tant que le gardien ne l'a pas branché.
+    inerte tant qu'il n'est pas branché. Ne lit AUCUN secret (l'auth Graph = identité managée).
     """
     valeurs = {
-        "tenant_id": os.environ.get(ENV_TENANT_ID, ""),
-        "client_id": os.environ.get(ENV_CLIENT_ID, ""),
-        "client_secret": os.environ.get(ENV_CLIENT_SECRET, ""),
         "site_id": os.environ.get(ENV_SITE_ID, ""),
         "proposition_list_id": os.environ.get(ENV_PROPOSITION_LIST_ID, ""),
     }
     manquantes = [k for k, v in valeurs.items() if not v]
     if manquantes:
         noms_env = {
-            "tenant_id": ENV_TENANT_ID,
-            "client_id": ENV_CLIENT_ID,
-            "client_secret": ENV_CLIENT_SECRET,
             "site_id": ENV_SITE_ID,
             "proposition_list_id": ENV_PROPOSITION_LIST_ID,
         }
@@ -83,18 +110,27 @@ def _config() -> dict[str, str]:
     return valeurs
 
 
-def _token(cfg: dict[str, str]) -> str:
-    """Obtient un jeton applicatif (client_credentials). ClientSecretCredential met en cache."""
-    credential = ClientSecretCredential(
-        tenant_id=cfg["tenant_id"],
-        client_id=cfg["client_id"],
-        client_secret=cfg["client_secret"],
-    )
-    return credential.get_token(GRAPH_SCOPE).token
+def _credential():
+    """Construit le credential de SORTIE Graph selon AZURE_ENV (jamais à l'import — au call-time).
+
+    - prod (défaut sûr) : ManagedIdentityCredential(client_id=...) — identité managée user-assigned,
+      type SPÉCIFIQUE pour éviter qu'une chaîne de fallback ramasse une autre identité.
+    - local : DefaultAzureCredential() — découvre az login / VS Code (hors Azure).
+
+    Aucun secret : zéro secret côté flux Graph.
+    """
+    env = (os.environ.get(ENV_AZURE_ENV, "") or "prod").strip().lower()
+    if env == "local":
+        return DefaultAzureCredential()
+    # prod (et défaut si AZURE_ENV absente ou inattendue) : identité managée user-assigned.
+    client_id = (os.environ.get(ENV_AZURE_CLIENT_ID, "") or MANAGED_IDENTITY_CLIENT_ID).strip()
+    return ManagedIdentityCredential(client_id=client_id)
 
 
-def _entetes(cfg: dict[str, str]) -> dict[str, str]:
-    return {"Authorization": f"Bearer {_token(cfg)}", "Accept": "application/json"}
+def _entetes() -> dict[str, str]:
+    """En-têtes Graph avec un jeton frais (identité managée). Construit le credential au call-time."""
+    token = _credential().get_token(GRAPH_SCOPE).token
+    return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
 
 @mcp.tool()
@@ -118,7 +154,7 @@ def list_items(list_id: str, top: int = 50) -> dict[str, Any]:
     url = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{list_id}/items"
     params = {"$expand": "fields", "$top": str(max(1, min(top, 200)))}
     with httpx.Client(timeout=30) as client:
-        reponse = client.get(url, headers=_entetes(cfg), params=params)
+        reponse = client.get(url, headers=_entetes(), params=params)
         reponse.raise_for_status()
         corps = reponse.json()
     items = corps.get("value", [])
@@ -152,7 +188,7 @@ def create_list_item(fields: dict[str, Any]) -> dict[str, Any]:
     with httpx.Client(timeout=30) as client:
         reponse = client.post(
             url,
-            headers={**_entetes(cfg), "Content-Type": "application/json"},
+            headers={**_entetes(), "Content-Type": "application/json"},
             json={"fields": fields},
         )
         reponse.raise_for_status()
@@ -161,6 +197,6 @@ def create_list_item(fields: dict[str, Any]) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Transport stdio par défaut (le client MCP — ex. Claude Code — lance ce processus).
+    # Transport HTTP STREAMABLE (endpoint /mcp par défaut du SDK ; /healthz pour les sondes).
     # Aucune connexion n'est tentée tant qu'un outil n'est pas appelé avec une config valide.
-    mcp.run()
+    mcp.run(transport="streamable-http")
