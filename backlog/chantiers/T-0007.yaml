@@ -19,10 +19,12 @@ depend_de: ["T-0008"]
 contrats_concernes:
   - "contrats/socle/organisation.md"
   - "contrats/socle/parc-collaborateur.md"
+  - "contrats/socle/rgpd-ecoute-teams.md"
 criteres_acceptation:
   - "Une décision promue « X devient collaborateur de P » déclenche les trois réconciliations sans saisie manuelle de droit ni de config"
   - "Le déclencheur est le passage candidat → collaborateur (création identité Entra), PAS l'entrée en liste de recrutement"
   - "Chaque réconciliation est au moindre privilège et tracée ; retour arrière par repointage"
+  - "CONTRAINTE D'ORDONNANCEMENT RGPD : l'information préalable « mémoire d'organisation » est délivrée AVANT l'activation de l'écoute Teams/Claude du collaborateur — étape qui PRÉCÈDE l'écoute dans la séquence, pas une case de fin de parcours (cadre rgpd-ecoute-teams.md §5)"
 rayon_impact: large
 statut: à_faire
 note: >
@@ -33,3 +35,8 @@ note: >
   l'onboarding à la lecture RH (T-0003) et au pipeline de recrutement. Le déclencheur est strictement
   le passage candidat → collaborateur (création de l'identité Entra). Phase 4 : dépend des
   réconciliateurs (parc T-0008 ; droits plan §9 T-4.3) qui n'existent pas encore.
+  RGPD — INFORMATION MÉMOIRE AVANT ÉCOUTE : l'onboarding porte l'information préalable obligatoire
+  des personnes sur l'écoute Teams/Claude de la mémoire d'organisation. C'est une CONTRAINTE
+  D'ORDONNANCEMENT : l'information PRÉCÈDE l'activation de l'écoute (pas d'écoute d'un collaborateur
+  non informé), ce n'est pas une case de fin de parcours. Cadre : contrats/socle/rgpd-ecoute-teams.md
+  (§5 transparence). Firme solo aujourd'hui : rien à exécuter, obligation posée comme déclencheur.
