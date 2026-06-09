@@ -198,5 +198,11 @@ def create_list_item(fields: dict[str, Any]) -> dict[str, Any]:
 
 if __name__ == "__main__":
     # Transport HTTP STREAMABLE (endpoint /mcp par défaut du SDK ; /healthz pour les sondes).
-    # Aucune connexion n'est tentée tant qu'un outil n'est pas appelé avec une config valide.
-    mcp.run(transport="streamable-http")
+    # Host réglé ICI (le SDK n'applique pas FASTMCP_HOST de l'environnement) : défaut 0.0.0.0
+    # — interface joignable par l'ingress/les sondes d'un conteneur (127.0.0.1 du SDK était le piège) ;
+    # reste pilotable par FASTMCP_HOST / FASTMCP_PORT. Aucune connexion réseau tant qu'un outil n'est pas appelé.
+    mcp.run(
+        transport="streamable-http",
+        host=os.environ.get("FASTMCP_HOST", "0.0.0.0"),
+        port=int(os.environ.get("FASTMCP_PORT", "8000")),
+    )
