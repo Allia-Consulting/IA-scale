@@ -1,34 +1,51 @@
 id: T-0002b
-titre: "Serveur MCP Graph : déploiement & écriture réelle"
+titre: "Serveur MCP Graph : déploiement Azure (identité managée) & écriture réelle"
 capacite: "Socle d'exploitation / Orchestration des agents"
 phase: 1
 type_action: infrastructure_mcp
 cran: valide
 produit:
-  - "déploiement du serveur MCP Graph (code existant : outils/mcp-graph/) sur un hébergement Azure (événementiel)"
+  - "déploiement du serveur MCP Graph (code existant : outils/mcp-graph/) sur Azure Container Apps (scale-to-zero, événementiel ; App Service en repli)"
+  - "bascule du code vers l'identité managée : server.py passe de ClientSecretCredential à DefaultAzureCredential ; suppression de la variable GRAPH_CLIENT_SECRET ; Key Vault devient optionnel pour ce service (plus de secret applicatif)"
   - "écriture réelle dans la Liste « Zone-de-proposition » via Graph Lists API"
   - "mise à jour de modele-donnees.md avec les endpoints/identifiants réels (APRÈS déploiement)"
-depend_de: ["T-0002a", "T-0003"]
-# T-0002a : le runbook Entra (app/secret/octroi write) doit précéder toute écriture réelle.
-# T-0003  : la journalisation RH/CVs doit être active avant tout accès agent à M365.
-# (Conserve la logique de l'ancien T-0002, dont la dépendance était déjà T-0003 ; l'ancienne
-#  référence « A0.7 » avait été corrigée en T-0003 en amont.) T-0003 portant la sentinelle
-#  RUNBOOK-HUMAIN, cette tâche n'est de toute façon pas sélectionnable en autonomie tant que
-#  T-0003 n'est pas promu.
+depend_de: ["T-0002a", "T-0002a-bis"]
+# CHANGEMENT DE DÉPENDANCE (8 juin 2026, session doctrine) — tracé distinctement dans le corps de la PR :
+#   AVANT : depend_de: ["T-0002a", "T-0003"]
+#   APRÈS : depend_de: ["T-0002a", "T-0002a-bis"]
+#   - SUPPRESSION de T-0003 : DÉCOUPLAGE explicite. T-0002b écrit en ZONE-DE-PROPOSITION
+#     et lit la liste Missions — il NE touche NI Ressources-RH NI CVs. La journalisation
+#     RH/CVs (T-0003) n'est donc PAS un prérequis de cette tâche. T-0003 RESTE prérequis
+#     de la LECTURE RH réelle, mais plus de T-0002b. (Auparavant la dépendance T-0003 était
+#     héritée de l'ancien T-0002, où elle était sur-large.)
+#   - AJOUT de T-0002a-bis : l'hébergement sous IDENTITÉ MANAGÉE crée un principal Entra
+#     DISTINCT de l'app registration de T-0002a ; le rôle write Sites.Selected ne se
+#     transfère pas et doit être RÉ-OCTROYÉ au principal de l'identité managée (runbook
+#     humain T-0002a-bis). Pas d'écriture réelle avant que ce ré-octroi n'existe.
+# Note d'ordonnancement : le principal d'identité managée est provisionné comme PREMIÈRE
+#   étape du déploiement (cette tâche) ; le ré-octroi (T-0002a-bis, runbook) s'applique
+#   ensuite ; l'écriture réelle vient après. L'arête de dépendance exprime « pas d'écriture
+#   avant l'octroi ». T-0002a-bis portant la sentinelle RUNBOOK-HUMAIN, cette tâche reste
+#   non sélectionnable en autonomie tant que le runbook n'est pas fait.
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
 criteres_acceptation:
-  - "Le serveur MCP est déployé et joignable (hébergement Azure), sans dépendre du poste du fondateur"
+  - "Le serveur MCP est déployé sur Azure Container Apps (scale-to-zero) et joignable, sans dépendre du poste du fondateur"
+  - "Le service s'authentifie par identité managée (DefaultAzureCredential) ; aucun secret applicatif n'est stocké ni injecté (GRAPH_CLIENT_SECRET supprimé)"
   - "L'agent lit la liste Missions via Graph et liste les éléments réels"
-  - "L'agent crée un item dans Zone-de-proposition sans toucher les sources"
+  - "L'agent crée un item dans Zone-de-proposition sans toucher les sources (Ressources-RH/CVs non concernées)"
   - "modele-donnees.md est mis à jour avec les endpoints réels après déploiement"
 rayon_impact: local
 statut: à_faire
 note: >
   Issu du découpage de l'ancien T-0002 (cette tâche = la partie CODE/DÉPLOIEMENT). Le code MCP
   est DÉJÀ ÉCRIT (outils/mcp-graph/ : list_items + create_list_item, garde-fou d'écriture en
-  zone de proposition) mais NON DÉPLOYÉ. Le chantier principal restant est l'HÉBERGEMENT AZURE
-  (événementiel, qui tourne sans le poste du fondateur — voir architecture.md Partie B.4) ;
-  cette part est un runbook humain. En attendant le déploiement, la zone de proposition reste
-  SIMULÉE EN LOCAL (zone-proposition/). La mise à jour des endpoints réels dans modele-donnees.md
-  se fait APRÈS déploiement.
+  zone de proposition) mais NON DÉPLOYÉ — et le passage à l'identité managée (DefaultAzureCredential,
+  suppression de GRAPH_CLIENT_SECRET) reste À FAIRE dans le code lors de ce déploiement. Le
+  chantier principal restant est l'HÉBERGEMENT AZURE CONTAINER APPS, scale-to-zero, événementiel,
+  qui tourne sans le poste du fondateur et SANS SECRET (identité managée) — voir architecture.md
+  Partie B.4 / B.4 bis ; cette part est un runbook humain. En attendant le déploiement, la zone de
+  proposition reste SIMULÉE EN LOCAL (zone-proposition/), les synthèses « mémoire hebdo » sous
+  zone-proposition/memoire/. La mise à jour des endpoints réels dans modele-donnees.md se fait
+  APRÈS déploiement. DÉCOUPLAGE de T-0003 : cette tâche n'écrit qu'en Zone-de-proposition,
+  donc plus aucune dépendance à la journalisation RH/CVs (voir le bloc depend_de).
