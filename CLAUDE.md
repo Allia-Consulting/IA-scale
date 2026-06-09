@@ -11,6 +11,7 @@ Ce dépôt est le **canon des règles** d'Allia. Résous toujours la version à 
 - **Règles** (ce dépôt) : `doctrine/doctrine.md` (fait foi), `contrats/socle/*`, `contrats/local/<perimetre>/*`, `backlog/plan.md`, `skills/<skill>/SKILL.md`, `agents/<agent>/profil.yaml`.
 - **Crans** : `contrats/socle/table-des-crans.yaml` — à consulter avant toute action.
 - **Organisation & délégations** : `contrats/socle/organisation.md`.
+- **Mémoire d'organisation** : résous aussi `contrats/socle/memoire-organisation.md` — le contrat socle qui régit la synthèse hebdomadaire candidate (batch nocturne jeudi→vendredi) écrite en Zone-de-proposition, avant validation ligne à ligne par le gardien. *(Contrat **candidat** tant que non promu — voir son en-tête.)*
 - **Données** (les faits) : M365 (missions, temps, imputations, livrables), via MCP. Jamais dans le dépôt.
 
 ## Avant d'agir : résous le cran

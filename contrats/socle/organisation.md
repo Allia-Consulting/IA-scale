@@ -1,11 +1,11 @@
 # Organisation & délégations — Allia Consulting
 
-> **Version** : 1.1 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
+> **Version** : 1.2 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), `/contrats/socle/organisation.md`.
 > **Autorité de promotion** : Gardien du temple.
 > **Portée** : Toute l'organisation Allia.
-> **Changelog** : v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
+> **Changelog** : v1.2 — promu via boucle de promotion, 8 juin 2026 (session doctrine). **D4 (carte des capacités, §2)** : ajout de deux capacités au domicile canonique de la carte (la grille des périmètres) — **« onboarding & intégration »** (capacité chapeau orchestrant les trois réconciliations d'une décision « X devient collaborateur du périmètre P » : matériel, droits, connaissance) sous *Capacités habilitantes*, et **« parc & gestion de poste »** (profil de poste, apps déployées, posture sécurité, groupes Entra d'enrôlement ; politique canonisée, exécution = runbook) sous *Socle d'exploitation & gouvernance*. v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
 
 La doctrine définit *les règles et les rôles* (en abstrait). Le plan définit *le chantier*. Ce document définit **qui répond de quoi** : il lie les rôles abstraits de la doctrine à des périmètres concrets et à leurs titulaires, et il gouverne la délégation. C'est la « réalisation » de la gouvernance, rendue canonique et gouvernable — ce que la doctrine laisse délibérément de côté pour rester stable (principe « capacités stables, réalisation volatile »).
 
@@ -33,8 +33,12 @@ Un périmètre est une capacité, ou un groupe cohérent de capacités, dont un 
 
 - **Pilotage** — stratégie & offre · performance & gouvernance.
 - **Cœur de métier** — développement commercial · delivery · relation client · connaissance, contenu & IP (dont **communication & marque**).
-- **Capacités habilitantes** — talent & RH · gestion financière · ressources & capacité · corporate & conformité.
-- **Socle d'exploitation & gouvernance** — orchestration des agents · référentiel & cycle de vie des agents · évaluation & observabilité · adoption multi-utilisateurs (RBAC).
+- **Capacités habilitantes** — talent & RH · **onboarding & intégration** · gestion financière · ressources & capacité · corporate & conformité.
+- **Socle d'exploitation & gouvernance** — orchestration des agents · référentiel & cycle de vie des agents · **parc & gestion de poste** · évaluation & observabilité · adoption multi-utilisateurs (RBAC).
+
+> **Deux capacités ajoutées (v1.2, session doctrine du 8 juin 2026).**
+> - **Onboarding & intégration** (*Capacités habilitantes*) — capacité **chapeau** qui orchestre, pour une même décision promue « X devient collaborateur du périmètre P », les **trois réconciliations** d'une même vérité : **matériel** (parc — ABM/Intune), **droits** (Entra/SSO, via le réconciliateur de `§5`), **connaissance** (Claude/Git — accès au canon et à la mémoire d'organisation). Déclencheur : le passage **candidat → collaborateur** (création de l'identité Entra). La liste de recrutement reste un **processus humain**, volontairement non couplé (cf. `backlog/chantiers/`).
+> - **Parc & gestion de poste** (*Socle d'exploitation & gouvernance*) — la **politique** de poste (profil par fonction, applications déployées, posture de sécurité, groupes Entra d'enrôlement) est **canonisée** ici et dans `contrats/socle/parc-collaborateur.md` (candidat) ; la **configuration effective** Intune/ABM est un **runbook humain**, et la réconciliation automatique politique→Intune est un chantier de Phase 3/4 (backlog). Voir l'extension de la chaîne d'autorité aux **appareils** (doctrine §8, candidat v1.4).
 
 Le gardien décide de la granularité : on délègue rarement une capacité isolée, plus souvent un domaine cohérent.
 
