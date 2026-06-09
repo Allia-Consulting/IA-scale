@@ -16,11 +16,11 @@ depend_de: ["T-0002b-1", "T-0002b-2", "T-0002b-3", "T-0002b-4", "T-0002b-5"]
 #     T-0002b-3 déploiement Container App (min 1 réplica, attache identité managée) — runbook
 #     T-0002b-4 app reg « serveur » Easy Auth + secret — runbook
 #     T-0002b-5 app reg « client » (principe appelant unique) + tokens — runbook
-#   ORDONNANCEMENT : b-1 → b-2 → b-3 (dépend de T-0002a-bis, FAIT) → b-4 → b-5.
+#   ORDONNANCEMENT : b-1 → b-2 → b-3 (dépend de T-0002a-bis, promu — runbook exécuté le 9 juin 2026) → b-4 → b-5.
 # HISTORIQUE DE DÉPENDANCE (conservé) : AVANT le 8 juin, depend_de incluait T-0003 ; DÉCOUPLAGE acté —
 #   cette tâche écrit en ZONE-DE-PROPOSITION et lit Missions, elle ne touche NI Ressources-RH NI CVs,
 #   donc AUCUNE dépendance à la journalisation RH/CVs (T-0003). T-0003 reste prérequis de la LECTURE RH
-#   réelle, pas de T-0002b. L'octroi à l'identité managée (T-0002a-bis) est désormais FAIT.
+#   réelle, pas de T-0002b. L'octroi à l'identité managée (T-0002a-bis) est désormais promu (runbook exécuté le 9 juin 2026).
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
 criteres_acceptation:

@@ -8,7 +8,7 @@ produit:
   - "identité managée USER-ASSIGNED « id-allia-mcp-graph » (principal Entra DISTINCT de l'app registration allia-mcp-graph)"
   - "octroi write au principal de l'identité, sur le SEUL site AlliaConsuling, en DEUX étapes : (1) app role assignment Entra Sites.Selected au service principal de l'identité ; (2) Graph POST /sites/{id}/permissions avec le clientId de l'identité dans application.id"
 depend_de: []
-# depend_de vide : tâche déjà FAITE (exécutée le 9 juin 2026). Même convention que T-0002a :
+# depend_de vide : tâche déjà PROMUE (exécutée le 9 juin 2026). Même convention que T-0002a :
 # la sentinelle RUNBOOK-HUMAIN sert à empêcher la sélection AUTONOME d'un runbook NON encore fait ;
 # ici la tâche est faite, donc inerte pour la sélection — la sentinelle serait redondante. La nature
 # « runbook, jamais par un agent » est portée par type_action: runbook_humain + la note d'exécution.
