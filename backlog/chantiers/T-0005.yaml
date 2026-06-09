@@ -9,13 +9,21 @@ produit:
   - "écriture de la synthèse en zone de proposition avec champ d'origine « mémoire hebdo » (simulée en local zone-proposition/memoire/ tant que T-0002b n'est pas déployé)"
   - "rituel de validation ligne à ligne le vendredi (non-validé = oublié)"
 depend_de: []
-# Aucune dépendance dure de chantier. PRÉREQUIS NORMATIF (non bloquant pour la sélection,
-#   mais à respecter) : la PROMOTION du contrat socle candidat contrats/socle/memoire-organisation.md
-#   par le gardien — le batch exécute ce contrat. L'écriture RÉELLE en M365 attend T-0002b ; en
-#   attendant, écriture SIMULÉE EN LOCAL (zone-proposition/memoire/). L'écriture continue est
-#   abandonnée (décision 8 juin 2026) au profit d'une synthèse hebdomadaire candidate.
+# Aucune dépendance dure de chantier. PRÉREQUIS NORMATIFS (non bloquants pour la sélection,
+#   mais à respecter avant toute écoute réelle) :
+#   1) PROMOTION du contrat socle candidat contrats/socle/memoire-organisation.md par le gardien
+#      — le batch exécute ce contrat ;
+#   2) PROMOTION du CADRE RGPD contrats/socle/rgpd-ecoute-teams.md par le gardien-DPO — l'écoute
+#      Teams/Claude est un traitement de données personnelles : finalité limitée aux apprentissages
+#      COLLECTIFS, base légale d'intérêt légitime, minimisation/rétention (suppression du verbatim
+#      brut et du non-validé après la décision du vendredi), information préalable AVANT écoute,
+#      droits des personnes, AIPD. (Remplace toute mention vague de « cadrage RGPD ».)
+#   L'écriture RÉELLE en M365 attend T-0002b ; en attendant, écriture SIMULÉE EN LOCAL
+#   (zone-proposition/memoire/). L'écriture continue est abandonnée (décision 8 juin 2026) au
+#   profit d'une synthèse hebdomadaire candidate.
 contrats_concernes:
   - "contrats/socle/memoire-organisation.md"
+  - "contrats/socle/rgpd-ecoute-teams.md"
   - "contrats/socle/modele-donnees.md"
   - "contrats/socle/anonymisation.md"
 criteres_acceptation:
@@ -23,6 +31,7 @@ criteres_acceptation:
   - "La synthèse est écrite en zone de proposition, champ d'origine « mémoire hebdo » (locale tant que T-0002b non déployé)"
   - "La synthèse reste INTERNE et NOMINATIVE ; toute sortie externe d'un fragment passe la porte d'anonymisation (anonymisation.md §1)"
   - "Le vendredi, une validation ligne à ligne est possible ; le non-validé est oublié (pas de rétention par défaut)"
+  - "RGPD (cadre rgpd-ecoute-teams.md, prérequis normatif) : aucune écoute réelle avant promotion du cadre ET information préalable du collaborateur ; le verbatim brut et la synthèse non validée sont supprimés après la décision du vendredi"
   - "L'agent n'écrit jamais la mémoire comme une source et ne promeut jamais"
 rayon_impact: local
 statut: à_faire

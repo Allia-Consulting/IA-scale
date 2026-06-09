@@ -1,9 +1,10 @@
 # Mémoire d'organisation — Allia Consulting
 
-> **Version** : 1.0 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle **interne, nominatif** — *en attente de promotion par le gardien*.
+> **Version** : 1.1 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle **interne, nominatif** — *en attente de promotion par le gardien*.
+> **Changelog** : v1.1 — candidat, 9 juin 2026 : ajout du **renvoi normatif vers `contrats/socle/rgpd-ecoute-teams.md`** (cadre RGPD de l'écoute Teams/Claude) en en-tête et au §5. Régime **nominatif §4 confirmé, non modifié** ; aucun autre changement de fond. v1.0 — candidat (mécanisme initial).
 > **Domicile** : `contrats/socle/memoire-organisation.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §7 boucle de promotion), `contrats/socle/modele-donnees.md` (§2 bis/§3 — zone de proposition, champ d'origine « mémoire hebdo »).
-> **Renvoi normatif** : `contrats/socle/anonymisation.md` — ce contrat est **interne et nominatif** ; toute **sortie externe** d'un fragment de mémoire **déclenche la porte d'anonymisation** (anonymisation.md §1). Voir §5.
+> **Renvoi normatif** : `contrats/socle/anonymisation.md` — ce contrat est **interne et nominatif** ; toute **sortie externe** d'un fragment de mémoire **déclenche la porte d'anonymisation** (anonymisation.md §1). Voir §5. **`contrats/socle/rgpd-ecoute-teams.md`** — **cadre RGPD de conformité de l'écoute** Teams/Claude (finalité, base légale, minimisation/rétention, transparence, droits des personnes) ; prérequis normatif de l'écoute réelle.
 > **Rattachement** : capacité *Connaissance, contenu & IP* ; chantier `backlog/chantiers/T-0005.yaml` (mécanisme) ; cran de promotion `promouvoir_contrat_socle` (gardien).
 
 ## 0. Objet
@@ -38,6 +39,8 @@ Ce contrat dit **comment** cette mémoire se produit, **où** elle vit transitoi
 ## 5. Renvoi normatif à l'anonymisation — à la sortie externe
 
 Conformément à `anonymisation.md` §1 (déclencheur), **toute sortie externe de la firme** d'un fragment de cette mémoire — publication, livrable rendu hors firme — **déclenche la porte d'anonymisation AVANT l'usage** (cran `anonymisation`, orthogonal au cran de l'action). Le critère décisif reste « la matière **quitte-t-elle la firme** ? ». La **réutilisation interne** (d'une mission/équipe à l'autre) reste **nominative** et ne déclenche rien.
+
+**Cadre RGPD de l'écoute.** L'**écoute** elle-même (entrée du mécanisme §1 : conversations Teams/Claude) est un traitement de données personnelles gouverné par `contrats/socle/rgpd-ecoute-teams.md` (cadre de conformité : finalité limitée aux apprentissages **collectifs**, base légale d'intérêt légitime, minimisation/rétention — suppression du brut et du non-validé, transparence préalable, droits des personnes). Ce cadre est un **prérequis normatif de l'écoute réelle**. Le régime **nominatif** du §4 (ci-dessus) est **confirmé** par ce cadre, pas modifié.
 
 ## 6. Crans et gouvernance
 
