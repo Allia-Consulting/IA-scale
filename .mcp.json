@@ -7,7 +7,7 @@
         "clientId": "77aa6010-e3a8-4404-8c34-5f352e0c589a",
         "callbackPort": 8080,
         "authServerMetadataUrl": "https://login.microsoftonline.com/a8d48a4e-329b-4302-b83a-5b085cefa944/v2.0/.well-known/openid-configuration",
-        "scopes": ["api://0028a5ff-925a-4700-b703-2f2d0ce728fc/access_as_user"]
+        "scopes": "api://0028a5ff-925a-4700-b703-2f2d0ce728fc/access_as_user"
       }
     }
   }

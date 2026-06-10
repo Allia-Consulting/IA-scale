@@ -1,7 +1,7 @@
 # Identités et secrets — Allia Consulting
 
-> **Version** : 1.0 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle — *en attente de promotion par le gardien*.
-> **Changelog** : v1.0 — candidat, 10 juin 2026 (session stop-doctrine) : principe **zéro secret applicatif**, modèle des **identités appelantes** (humains / workloads / instruments du gardien), registre des **dettes** de secrets avec échéances.
+> **Version** : 1.1 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle — *en attente de promotion par le gardien*.
+> **Changelog** : v1.1 — candidat, 10 juin 2026 : **extinction de la première dette** du registre §4 (secret client supprimé après preuve `T-0010`). v1.0 — candidat, 10 juin 2026 (session stop-doctrine) : principe **zéro secret applicatif**, modèle des **identités appelantes** (humains / workloads / instruments du gardien), registre des **dettes** de secrets avec échéances.
 > **Domicile** : `contrats/socle/identites-et-secrets.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi » — appliqué aux droits, §8 chaîne d'autorité, §9 principe zéro secret), `contrats/socle/organisation.md` (§5 — les droits sont la projection d'une décision promue), `architecture.md` (B.4 bis — double frontière de secret, document de référence, ne fait pas foi).
 > **Rattachement** : capacité *Socle d'exploitation / Orchestration des agents* ; chantiers `backlog/chantiers/T-0010.yaml` (branchement des postes), `T-0009.yaml` (validation applicative) ; cran de promotion `promouvoir_contrat_socle` (gardien).
@@ -42,10 +42,10 @@ Les secrets qui existent encore, avec leur trajectoire d'extinction. Ce registre
 
 | Secret (dette) | Porteur | Créé le | Expire | Cible d'extinction | Chantier |
 |---|---|---|---|---|---|
-| Secret **client** (`mcp-client-secret`) | app registration `allia-mcp-graph-client` | 10 juin 2026 | **juin 2028** | **SUPPRESSION** dès la preuve `T-0010` (plus aucun consommateur cible : les humains passent en identité de personne, le batch mémoire en identité du gardien) | `T-0010` |
+| Secret **client** (`mcp-client-secret`) | app registration `allia-mcp-graph-client` | 10 juin 2026 | — | **ÉTEINTE le 10 juin 2026** — supprimée après preuve `T-0010` (plus aucun consommateur : les humains passent par leur identité Entra, les workloads futurs par identité managée) | `T-0010` |
 | Secret **serveur** Easy Auth (`easyauth-server-secret`) | app registration `allia-mcp-graph-server-auth` (porté par la container app via `microsoft-provider-authentication-secret`) | 10 juin 2026 | **juin 2028** | **suppression ou remplacement par identité managée fédérée** — la doc Microsoft documente Easy Auth **sans secret** pour la validation bearer pure ; MI-FIC documenté App Service, **à confirmer Container Apps**. À instruire en **runbook AVANT juin 2028** | à ouvrir (runbook) |
 
-> Les deux dettes partagent la même échéance (**juin 2028**) : un seul rendez-vous — viser l'**extinction** à ce rendez-vous, pas la rotation.
+> Seule dette restante : le secret **serveur** (échéance **juin 2028**) — viser l'**extinction** à ce rendez-vous, pas la rotation.
 
 ## 5. Évolution de ce contrat
 

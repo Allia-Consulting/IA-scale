@@ -70,6 +70,12 @@ Le branchement d'un poste suit le **modèle des identités appelantes** (`contra
 - **Configuration** : le fichier **`.mcp.json` à la racine du dépôt** (scope **project** de Claude Code) porte l'endpoint `/mcp` réel et la configuration OAuth (clientId public, métadonnées Entra, scope `access_as_user`). Il ne contient **aucun secret**.
 - **Porte humaine** : au premier lancement, Claude Code **demande l'approbation** du serveur MCP du projet — rien ne se connecte sans ce geste explicite.
 - **Flux** : à la connexion, Claude Code ouvre le **navigateur** sur la mire Entra ; la personne s'authentifie avec **son** compte ; l'accès n'est accordé que si elle appartient au groupe `grp-mcp-graph-users` (*assignment required* sur l'enterprise app du service).
+- **Faits durcis** (prouvés le 10 juin 2026, trace `T-0010`) — à connaître pour le prochain poste :
+  - `oauth.scopes` dans `.mcp.json` est une **CHAÎNE** (scopes multiples séparés par des espaces), jamais un tableau — config invalide = serveur **ignoré** (silencieusement par l'app desktop ; warning explicite au CLI : `/doctor` et bandeau `/mcp`).
+  - L'authentification OAuth des serveurs `.mcp.json` projet se fait au **CLI** — l'app **desktop** ne les expose pas (son `/mcp` ouvre le catalogue de connecteurs claude.ai) ; la configuration est partagée entre les deux.
+  - Côté Entra, les **redirect URIs** se saisissent en **minuscules strictes** (correspondance sensible à la casse, `AADSTS50011` sur une majuscule) — copier-coller plutôt que retaper.
+  - L'accès s'obtient par **ajout au groupe Entra `grp-mcp-graph-users`** — c'est la **porte du gardien** (projection d'une décision promue, `organisation.md` §5), jamais une affectation individuelle.
+  - Après **tout changement de membres** du groupe, **ré-authentifier** (`/mcp`) : l'affectation ne prend effet dans le jeton qu'à sa **prochaine émission** (prévoir 2-3 min de propagation d'annuaire). Un groupe **vide** ferme la porte à tout le monde — comportement attendu et constaté.
 - **Plan B (même cible zéro-secret, confort moindre)** : si le flux OAuth natif bute contre Entra, un `headersHelper` exécutant `az account get-access-token --resource api://0028a5ff-925a-4700-b703-2f2d0ce728fc` sous l'identité Entra de la personne (`az login`) — voir la note de `T-0010`.
 
 ## Hors de ce livrable (signalé, non fait)
