@@ -63,6 +63,15 @@ python server.py            # transport HTTP streamable (endpoint /mcp ; /health
 
 En local hors Azure, poser `AZURE_ENV=local` (le credential découvre `az login`). En production, l'hébergement (Container Apps, `T-0002b-3`) fournit l'identité managée et `AZURE_ENV=prod`. Tant que la configuration M365 n'est pas renseignée, **le serveur dort** (aucun appel réseau à l'import).
 
+## Branchement d'un poste (Claude Code)
+
+Le branchement d'un poste suit le **modèle des identités appelantes** (`contrats/socle/identites-et-secrets.md` §2, cas « humain ») : **identité Entra de la personne**, flux **authorization code + PKCE** sur un client **public** — **aucun secret** créé, distribué ni stocké sur le poste. Chantier : `backlog/chantiers/T-0010.yaml` (la part Entra — scope délégué, client public, groupe `grp-mcp-graph-users` — est un **runbook humain**, non couverte ici).
+
+- **Configuration** : le fichier **`.mcp.json` à la racine du dépôt** (scope **project** de Claude Code) porte l'endpoint `/mcp` réel et la configuration OAuth (clientId public, métadonnées Entra, scope `access_as_user`). Il ne contient **aucun secret**.
+- **Porte humaine** : au premier lancement, Claude Code **demande l'approbation** du serveur MCP du projet — rien ne se connecte sans ce geste explicite.
+- **Flux** : à la connexion, Claude Code ouvre le **navigateur** sur la mire Entra ; la personne s'authentifie avec **son** compte ; l'accès n'est accordé que si elle appartient au groupe `grp-mcp-graph-users` (*assignment required* sur l'enterprise app du service).
+- **Plan B (même cible zéro-secret, confort moindre)** : si le flux OAuth natif bute contre Entra, un `headersHelper` exécutant `az account get-access-token --resource api://0028a5ff-925a-4700-b703-2f2d0ce728fc` sous l'identité Entra de la personne (`az login`) — voir la note de `T-0010`.
+
 ## Hors de ce livrable (signalé, non fait)
 
 - **Conteneurisation** (Dockerfile, image, ACR) : chantier `T-0002b-2`. **Fait ACR Tasks durci** : le scanner de dépendances d'ACR Tasks n'accepte pas le flag `--platform` dans l'instruction `FROM` (« unable to understand line », build avorté avant exécution) ; la plateforme cible se passe à `az acr build --platform linux/amd64` (défaut déjà Linux/AMD64), **pas** dans le `FROM`. Ne pas réintroduire `FROM --platform=...` : cela recasserait le build côté ACR.

@@ -25,3 +25,8 @@ note: >
   partagé par tous les consommateurs internes du service (Claude Code, puis batch mémoire T-0005) — pas
   de secret/identité par utilisateur. Runbook humain — créer app, configurer auth, obtenir des tokens
   sont PROSCRITS à un agent et à Claude (garde-fous CLAUDE.md ; plan §2 ; table-des-crans.yaml).
+  RÉVISION PROSPECTIVE (stop doctrine 10 juin 2026) : le modèle « un principe appelant unique à
+  secret partagé » est remplacé par le modèle d'identités appelantes de
+  contrats/socle/identites-et-secrets.md (humains = identité Entra ; workloads = identité managée).
+  L'app cliente devient un client PUBLIC (T-0010) et son secret une dette à éteindre (registre §4).
+  L'exécution ci-dessus reste la trace exacte de ce qui a été fait et prouvé le 10 juin 2026.
