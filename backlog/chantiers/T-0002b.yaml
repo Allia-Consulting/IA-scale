@@ -30,7 +30,8 @@ criteres_acceptation:
   - "L'agent lit la liste Missions via Graph et crée un item dans Zone-de-proposition sans toucher les sources (Ressources-RH/CVs non concernées)"
   - "modele-donnees.md est mis à jour avec les endpoints réels après déploiement"
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: "chapeau intégralement prouvée le 10 juin 2026 — les CINQ sous-tâches sont promues : T-0002b-1 code HTTP streamable (PRs #32/#35/#36) ; T-0002b-2 image (part agent PRs #34 + correctif #37 ; runbook ACR exécuté le 10 juin) ; T-0002b-3 déploiement Container App (runbook 10 juin) ; T-0002b-4 Easy Auth (runbook 10 juin) ; T-0002b-5 principe appelant (runbook 10 juin). Critères de la chapeau tous prouvés le 10 juin 2026 : service HTTP distant min 1 réplica sans dépendre du poste du fondateur ; entrée Easy Auth prouvée dans les deux sens (sans token → 401 ; bearer du principe appelant → 200) ; sortie Graph sous identité managée, zéro secret applicatif ; lecture de la liste Missions + création d'un item en Zone-de-proposition sans toucher les sources. Les preuves détaillées vivent dans les champs execution: des sous-tâches (renvoi — pas de duplication ici). La mise à jour de modele-donnees.md avec les endpoints réels (item du produit de cette chapeau, prévu APRÈS déploiement) est faite par la même PR que la présente trace (v1.8)."
 note: >
   TÂCHE-CHAPEAU (id conservé pour ne pas casser les renvois : T-0005, modele-donnees.md, skills).
   Modèle d'hébergement précisé le 9 juin 2026 (doc Microsoft « Host/Secure MCP servers on Azure
