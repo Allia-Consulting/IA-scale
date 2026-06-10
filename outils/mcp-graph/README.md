@@ -65,7 +65,7 @@ En local hors Azure, poser `AZURE_ENV=local` (le credential découvre `az login`
 
 ## Hors de ce livrable (signalé, non fait)
 
-- **Conteneurisation** (Dockerfile, image, ACR) : chantier `T-0002b-2`.
+- **Conteneurisation** (Dockerfile, image, ACR) : chantier `T-0002b-2`. **Fait ACR Tasks durci** : le scanner de dépendances d'ACR Tasks n'accepte pas le flag `--platform` dans l'instruction `FROM` (« unable to understand line », build avorté avant exécution) ; la plateforme cible se passe à `az acr build --platform linux/amd64` (défaut déjà Linux/AMD64), **pas** dans le `FROM`. Ne pas réintroduire `FROM --platform=...` : cela recasserait le build côté ACR.
 - **Déploiement Container App** (min 1 réplica, attache de l'identité managée, ingress) : chantier `T-0002b-3` (runbook).
 - **Authentification d'ENTRÉE** (app registration « serveur » Easy Auth + secret serveur ; app registration « client ») : chantiers `T-0002b-4` / `T-0002b-5` (runbooks). C'est une frontière distincte du flux Graph.
 - **Mise à jour de `modele-donnees.md`** avec les endpoints/identifiants réels : **après** le déploiement (étape ultérieure de `T-0002b`), pas ici.
