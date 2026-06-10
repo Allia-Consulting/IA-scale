@@ -106,8 +106,8 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Ré-octroi `write` au principal de l'identité managée | **FAIT** — runbook `T-0002a-bis` réalisé le 9 juin : **(1)** app role assignment `Sites.Selected` au service principal de l'identité, **(2)** `POST /sites/{id}/permissions` avec le `clientId` de l'identité | Graph (app role assignment + `POST /sites/{id}/permissions`) |
 | Registre de conteneurs **ACR `acralliamcpgraph`** (Basic, francecentral, rg-ia-scale) | **FAIT** — runbook `T-0002b-2` exécuté le 10 juin 2026 ; **admin user désactivé**, jetons d'audience ARM (`authentication-as-arm`) **activés** (prérequis du pull par identité managée, `T-0002b-3`) | portail Azure / `az acr show` |
 | Image **`allia-mcp-graph:0.1.0`** (linux/amd64) poussée dans l'ACR | **FAIT** — buildée côté ACR (`az acr build --platform linux/amd64`) et poussée le 10 juin 2026 ; digest `sha256:34167f9e…` | `az acr repository show-tags` |
-| Hébergement (Azure **Container Apps**, **min 1 réplica** ; App Service en repli) | **À FAIRE** — `T-0002b-3` (runbook) ; min 1 réplica car usage interactif (B.4 bis) | portail Azure |
-| Service MCP **HTTP distant** (`/mcp` streamable + `/healthz`, stateless) | **À FAIRE** — code `T-0002b-1`, image `T-0002b-2`, déploiement `T-0002b-3` | `outils/mcp-graph/` + `T-0002b-*` |
+| Hébergement (Azure **Container Apps**, **min 1 réplica**) | **FAIT** — runbook `T-0002b-3` exécuté le 10 juin 2026 : environnement **`cae-ia-scale`** + container app **`ca-allia-mcp-graph`** (francecentral, rg-ia-scale), **min 1 / max 1 réplica**, identité user-assigned `id-allia-mcp-graph` attachée, pull ACR par identité managée (AcrPull) ; **restriction IP transitoire** « allow-gardien » (fenêtre pré-Easy-Auth, à lever fin `T-0002b-4`) | portail Azure / `az containerapp show` |
+| Service MCP **HTTP distant** (`/mcp` streamable + `/healthz`, stateless) | **PARTIEL** — **déployé et joignable** (FQDN `ca-allia-mcp-graph.delightfulocean-1bf3f3c5.francecentral.azurecontainerapps.io` ; `/healthz` 200, `/mcp` répond au JSON-RPC initialize) ; restent l'auth d'entrée Easy Auth (`T-0002b-4`) et le principe appelant client (`T-0002b-5`) | portail Azure + sondes `/healthz` · `/mcp` |
 | App registration **« serveur »** Easy Auth (built-in auth Entra) + secret serveur | **À FAIRE** — **runbook humain** `T-0002b-4` (frontière d'**entrée** ; un secret serveur, distinct du flux Graph) | portail Entra / Container Apps |
 | App registration **« client »** (principe appelant unique) + tokens | **À FAIRE** — **runbook humain** `T-0002b-5` (partagé Claude Code + batch mémoire) | portail Entra |
 
@@ -118,10 +118,12 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 |---|---|---|
 | Site SharePoint AlliaConsuling | **FAIT** — site et listes existants au tenant | `contrats/socle/modele-donnees.md` §2 bis + tenant M365 |
 | Listes du modèle de données (Missions, Temps, …) | **PARTIEL** — listes **existantes au tenant** (lecture) **FAIT** ; **écriture** via Graph = `T-0002b` (à faire) | `modele-donnees.md` §2 bis / §4 + tenant |
-| Zone de proposition | **PARTIEL** — **réelle** (Liste « Zone-de-proposition ») **À FAIRE** (`T-0002b`) ; **simulée en local** (`zone-proposition/`) **FAIT** | `modele-donnees.md` §3 / §4 |
+| Zone de proposition | **FAIT** (liste réelle) — Liste « Zone-de-proposition » **créée le 10 juin 2026** par le gardien (UI SharePoint, pendant le runbook `T-0002b-3` ; colonne texte « Origine » = champ d'origine), id Graph `2590d442-6e7d-4802-b271-451212ea10d4` ; l'**écriture de bout en bout** via le connecteur reste à prouver (chapeau `T-0002b` — b-4/b-5) ; la simulation locale (`zone-proposition/`) reste le domicile transitoire des dérivés d'ici là | `modele-donnees.md` §2 bis / §3 + tenant |
 | Audit / journalisation sur `Ressources-RH` et `CVs` | **À FAIRE** (à activer avant tout accès agent — `T-0003`, runbook) | `modele-donnees.md` §2 bis + tenant |
 | Écrans de saisie (SharePoint puis Power Apps) | **À FAIRE** (décision Partie B.1 ; non construits) | tenant M365 |
-| Mémoire d'organisation — synthèse hebdo candidate (champ d'origine « mémoire hebdo ») | **PARTIEL** — **simulée en local** (`zone-proposition/memoire/`) ; cible réelle (Liste « Zone-de-proposition ») **À FAIRE** (`T-0002b`) ; batch Cowork nocturne **À FAIRE** | `contrats/socle/memoire-organisation.md` (candidat) + `modele-donnees.md` §2 bis/§3 |
+| Mémoire d'organisation — synthèse hebdo candidate (champ d'origine « mémoire hebdo ») | **PARTIEL** — **simulée en local** (`zone-proposition/memoire/`) ; liste cible réelle **créée le 10 juin 2026** (voir ligne Zone de proposition), écriture par le batch **À FAIRE** (chapeau `T-0002b`) ; batch Cowork nocturne **À FAIRE** | `contrats/socle/memoire-organisation.md` (candidat) + `modele-donnees.md` §2 bis/§3 |
+
+> **Écart constaté le 10 juin 2026 (non corrigé)** : le site porte une liste **« Ressource-Profil »** (singulier) là où le canon dit **« Ressources-Profil »** (`modele-donnees.md` §2 bis). Micro-ajustement à arbitrer par le gardien (renommer la liste au tenant, ou aligner le canon).
 
 ### Couche parc / poste de travail (ABM · Intune · Entra)
 | Composant | État | Source de vérité |
@@ -138,7 +140,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Skill `compte-rendu-reunion` | **FAIT** — promu (v1.1) | `skills/compte-rendu-reunion/SKILL.md` |
 | Skill `releve-de-decisions` | **FAIT** — promu (v1.1) | `skills/releve-de-decisions/SKILL.md` |
 | Profil `agent-redaction` (compose les deux skills) | **FAIT** (présent ; en-tête candidat v1.0) | `agents/agent-redaction/profil.yaml` |
-| Serveur MCP Graph (`list_items`, `create_list_item`) | **PARTIEL** — **codé, non déployé** (code dormant) | `outils/mcp-graph/` + `T-0002b` |
+| Serveur MCP Graph (`list_items`, `create_list_item`) | **PARTIEL** — **codé et déployé** (Container App, `T-0002b-3` fait) ; entrée non encore sécurisée Easy Auth (`T-0002b-4`) ni principe appelant (`T-0002b-5`) — accès borné par la restriction IP transitoire | `outils/mcp-graph/` + `T-0002b-*` |
 | Agent métier « kick-off » | **À FAIRE** — **conçu, non construit** | `backlog/plan.md` §6 (T-1.2) |
 
 ---
