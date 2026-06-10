@@ -1,0 +1,30 @@
+id: T-0009
+titre: "MCP Graph : valider le claim roles (MCP.Invoke) dans le code du serveur"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 2
+type_action: edition_code
+cran: auto            # édition de code en branche ; la fusion reste la porte du gardien
+produit:
+  - "server.py : rejet (403) de tout token dont le claim roles ne contient pas MCP.Invoke, sur /mcp uniquement"
+depend_de: []
+# Micro-chantier DIFFÉRÉ, issu du runbook T-0002b-4 (10 juin 2026) : défense en profondeur sur la
+#   frontière d'ENTRÉE. Easy Auth authentifie le token ; la vérification du claim roles revient au
+#   code applicatif (voir note).
+contrats_concernes: []
+criteres_acceptation:
+  - "server.py rejette (403) tout token dont le claim roles ne contient pas MCP.Invoke, sur /mcp uniquement (/healthz reste liveness pur, jamais d'auth)"
+  - "Zéro secret introduit : la validation lit le JWT transmis par Easy Auth, n'acquiert rien"
+  - "PR dédiée ; CI build-mcp-graph verte (import + sonde /healthz reprouvés)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Easy Auth AUTHENTIFIE (le token est valide, émis par le tenant) mais NE VÉRIFIE PAS le claim
+  roles — la doc Microsoft est explicite : cette validation revient au code applicatif.
+  Aujourd'hui, tout principal du tenant capable d'obtenir un token d'audience
+  api://0028a5ff-925a-4700-b703-2f2d0ce728fc passe la porte. Tenant solo : risque faible, accepté
+  par le gardien le 10 juin 2026. La défense en profondeur (vérifier MCP.Invoke dans le JWT côté
+  server.py) devient NÉCESSAIRE dès que le tenant compte plus d'un humain ou plusieurs apps.
+  Contrainte : rouvre outils/mcp-graph/server.py (code promu) — PR dédiée le moment venu, PAS
+  maintenant. Échéance indicative : avant l'arrivée des premiers collaborateurs (même logique que
+  T-0003). L'app role MCP.Invoke a été posé par T-0002b-4 ; son octroi à l'app cliente relève de
+  T-0002b-5.
