@@ -23,7 +23,12 @@ criteres_acceptation:
   - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien) ; rayon effectif nul (promotion à contenu inchangé)."
   - "L'agent n'a pas mergé : il a ouvert une PR (candidat). La promotion reste la décision du gardien."
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: "Exécutée lors du test de sortie A0.9 (Phase 0) : l'agent a déroulé la boucle complète
+  sur la promotion du skill compte-rendu-reunion (en-tête candidat → promu v1.0, changelog daté,
+  §10 aligné), PR promue par le gardien, propagation vérifiée — voir le changelog du skill, qui
+  cite T-0004. Le statut du YAML était resté à_faire par oubli ; aligné le 10 juin 2026 (check du
+  gardien), sans aucun changement du skill."
 note: >
   Pilote du TEST DE SORTIE A0.9 (plan §5). Cette tâche existe pour qu'un agent puisse dérouler
   la boucle complète de bout en bout : pull (résoudre le canon) → action (préparer la promotion
