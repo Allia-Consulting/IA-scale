@@ -25,7 +25,47 @@ criteres_acceptation:
   - "Aucun secret créé, distribué ni stocké sur aucun poste"
   - "Le secret client est supprimé après preuve"
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: "Runbook humain + preuve exécutés le 10 juin 2026 (portail Entra + CLI Claude Code
+  sur le poste du gardien). Réalisé : scope délégué access_as_user exposé sur l'app serveur
+  (api://0028a5ff-925a-4700-b703-2f2d0ce728fc/access_as_user) ; app cliente
+  77aa6010-e3a8-4404-8c34-5f352e0c589a convertie en client PUBLIC (plateforme desktop/mobile,
+  redirect URIs http://localhost:8080/callback et http://127.0.0.1:8080/callback, « Allow public
+  client flows » activé) ; permission déléguée + consentement admin au PORTAIL (3e occurrence du
+  fait Cloud Shell MSI) ; « Affectation requise » = Oui sur l'enterprise app serveur ; accès par
+  GROUPE DÉDIÉ grp-mcp-graph-users (membre : le gardien) — licence Entra ID P1 confirmée par
+  l'opérabilité de l'affectation de groupes. ÉCART CORRIGÉ EN SESSION : le groupe automatique
+  « All Company » avait été affecté par erreur (aurait neutralisé le verrou : tout futur
+  collaborateur autorisé d'office) — retiré, ainsi que l'affectation directe du gardien ; état
+  final = une seule affectation, le groupe dédié (conforme organisation.md §5 : ressources liées
+  aux groupes, jamais aux individus). PREUVES : (1) flux OAuth navigateur Entra complet depuis
+  /mcp du CLI (Authentication Successful, callback localhost:8080) ; (2) /mcp : serveur
+  ✔ connected · 2 tools ; (3) list_items Missions → « Projet Siteflow », count 1 — chaîne
+  complète identité du gardien → Entra (PKCE, zéro secret) → Easy Auth → serveur → identité
+  managée → Graph ; (4) contre-preuve post-nettoyage des affectations : list_items passe
+  toujours. SECRET CLIENT SUPPRIMÉ après preuves (portail, liste « Secrets client » vide ; copie
+  du coffre purgée) — première dette du registre identites-et-secrets.md §4 ÉTEINTE. Critère
+  « un utilisateur hors groupe n'obtient pas de token » : CONTRE-PROUVÉ EN CONDITIONS RÉELLES le
+  10 juin 2026 — lors du nettoyage des affectations, le groupe grp-mcp-graph-users s'est retrouvé
+  momentanément SANS MEMBRE : refus d'émission de token pour tous (gardien compris), serveur en
+  échec d'authentification côté Claude Code ; ré-ajout du gardien au groupe → ré-authentification
+  → list_items repasse (re-prouvé « Projet Siteflow »). Le verrou par affectation fonctionne dans
+  les deux sens. FAITS DURCIS DE SESSION : (a) schéma Claude Code : oauth.scopes est une CHAÎNE
+  (scopes multiples séparés par espaces), jamais un tableau — config invalide = serveur ignoré,
+  silencieusement par l'app desktop, avec warning explicite par le CLI (/doctor et bandeau /mcp) ;
+  (b) l'app DESKTOP (onglet Code) n'expose PAS les serveurs .mcp.json projet : son /mcp ouvre le
+  catalogue de connecteurs claude.ai — l'authentification OAuth des serveurs projet se fait au CLI
+  (installé sur le poste du gardien, v2.1.170, script officiel claude.ai/install.sh — le même que
+  conformite.yml) ; l'approbation projet vit dans ~/.claude.json (enabledMcpjsonServers), exprimée
+  par décision du gardien ; (c) Entra : la correspondance des redirect URIs est SENSIBLE À LA
+  CASSE (AADSTS50011 sur une majuscule) — saisir tout en minuscules, copier-coller plutôt que
+  retaper ; (d) incident annexe clos : un PAT GitHub en clair découvert dans l'URL du remote d'un
+  clone vestige (Desktop, init du 6 juin) — vérifié DÉJÀ INVALIDE via l'API GitHub (Bad
+  credentials), clone à purger (rappel gardien) ; (e) une affectation de groupe Entra ne prend
+  effet dans le jeton qu'à sa PROCHAINE ÉMISSION (ré-authentifier après tout changement de
+  membres ; prévoir 2-3 min de propagation d'annuaire) — et créer un groupe d'accès sans oublier
+  d'y mettre ses membres : un groupe vide ferme la porte à tout le monde, comportement attendu et
+  constaté."
 note: >
   PLAN B sans secret si le flux OAuth natif de Claude Code bute contre Entra (historique de bugs
   DCR/clientId pré-configuré début 2026 ; docs actuelles OK) : headersHelper exécutant
