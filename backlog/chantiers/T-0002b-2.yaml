@@ -21,9 +21,11 @@ criteres_acceptation:
   - "L'ACR existe (runbook humain) et l'image y est poussée (runbook humain)"
   - "Aucun secret n'est embarqué dans l'image (identité managée côté Graph ; Easy Auth côté entrée, hors image)"
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: "runbook humain exécuté le 10 juin 2026 (Cloud Shell Azure) : ACR « acralliamcpgraph » créé (Basic, francecentral, rg-ia-scale) ; admin user DÉSACTIVÉ ; jetons d'audience ARM (authentication-as-arm) ACTIVÉS — prérequis du pull par identité managée en T-0002b-3. Image allia-mcp-graph:0.1.0 buildée CÔTÉ ACR (az acr build --platform linux/amd64, pas de Docker local) et poussée : acralliamcpgraph.azurecr.io/allia-mcp-graph:0.1.0, digest sha256:34167f9e83b362c1b0df2983eaf68940bc09ccd4048803d9b64b5891da42631d. Prérequis tenant non anticipé : resource provider Microsoft.ContainerRegistry non enregistré sur l'abonnement (MissingSubscriptionRegistration au premier az acr create) — enregistré via az provider register, une fois pour toutes. La part agent (Dockerfile + CI de preuve) était promue antérieurement (#34, correctif #37 ; fait ACR Tasks tracé dans outils/mcp-graph/README.md)."
 note: >
   Sous-tâche IMAGE de la chapeau T-0002b. Distinction nette des deux natures : le Dockerfile relève
   de l'agent (édition de code, cran auto) ; la création de l'ACR et le push relèvent du RUNBOOK HUMAIN
   (configuration d'infrastructure Azure — proscrite à un agent et à Claude). Prérequis du déploiement
-  T-0002b-3 (l'image doit exister dans l'ACR).
+  T-0002b-3 (l'image doit exister dans l'ACR). Ce prérequis est désormais satisfait : l'image 0.1.0
+  est dans l'ACR (runbook exécuté le 10 juin 2026 — voir execution).
