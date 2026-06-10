@@ -83,7 +83,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 
 ## Partie C — Inventaire du SI
 
-> **État au 9 juin 2026 — se périme, vérifier les sources.** Légende : **FAIT** / **PARTIEL** / **À FAIRE** / *à confirmer par le gardien* (état non constatable depuis le dépôt). Chaque ligne indique **où vérifier la vérité**.
+> **État au 10 juin 2026 — se périme, vérifier les sources.** Légende : **FAIT** / **PARTIEL** / **À FAIRE** / *à confirmer par le gardien* (état non constatable depuis le dépôt). Chaque ligne indique **où vérifier la vérité**.
 
 ### Couche GitHub / canon
 | Composant | État | Source de vérité |
@@ -104,6 +104,8 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Octroi du rôle `write` sur le site AlliaConsuling (app registration) | **FAIT** — accordé via Graph, confirmé | Graph `POST /sites/{id}/permissions` |
 | Identité managée **user-assigned `id-allia-mcp-graph`** (principal Entra distinct) | **FAIT** — créée le 9 juin (user-assigned : découplée du cycle de vie du conteneur, droits octroyables avant déploiement — B.4 bis) | portail Azure / Entra |
 | Ré-octroi `write` au principal de l'identité managée | **FAIT** — runbook `T-0002a-bis` réalisé le 9 juin : **(1)** app role assignment `Sites.Selected` au service principal de l'identité, **(2)** `POST /sites/{id}/permissions` avec le `clientId` de l'identité | Graph (app role assignment + `POST /sites/{id}/permissions`) |
+| Registre de conteneurs **ACR `acralliamcpgraph`** (Basic, francecentral, rg-ia-scale) | **FAIT** — runbook `T-0002b-2` exécuté le 10 juin 2026 ; **admin user désactivé**, jetons d'audience ARM (`authentication-as-arm`) **activés** (prérequis du pull par identité managée, `T-0002b-3`) | portail Azure / `az acr show` |
+| Image **`allia-mcp-graph:0.1.0`** (linux/amd64) poussée dans l'ACR | **FAIT** — buildée côté ACR (`az acr build --platform linux/amd64`) et poussée le 10 juin 2026 ; digest `sha256:34167f9e…` | `az acr repository show-tags` |
 | Hébergement (Azure **Container Apps**, **min 1 réplica** ; App Service en repli) | **À FAIRE** — `T-0002b-3` (runbook) ; min 1 réplica car usage interactif (B.4 bis) | portail Azure |
 | Service MCP **HTTP distant** (`/mcp` streamable + `/healthz`, stateless) | **À FAIRE** — code `T-0002b-1`, image `T-0002b-2`, déploiement `T-0002b-3` | `outils/mcp-graph/` + `T-0002b-*` |
 | App registration **« serveur »** Easy Auth (built-in auth Entra) + secret serveur | **À FAIRE** — **runbook humain** `T-0002b-4` (frontière d'**entrée** ; un secret serveur, distinct du flux Graph) | portail Entra / Container Apps |
