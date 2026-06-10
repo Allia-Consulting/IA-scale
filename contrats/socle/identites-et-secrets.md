@@ -1,7 +1,7 @@
 # Identités et secrets — Allia Consulting
 
-> **Version** : 1.1 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle — *en attente de promotion par le gardien*.
-> **Changelog** : v1.1 — candidat, 10 juin 2026 : **extinction de la première dette** du registre §4 (secret client supprimé après preuve `T-0010`). v1.0 — candidat, 10 juin 2026 (session stop-doctrine) : principe **zéro secret applicatif**, modèle des **identités appelantes** (humains / workloads / instruments du gardien), registre des **dettes** de secrets avec échéances.
+> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : 10 juin 2026 — **alignement de l'en-tête candidat → promu** (promotion effective : PR #42 ; v1.1 : PR #43) — contenu byte-inchangé hors en-tête/statut. v1.1 — candidat, 10 juin 2026 : **extinction de la première dette** du registre §4 (secret client supprimé après preuve `T-0010`). v1.0 — candidat, 10 juin 2026 (session stop-doctrine) : principe **zéro secret applicatif**, modèle des **identités appelantes** (humains / workloads / instruments du gardien), registre des **dettes** de secrets avec échéances.
 > **Domicile** : `contrats/socle/identites-et-secrets.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi » — appliqué aux droits, §8 chaîne d'autorité, §9 principe zéro secret), `contrats/socle/organisation.md` (§5 — les droits sont la projection d'une décision promue), `architecture.md` (B.4 bis — double frontière de secret, document de référence, ne fait pas foi).
 > **Rattachement** : capacité *Socle d'exploitation / Orchestration des agents* ; chantiers `backlog/chantiers/T-0010.yaml` (branchement des postes), `T-0009.yaml` (validation applicative) ; cran de promotion `promouvoir_contrat_socle` (gardien).
@@ -49,4 +49,4 @@ Les secrets qui existent encore, avec leur trajectoire d'extinction. Ce registre
 
 ## 5. Évolution de ce contrat
 
-Ce document est un **contrat socle candidat** : il fait foi après promotion par le gardien, et n'évolue que par la **boucle de promotion** (`doctrine.md` §7) — proposition (PR), avis d'impact, décision du gardien attachée à l'empreinte exacte, promotion, retour arrière par repointage. Toute extinction ou création de secret se trace **ici**, dans le registre §4, dans la même PR que le geste qui la décide.
+Ce document est un **contrat socle promu** : il fait foi, et n'évolue que par la **boucle de promotion** (`doctrine.md` §7) — proposition (PR), avis d'impact, décision du gardien attachée à l'empreinte exacte, promotion, retour arrière par repointage. Toute extinction ou création de secret se trace **ici**, dans le registre §4, dans la même PR que le geste qui la décide.
