@@ -3,7 +3,11 @@
 # Contraintes aval (contrat_interface de T-0002b-1) : Linux/amd64 uniquement, conteneur NON privilégié,
 # stateless only, TOUTES les dépendances dans l'image. Ne modifie PAS server.py (promu) — on le
 # conteneurise tel quel. Aucun secret dans l'image (la SORTIE Graph s'authentifie par identité managée).
-FROM --platform=linux/amd64 python:3.12-slim
+# Plateforme amd64 : garantie PAR LA COMMANDE DE BUILD (`az acr build --platform linux/amd64` ;
+# défaut ACR Tasks = Linux/AMD64), PAS par un flag `--platform` inline dans le FROM — le scanner de
+# dépendances d'ACR Tasks ne parse pas `FROM --platform=...` (« unable to understand line », build
+# avorté avant exécution). Ne pas réintroduire ce flag ici.
+FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
