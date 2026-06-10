@@ -5,15 +5,17 @@ phase: 2
 type_action: edition_code
 cran: auto            # édition de code en branche ; la fusion reste la porte du gardien
 produit:
-  - "server.py : rejet (403) de tout token dont le claim roles ne contient pas MCP.Invoke, sur /mcp uniquement"
+  - "server.py : la validation sur /mcp accepte un claim scp contenant access_as_user (humains) OU un claim roles contenant MCP.Invoke (workloads/transition) ; rejet 403 sinon"
+  - "server.py : journalisation de l'identité appelante transmise par Easy Auth (en-têtes X-MS-CLIENT-PRINCIPAL-*) — traçabilité par personne"
 depend_de: []
 # Micro-chantier DIFFÉRÉ, issu du runbook T-0002b-4 (10 juin 2026) : défense en profondeur sur la
 #   frontière d'ENTRÉE. Easy Auth authentifie le token ; la vérification du claim roles revient au
 #   code applicatif (voir note).
 contrats_concernes: []
 criteres_acceptation:
-  - "server.py rejette (403) tout token dont le claim roles ne contient pas MCP.Invoke, sur /mcp uniquement (/healthz reste liveness pur, jamais d'auth)"
-  - "Zéro secret introduit : la validation lit le JWT transmis par Easy Auth, n'acquiert rien"
+  - "server.py rejette (403), sur /mcp uniquement, tout token dont NI le claim scp (access_as_user) NI le claim roles (MCP.Invoke) n'autorisent l'appel (/healthz reste liveness pur, jamais d'auth)"
+  - "L'identité appelante (en-têtes X-MS-CLIENT-PRINCIPAL-* posés par Easy Auth) est journalisée à chaque appel /mcp — traçabilité par personne ; la signature des écritures reste applicative (OBO non retenu, décision du gardien du 10 juin 2026)"
+  - "Zéro secret introduit : la validation lit le JWT et les en-têtes transmis par Easy Auth, n'acquiert rien"
   - "PR dédiée ; CI build-mcp-graph verte (import + sonde /healthz reprouvés)"
 rayon_impact: local
 statut: à_faire
@@ -27,4 +29,8 @@ note: >
   Contrainte : rouvre outils/mcp-graph/server.py (code promu) — PR dédiée le moment venu, PAS
   maintenant. Échéance indicative : avant l'arrivée des premiers collaborateurs (même logique que
   T-0003). L'app role MCP.Invoke a été posé par T-0002b-4 ; son octroi à l'app cliente relève de
-  T-0002b-5.
+  T-0002b-5. MISE À JOUR (stop doctrine 10 juin 2026) : la validation suit le modèle des identités
+  appelantes de contrats/socle/identites-et-secrets.md — claim scp (access_as_user) pour les
+  HUMAINS, claim roles (MCP.Invoke) pour les WORKLOADS et la transition ; la JOURNALISATION de
+  l'identité appelante (X-MS-CLIENT-PRINCIPAL-*) est la traçabilité par personne décidée le
+  10 juin ; la signature des écritures reste APPLICATIVE (OBO non retenu aujourd'hui).

@@ -8,6 +8,7 @@ produit:
   - "batch Cowork nocturne (jeudi→vendredi) qui écoute les conversations Claude + Teams de la semaine et produit UNE synthèse candidate"
   - "écriture de la synthèse en zone de proposition avec champ d'origine « mémoire hebdo » (simulée en local zone-proposition/memoire/ tant que T-0002b n'est pas déployé)"
   - "rituel de validation ligne à ligne le vendredi (non-validé = oublié)"
+  - "exécution en COWORK LOCAL sur le poste du gardien, sous l'identité Entra DU GARDIEN — zéro secret (identites-et-secrets.md §2, cas 3 ; décision du 10 juin 2026)"
 depend_de: []
 # Aucune dépendance dure de chantier. PRÉREQUIS NORMATIFS (non bloquants pour la sélection,
 #   mais à respecter avant toute écoute réelle) :
@@ -42,3 +43,9 @@ note: >
   continue est abandonnée (ni relisible, ni gouvernable à la promotion). Domicile transitoire :
   zone-proposition/memoire/ (simulation locale) en attendant l'écriture réelle (T-0002b).
   Le dérivé n'est jamais le saisi : la synthèse est candidate, validée ligne à ligne le vendredi.
+  DÉCISION DU 10 JUIN 2026 (stop doctrine) : le batch tourne en COWORK LOCAL sur le poste du
+  gardien, sous l'identité Entra DU GARDIEN (zéro secret — contrats/socle/identites-et-secrets.md
+  §2, cas 3). Justification : la mémoire est un acte de gouvernance (analyse et promotion, gardien
+  seul) — la dépendance est au RÔLE, pas au poste par accident. ÉCART À architecture.md B.4 ASSUMÉ
+  ET BORNÉ : limité à la mémoire d'organisation, réversible à la fédération du rôle gardien. Ne
+  change ni le mécanisme (synthèse hebdo candidate) ni les prérequis normatifs RGPD.

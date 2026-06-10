@@ -1,0 +1,37 @@
+id: T-0010
+titre: "Branchement des postes au serveur MCP par identité de personne (zéro secret)"
+capacite: "Socle d'exploitation / Adoption & exploitation multi-utilisateurs"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide          # nature MIXTE : la part fichiers (.mcp.json, README) est agent-éditable (auto) ; la part Entra est runbook (validé)
+produit:
+  - "(agent — cran auto) .mcp.json à la racine du dépôt (scope project Claude Code, AUCUN secret) : type http, url = endpoint /mcp réel, oauth { clientId = 77aa6010-e3a8-4404-8c34-5f352e0c589a, callbackPort = 8080, authServerMetadataUrl = https://login.microsoftonline.com/a8d48a4e-329b-4302-b83a-5b085cefa944/v2.0/.well-known/openid-configuration, scopes = api://0028a5ff-925a-4700-b703-2f2d0ce728fc/access_as_user }"
+  - "(agent — cran auto) README outils/mcp-graph : section « Branchement d'un poste »"
+  - "(runbook humain) scope délégué access_as_user exposé sur l'app serveur ; app cliente convertie en client public (plateforme desktop, redirect URI http://localhost:8080/callback) ; permission déléguée + consentement admin (PORTAIL — fait durci : admin-consent échoue en Cloud Shell MSI) ; assignment required sur l'enterprise app serveur + groupe grp-mcp-graph-users"
+  - "(runbook humain) preuve, puis SUPPRESSION du secret client (première dette éteinte du registre identites-et-secrets.md §4)"
+depend_de: ["T-0002b"]
+# Applique le modèle d'identités appelantes (contrats/socle/identites-et-secrets.md §2, cas « humain ») :
+#   identité Entra de la personne, authorization code + PKCE sur client PUBLIC — AUCUN secret créé,
+#   distribué ni stocké sur un poste. NATURE MIXTE, même convention que T-0002b-2 : PAS de sentinelle
+#   RUNBOOK-HUMAIN, pour que l'agent puisse préparer la part fichiers (.mcp.json, README) ; la part
+#   Entra (scope délégué, client public, consentement, groupe) reste la porte du gardien (signalée
+#   dans produit). Dépend de T-0002b : le service /mcp réel existe (promu le 10 juin 2026).
+contrats_concernes:
+  - "contrats/socle/identites-et-secrets.md"
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "Depuis un poste, /mcp dans Claude Code déclenche le flux navigateur Entra ; la session liste les outils du serveur ; un list_items passe"
+  - "Un utilisateur hors du groupe grp-mcp-graph-users n'obtient pas de token"
+  - "Aucun secret créé, distribué ni stocké sur aucun poste"
+  - "Le secret client est supprimé après preuve"
+rayon_impact: local
+statut: à_faire
+note: >
+  PLAN B sans secret si le flux OAuth natif de Claude Code bute contre Entra (historique de bugs
+  DCR/clientId pré-configuré début 2026 ; docs actuelles OK) : headersHelper exécutant
+  az account get-access-token --resource api://0028a5ff-925a-4700-b703-2f2d0ce728fc sous l'identité
+  Entra de la personne (az login) — même cible zéro-secret, confort moindre. POINT DE VIGILANCE
+  Easy Auth : si 401 avec un token utilisateur, ajouter api://0028a5ff-925a-4700-b703-2f2d0ce728fc
+  aux allowed token audiences (az containerapp auth update). La suppression du secret client éteint
+  la première dette du registre (identites-et-secrets.md §4) ; le batch mémoire (T-0005) n'utilisera
+  PAS ce branchement : il tourne sous l'identité Entra du gardien (cas 3 du modèle).
