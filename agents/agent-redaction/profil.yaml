@@ -1,5 +1,7 @@
 id: agent-redaction
-version: "1.0 — candidat"
+# Changelog : 12 juin 2026 — alignement en-tête candidat → promu (les deux skills composés
+# sont promus ; le profil a servi au test A0.9). Contenu inchangé hors en-tête.
+version: "1.0 — promu"
 nature: "profil d'agent"
 domicile: "agents/agent-redaction/profil.yaml"
 role: agent                      # opère sur le plan d'exécution
