@@ -1,7 +1,9 @@
 # Parc collaborateur — politique de poste de travail — Allia Consulting
 
-> **Version** : 1.0 — *promu*. **Statut** : contrat socle — fait foi.
-> **Changelog** : 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Les §3–§5 restent des squelettes à renseigner par candidats ultérieurs avant exécution de T-0006.
+> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Changelog** :
+> - v1.1 — candidat, 12 juin 2026 : renseignement des §3–§6 (décisions du gardien, 12 juin 2026) — canal d'acquisition rattaché à l'ABM, profil unique "collaborateur", apps socle, posture de sécurité, groupes d'enrôlement. Le contrat cesse d'être un squelette ; prérequis normatif de T-0006 satisfait à sa promotion.
+> - 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Les §3–§5 restent des squelettes à renseigner par candidats ultérieurs avant exécution de T-0006.
 > **Domicile** : `contrats/socle/parc-collaborateur.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2, §8 — chaîne d'autorité étendue aux **appareils**, ligne candidate v1.4), `contrats/socle/organisation.md` (§2 capacité « parc & gestion de poste » ; §5 réconciliation au moindre privilège).
 > **Rattachement** : capacité *Socle d'exploitation & gouvernance / parc & gestion de poste* ; chantiers `backlog/chantiers/T-0006.yaml` (config effective, runbook) et `backlog/chantiers/T-0008.yaml` (réconciliateur politique→Intune, Phase 3/4).
@@ -25,19 +27,31 @@ La configuration d'un poste est un **dérivé** d'une décision de parc promue i
 
 ## 3. Profil de poste (par fonction)
 
-La politique définit, **par fonction** (le détail concret est volatil — réalisation, doctrine §2), un profil de poste : modèle/type de matériel attendu, système géré, niveau d'accès de base. *(À renseigner par le gardien à la promotion — squelette candidat ; aucune valeur n'est figée tant que non promue.)*
+- **Canal d'acquisition** : tout matériel du parc est acheté via le canal Apple rattaché à l'**ABM de la firme** (numéro d'organisation / numéro client Apple déclaré dans Apple Business Manager). Conséquence : l'appareil est inscrit automatiquement dans ABM dès la commande — la commande **déclenche** la chaîne ABM → Intune → déploiement du poste (profil, apps, posture), sans geste manuel sur l'appareil. Un matériel acheté hors de ce canal n'entre pas au parc géré (hors politique). L'acte d'achat reste un engagement financier : geste exclusif du gardien (`table-des-crans.yaml` : proscrites) ; l'interfaçage effectif du canal dans ABM relève du runbook T-0006.
+- Un profil **unique** : « collaborateur », appliqué à tous les postes de la firme, gardien compris (un seul standard de poste). Le grade est un détail RH (M365), orthogonal au profil (`organisation.md` §8) ; les instruments propres au gardien relèvent de son runbook humain, hors profil Intune.
+- **Matériel de référence** : MacBook Pro 14" (puce Apple M5), 24 Go de mémoire unifiée, 1 To de stockage.
+- **Plancher contractuel** (évite une re-promotion à chaque refresh Apple) : puce Apple Silicon en cours de commercialisation, ≥ 24 Go, ≥ 1 To, macOS géré.
+- **Système géré** : macOS, enrôlé zéro-touch ABM → Intune.
 
 ## 4. Applications déployées
 
-Liste des applications poussées par défaut (productivité, sécurité, métier) et de celles conditionnées à une fonction ou un périmètre. *(Squelette candidat — à compléter/valider par le gardien.)*
+- **Socle** (poussé par défaut via Intune) : suite Microsoft 365 (Word, Excel, PowerPoint, Outlook, Teams, OneDrive) ; Claude desktop ; Claude Code CLI (l'authentification OAuth des serveurs MCP `.mcp.json` projet se fait au CLI — fait durci T-0010) ; Google Chrome (navigateur géré) ; git et gh (la connexion Git vise le dépôt commun de la firme — org GitHub Allia-Consulting ; le geste d'authentification `gh auth login` reste celui de la personne, sous son identité).
+- **Company Portal** : implicite à l'enrôlement Intune.
+- **Apps conditionnées à une fonction ou un périmètre** : aucune à ce stade ; s'ajoutent par candidats ultérieurs.
 
 ## 5. Posture de sécurité
 
-Exigences minimales de conformité d'un poste : chiffrement du disque, verrouillage, mises à jour gérées, télémétrie de conformité, conditions d'accès conditionnel. *(Squelette candidat — paramètres exacts à valider par le gardien, idéalement avec un conseil sécurité.)*
+- **FileVault obligatoire**, clé de récupération séquestrée dans Intune ;
+- **verrouillage de session** à 5 minutes d'inactivité, mot de passe requis immédiatement ;
+- **mises à jour macOS gérées par Intune**, fenêtre de conformité : 10 jours calendaires de retard maximum ;
+- **accès conditionnel** : l'accès M365 est conditionné à l'état « appareil conforme » (Intune *compliant*) — c'est le verrou qui rend la posture opposable ;
+- **version macOS minimale** : N-1 (la version courante ou la précédente).
 
 ## 6. Groupes Entra d'enrôlement
 
-La politique nomme les **groupes Entra d'enrôlement** par profil. L'appartenance à un groupe **ouvre** la politique correspondante ; elle se **projette** depuis une décision promue, au **moindre privilège**, jamais saisie à la main (`organisation.md` §5). Les ressources sont liées aux **groupes**, jamais aux individus.
+- **Convention de nommage** : `grp-parc-<profil>` (alignée sur le pattern existant `grp-mcp-graph-users`).
+- **Groupe du profil unique** : `grp-parc-collaborateur` — créé en T-0006 (runbook humain), porteur de la politique d'enrôlement.
+- L'appartenance au groupe est la **projection d'une décision promue** (`organisation.md` §5) ; ressources liées aux **groupes**, jamais aux individus.
 
 ## 7. Frontière politique / exécution — ce qui est runbook, ce qui est chantier
 
