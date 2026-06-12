@@ -1,7 +1,7 @@
 # Cadre RGPD — écoute Teams/Claude de la mémoire d'organisation — Allia Consulting
 
-> **Version** : 1.0 — *promu*. **Statut** : contrat socle — fait foi.
-> **Changelog** : 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Rappel : AIPD (§7) et information préalable (§5) restent des préalables à l'écoute réelle.
+> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : v1.1 — 12 juin 2026 : adossement des deux annexes normatives (annexe 1 mise en balance §2 ; annexe 2 AIPD §7) ; périmètre d'écoute précisé par l'annexe 1 §3 (exclusion des 1-à-1 Teams ; côté Claude, espace Allia Consulting uniquement) ; durée de suppression du brut fixée à J+7 (annexe 1 §5) ; cases 1, 2 et 4 du §11 produites. Aucun autre changement de fond. 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Rappel : AIPD (§7) et information préalable (§5) restent des préalables à l'écoute réelle.
 > **Domicile** : `contrats/socle/rgpd-ecoute-teams.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §9 confidentialité/conformité), `contrats/socle/memoire-organisation.md`, `contrats/socle/anonymisation.md`.
 > **Rattachement** : capacité *Corporate & conformité / Gouvernance IA responsable* ; chantiers `backlog/chantiers/T-0005.yaml` (mécanisme d'écoute) et `backlog/chantiers/T-0007.yaml` (onboarding — porteur de l'information préalable).
@@ -26,7 +26,7 @@ Le principe de **limitation des finalités** (RGPD) est ici une **contrainte d'e
 
 **Décision du gardien-DPO.** La base légale retenue est l'**intérêt légitime** (RGPD **art. 6.1.f**) : faire vivre une mémoire d'organisation qui compose l'intelligence inter-missions (doctrine §9).
 
-L'intérêt légitime exige un **test de mise en balance** (intérêt de la firme vs droits et libertés des personnes écoutées), **à documenter en annexe** de ce contrat. Ce test est **à produire / valider par le gardien-DPO** (§11) — il n'est pas réputé acquis par la seule mention de l'article.
+L'intérêt légitime exige un **test de mise en balance** (intérêt de la firme vs droits et libertés des personnes écoutées), **à documenter en annexe** de ce contrat. Ce test est **à produire / valider par le gardien-DPO** (§11) — il n'est pas réputé acquis par la seule mention de l'article. **Produit** : annexe 1 — `contrats/socle/annexes/rgpd-ecoute-teams--annexe-1-mise-en-balance.md` (12 juin 2026).
 
 ## 3. Régime des données — interne et nominatif
 
@@ -67,7 +67,7 @@ Le caractère nominatif **interne** ne dispense d'aucune obligation RGPD : il im
 **Décision du gardien-DPO**, tenue par lui :
 
 - **Registre des traitements** (RGPD **art. 30**) : ce traitement « écoute Teams/Claude → mémoire d'organisation » y est **inscrit** (finalité §1, base légale §2, catégories de données, durées §4, destinataires internes).
-- **Analyse d'impact (AIPD / DPIA)** (RGPD **art. 35**) : une **surveillance systématique de communications** relève **typiquement** des cas où une analyse d'impact est requise. L'AIPD est **à produire / valider par le gardien-DPO** (§11) **avant l'écoute réelle**.
+- **Analyse d'impact (AIPD / DPIA)** (RGPD **art. 35**) : une **surveillance systématique de communications** relève **typiquement** des cas où une analyse d'impact est requise. L'AIPD est **à produire / valider par le gardien-DPO** (§11) **avant l'écoute réelle**. **Produite** : annexe 2 — `contrats/socle/annexes/rgpd-ecoute-teams--annexe-2-aipd.md` (12 juin 2026).
 
 ## 8. Articulation avec l'anonymisation
 
@@ -96,10 +96,10 @@ Le **DPO conseille et contrôle** ; il ne décide pas à la place du responsable
 
 Explicitement **non tranchées** dans ce candidat — à produire/valider par le gardien-DPO **avant l'écoute réelle** :
 
-1. **Test de mise en balance** de l'intérêt légitime (§2) — à documenter en annexe.
-2. **AIPD / DPIA** (§7, art. 35) — surveillance systématique de communications.
+1. **Test de mise en balance** de l'intérêt légitime (§2) — à documenter en annexe. **Produite — voir annexe 1** (`contrats/socle/annexes/rgpd-ecoute-teams--annexe-1-mise-en-balance.md`).
+2. **AIPD / DPIA** (§7, art. 35) — surveillance systématique de communications. **Produite — voir annexe 2** (`contrats/socle/annexes/rgpd-ecoute-teams--annexe-2-aipd.md`).
 3. **Information-consultation des représentants du personnel** — verrou **droit du travail**, le jour où les **seuils d'effectif** l'imposent. *(Aucun seuil ni délai n'est inventé ici ; à fixer par le gardien-DPO selon le droit applicable.)*
-4. **Durée exacte de suppression du verbatim brut** (§4) — *à fixer par le gardien-DPO*.
+4. **Durée exacte de suppression du verbatim brut** (§4) — *à fixer par le gardien-DPO*. **Produite — voir annexe 1 §5** (J+7 calendaires après la validation du vendredi).
 5. **Interface d'exercice des droits** des personnes (§6).
 
 ## 12. Comment ce contrat évolue
