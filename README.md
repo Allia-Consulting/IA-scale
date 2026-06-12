@@ -47,6 +47,8 @@ Les décisions vivent dans **le guide** (ce dépôt) ; **Claude** les résout et
 /
   README.md                    ce fichier
   CLAUDE.md                    contexte de résolution pour Claude Code
+  architecture.md              document de référence — décrit, ne gouverne pas
+  .mcp.json                    branchement Claude Code au serveur MCP Graph (scope project, aucun secret)
   doctrine/
     doctrine.md                contrat socle racine
   contrats/
@@ -56,6 +58,10 @@ Les décisions vivent dans **le guide** (ce dépôt) ; **Claude** les résout et
       anonymisation.md         champs, seuil, déclencheur (RGPD / AI Act)
       organisation.md          périmètres & délégations
       design-system.md
+      identites-et-secrets.md  modèle des identités appelantes (humains / workloads)
+      memoire-organisation.md  synthèse hebdomadaire candidate (batch nocturne)
+      rgpd-ecoute-teams.md     écoute Teams — cadre RGPD
+      parc-collaborateur.md    politique de poste de travail
     local/
       <perimetre>/...          contrats locaux, un par animateur
   skills/
@@ -65,15 +71,18 @@ Les décisions vivent dans **le guide** (ce dépôt) ; **Claude** les résout et
   backlog/
     plan.md                    plan de construction (couche prose)
     chantiers/*.yaml           tâches agent-consommables
+  outils/
+    mcp-graph/                 serveur MCP Graph — code du connecteur
   .github/
     pull_request_template.md
     CODEOWNERS                 le gardien sur doctrine/ et contrats/socle/
     workflows/conformite.yml   l'agent-gardien (contrôle de conformité en CI)
+    workflows/build-mcp-graph.yml  preuve image, sans push
 ```
 
 ## Statut & rôles
 
-Les documents socle sont aujourd'hui des **candidats**, à promouvoir par le gardien. Quatre rôles, et eux seuls, interviennent : **gardien du temple** (garant de la cohérence, promeut), **animateur de périmètre** (propose sur son périmètre), **agent** (exécute selon les crans), **utilisateur** (se sert du système). Aujourd'hui, l'organisation repose sur un gardien unique.
+Les documents socle sont **promus** (ils font foi). Trois contrats socle restent **candidats** et le signalent dans leur en-tête : `memoire-organisation.md`, `rgpd-ecoute-teams.md`, `parc-collaborateur.md`. Quatre rôles, et eux seuls, interviennent : **gardien du temple** (garant de la cohérence, promeut), **animateur de périmètre** (propose sur son périmètre), **agent** (exécute selon les crans), **utilisateur** (se sert du système). Aujourd'hui, l'organisation repose sur un gardien unique.
 
 ---
 *Une seule vérité, propagée par contrats (pull) et gouvernée par les quatre rôles. On référence, on ne copie pas.*
