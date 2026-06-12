@@ -1,6 +1,7 @@
 # Cadre RGPD — écoute Teams/Claude de la mémoire d'organisation — Allia Consulting
 
-> **Version** : 1.0 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle — *en attente de promotion par le gardien*.
+> **Version** : 1.0 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Rappel : AIPD (§7) et information préalable (§5) restent des préalables à l'écoute réelle.
 > **Domicile** : `contrats/socle/rgpd-ecoute-teams.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §9 confidentialité/conformité), `contrats/socle/memoire-organisation.md`, `contrats/socle/anonymisation.md`.
 > **Rattachement** : capacité *Corporate & conformité / Gouvernance IA responsable* ; chantiers `backlog/chantiers/T-0005.yaml` (mécanisme d'écoute) et `backlog/chantiers/T-0007.yaml` (onboarding — porteur de l'information préalable).
@@ -103,8 +104,8 @@ Explicitement **non tranchées** dans ce candidat — à produire/valider par le
 
 ## 12. Comment ce contrat évolue
 
-Contrat socle **candidat** : il devient *fait foi* à sa **promotion** par le gardien (doctrine §7). Toute évolution (finalité, durées, base légale, annexes de conformité) est elle-même un candidat. La **promotion de ce cadre est un prérequis normatif de l'écoute réelle** (`T-0005`).
+Contrat socle **promu** — il fait foi (doctrine §7). Toute évolution (finalité, durées, base légale, annexes de conformité) est elle-même un candidat, promu par le gardien. La promotion de ce cadre était un **prérequis normatif de l'écoute réelle** (`T-0005`) ; l'AIPD (§7) et l'information préalable (§5) en restent des préalables.
 
 ---
 
-*Contrat socle candidat — cadre RGPD de l'écoute Teams/Claude. Il consigne les décisions du gardien-DPO ; les cases juridiques du §11 restent à sa main. Il attend la promotion du gardien.*
+*Contrat socle promu — cadre RGPD de l'écoute Teams/Claude. Il fait foi et évolue par la boucle de promotion. Il consigne les décisions du gardien-DPO ; les cases juridiques du §11 restent à sa main.*

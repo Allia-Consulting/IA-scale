@@ -82,7 +82,7 @@ Les décisions vivent dans **le guide** (ce dépôt) ; **Claude** les résout et
 
 ## Statut & rôles
 
-Les documents socle sont **promus** (ils font foi). Trois contrats socle restent **candidats** et le signalent dans leur en-tête : `memoire-organisation.md`, `rgpd-ecoute-teams.md`, `parc-collaborateur.md`. Quatre rôles, et eux seuls, interviennent : **gardien du temple** (garant de la cohérence, promeut), **animateur de périmètre** (propose sur son périmètre), **agent** (exécute selon les crans), **utilisateur** (se sert du système). Aujourd'hui, l'organisation repose sur un gardien unique.
+L'ensemble des contrats socle est **promu** (fait foi). Quatre rôles, et eux seuls, interviennent : **gardien du temple** (garant de la cohérence, promeut), **animateur de périmètre** (propose sur son périmètre), **agent** (exécute selon les crans), **utilisateur** (se sert du système). Aujourd'hui, l'organisation repose sur un gardien unique.
 
 ---
 *Une seule vérité, propagée par contrats (pull) et gouvernée par les quatre rôles. On référence, on ne copie pas.*
