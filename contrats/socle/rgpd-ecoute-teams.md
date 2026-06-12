@@ -1,7 +1,7 @@
 # Cadre RGPD — écoute Teams/Claude de la mémoire d'organisation — Allia Consulting
 
-> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
-> **Changelog** : v1.1 — 12 juin 2026 : adossement des deux annexes normatives (annexe 1 mise en balance §2 ; annexe 2 AIPD §7) ; périmètre d'écoute précisé par l'annexe 1 §3 (exclusion des 1-à-1 Teams ; côté Claude, espace Allia Consulting uniquement) ; durée de suppression du brut fixée à J+7 (annexe 1 §5) ; cases 1, 2 et 4 du §11 produites. Aucun autre changement de fond. 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Rappel : AIPD (§7) et information préalable (§5) restent des préalables à l'écoute réelle.
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : v1.2 — alignement minimal, 12 juin 2026 : §3 et §8 — la formule de déclenchement de la porte d'anonymisation renvoie au régime révisé d'`anonymisation.md` §1 (**communication grand public** ; matière d'un client tiers). Rien d'autre ; les annexes ne sont pas touchées (leur renvoi vers `anonymisation.md` §1 reste résolvable). v1.1 — 12 juin 2026 : adossement des deux annexes normatives (annexe 1 mise en balance §2 ; annexe 2 AIPD §7) ; périmètre d'écoute précisé par l'annexe 1 §3 (exclusion des 1-à-1 Teams ; côté Claude, espace Allia Consulting uniquement) ; durée de suppression du brut fixée à J+7 (annexe 1 §5) ; cases 1, 2 et 4 du §11 produites. Aucun autre changement de fond. 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Rappel : AIPD (§7) et information préalable (§5) restent des préalables à l'écoute réelle.
 > **Domicile** : `contrats/socle/rgpd-ecoute-teams.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §9 confidentialité/conformité), `contrats/socle/memoire-organisation.md`, `contrats/socle/anonymisation.md`.
 > **Rattachement** : capacité *Corporate & conformité / Gouvernance IA responsable* ; chantiers `backlog/chantiers/T-0005.yaml` (mécanisme d'écoute) et `backlog/chantiers/T-0007.yaml` (onboarding — porteur de l'information préalable).
@@ -33,7 +33,7 @@ L'intérêt légitime exige un **test de mise en balance** (intérêt de la firm
 **Décision du gardien-DPO**, cohérente avec `memoire-organisation.md` §4 (régime **confirmé**, non modifié) :
 
 - la **synthèse** est **interne et nominative** — elle nomme personnes, missions, clients comme la matière interne (avantage qui compose, doctrine §9) ;
-- la **sortie externe** d'un fragment (publication, livrable hors firme) **déclenche la porte d'anonymisation** (`anonymisation.md` §1) — **inchangé** ; voir §8.
+- la **communication grand public** d'un fragment **déclenche la porte d'anonymisation** (`anonymisation.md` §1, régime révisé le 12 juin 2026) ; voir §8.
 
 Le caractère nominatif **interne** ne dispense d'aucune obligation RGPD : il impose au contraire les garde-fous des §1, §4, §5 et §6.
 
@@ -71,7 +71,7 @@ Le caractère nominatif **interne** ne dispense d'aucune obligation RGPD : il im
 
 ## 8. Articulation avec l'anonymisation
 
-Ce cadre régit l'**entrée** (l'écoute) et la **vie interne** (synthèse nominative, rétention minimale). La **sortie externe** d'un fragment de mémoire reste gouvernée par `anonymisation.md` (porte automatique, §1) : déclenchement à la **sortie de firme**, irréversibilité visée, validation métier du cran *validé*. Les deux contrats sont **complémentaires et orthogonaux** : l'un protège la **collecte et la rétention**, l'autre la **diffusion externe**.
+Ce cadre régit l'**entrée** (l'écoute) et la **vie interne** (synthèse nominative, rétention minimale). La **communication grand public** d'un fragment de mémoire reste gouvernée par `anonymisation.md` (porte automatique, §1, régime révisé le 12 juin 2026 : communication grand public ; matière d'un client tiers), irréversibilité visée, porte du cran *validé*. Les deux contrats sont **complémentaires et orthogonaux** : l'un protège la **collecte et la rétention**, l'autre la **diffusion externe**.
 
 ## 9. Note de rôles — responsable de traitement, gardien, DPO
 

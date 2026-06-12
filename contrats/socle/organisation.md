@@ -1,11 +1,11 @@
 # Organisation & délégations — Allia Consulting
 
-> **Version** : 1.2 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
+> **Version** : 1.3 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), `/contrats/socle/organisation.md`.
 > **Autorité de promotion** : Gardien du temple.
 > **Portée** : Toute l'organisation Allia.
-> **Changelog** : v1.2 — promu via boucle de promotion, 8 juin 2026 (session doctrine). **D4 (carte des capacités, §2)** : ajout de deux capacités au domicile canonique de la carte (la grille des périmètres) — **« onboarding & intégration »** (capacité chapeau orchestrant les trois réconciliations d'une décision « X devient collaborateur du périmètre P » : matériel, droits, connaissance) sous *Capacités habilitantes*, et **« parc & gestion de poste »** (profil de poste, apps déployées, posture sécurité, groupes Entra d'enrôlement ; politique canonisée, exécution = runbook) sous *Socle d'exploitation & gouvernance*. v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
+> **Changelog** : v1.3 — promu via boucle de promotion, 12 juin 2026. **D3 REQUALIFIÉE (décision du gardien, 12 juin 2026)** : la grille d'habilitation du §4 bis (grades habilités + délégation, **contenu inchangé**) ne conditionne **plus l'envoi humain** d'un livrable — tout collaborateur envoie **librement** son livrable à son client, responsable de son acte (les crans gouvernent les agents, pas les humains — doctrine §6). La grille définit désormais **qui tient la porte du cran *validé*** pour (i) les **actions d'AGENT engageant la firme vis-à-vis d'un client** (envoi de livrable par un agent) et (ii) la **communication grand public**. Aligne doctrine v1.6, anonymisation.md v1.4, table-des-crans.yaml v1.5. v1.2 — promu via boucle de promotion, 8 juin 2026 (session doctrine). **D4 (carte des capacités, §2)** : ajout de deux capacités au domicile canonique de la carte (la grille des périmètres) — **« onboarding & intégration »** (capacité chapeau orchestrant les trois réconciliations d'une décision « X devient collaborateur du périmètre P » : matériel, droits, connaissance) sous *Capacités habilitantes*, et **« parc & gestion de poste »** (profil de poste, apps déployées, posture sécurité, groupes Entra d'enrôlement ; politique canonisée, exécution = runbook) sous *Socle d'exploitation & gouvernance*. v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
 
 La doctrine définit *les règles et les rôles* (en abstrait). Le plan définit *le chantier*. Ce document définit **qui répond de quoi** : il lie les rôles abstraits de la doctrine à des périmètres concrets et à leurs titulaires, et il gouverne la délégation. C'est la « réalisation » de la gouvernance, rendue canonique et gouvernable — ce que la doctrine laisse délibérément de côté pour rester stable (principe « capacités stables, réalisation volatile »).
 
@@ -78,16 +78,23 @@ Une délégation est elle-même un **acte de promotion** sur ce contrat (gardien
 
 ## 4 bis. Habilitation des portes de sortie de firme
 
-*Décision d'organisation (nouvelle).* La doctrine pose la règle **abstraite** : une sortie de firme (livrable client, publication) est validée par un **rôle métier habilité** (doctrine §6), sans nommer de grade. C'est **ici** que cette habilitation se **concrétise** — cohérent avec « capacités stables, réalisation volatile » : les grades relèvent de la réalisation et vivent hors de la doctrine.
+*Décision d'organisation — **requalifiée le 12 juin 2026** (décision du gardien).* **Les crans gouvernent les agents, pas les humains** (doctrine §6). Un **collaborateur envoie librement son livrable à son client** : aucune validation tierce, aucun grade requis, aucune délégation requise — il est lui-même **responsable de son acte**. La grille ci-dessous **ne conditionne plus l'envoi humain** d'un livrable.
 
-**Tenir une porte de sortie de firme exige deux conditions CUMULATIVES :**
+**Ce que la grille définit désormais : QUI TIENT LA PORTE du cran *validé*** pour :
+
+1. les **actions d'AGENT engageant la firme vis-à-vis d'un client** — l'envoi d'un livrable par un agent : la porte humaine est une **supervision de la machine**, pas un contrôle de la personne ;
+2. la **communication grand public** (site, publication, institutionnel) — qui reste au régime cran *validé* + porte d'anonymisation (`anonymisation.md` §1).
+
+C'est **ici** que cette habilitation se **concrétise** — cohérent avec « capacités stables, réalisation volatile » : les grades relèvent de la réalisation et vivent hors de la doctrine.
+
+**Tenir une de ces portes exige deux conditions CUMULATIVES** (contenu de la grille inchangé) :
 
 1. un **grade habilité** — **manager, senior manager, directeur, ou associé** ;
 2. la **responsabilité déléguée** sur la mission ou le périmètre concerné.
 
 **Grades NON habilités** : consultant junior, consultant, consultant senior.
 
-**Le grade est nécessaire mais non suffisant.** Un grade habilité ne peut tenir la porte que des **missions dont il a la responsabilité déléguée** : le grade est un **plancher de capacité** ; la **délégation** rattache à l'affaire. Aucun des deux ne suffit seul.
+**Le grade est nécessaire mais non suffisant.** Pour ces deux cas, un grade habilité ne peut tenir la porte que des **missions ou périmètres dont il a la responsabilité déléguée** : le grade est un **plancher de capacité** ; la **délégation** rattache à l'affaire. Aucun des deux ne suffit seul.
 
 **Où vit cette grille.** La doctrine définit la règle abstraite (« rôle métier habilité ») ; **`organisation.md` porte la grille concrète**. Un changement de grille de grades se fait **ici**, **jamais** dans la doctrine.
 

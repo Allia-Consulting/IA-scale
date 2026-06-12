@@ -1,8 +1,8 @@
 # Relevé de décisions — Skill
 
 > **id** : `releve-de-decisions`
-> **Version** : 1.2 — *promu*. **Nature** : skill.
-> **Changelog** : v1.2 — repointage du renvoi de câblage vers `T-0002b` après le découpage (PR #23) du chantier d'écriture Graph, 7 juin 2026 : le renvoi du §6 pointe désormais vers `T-0002b` (déploiement / écriture réelle). Aucun changement de comportement du skill. v1.1 — **CORRECTION du §7 (anonymisation)**, 7 juin 2026 : aligné sur `anonymisation.md` v1.3 — un relevé réutilisé **en interne** (même pour un autre client) reste **nominatif** ; l'anonymisation ne se déclenche qu'à la **sortie externe de la firme**. v1.0 — promu via boucle de promotion (procédure allégée) ; alignement sur le statut backlog (T-0001 `promu`, PR #11). Artefact référencé « v1.0 » par T-0001 et les dérivés.
+> **Version** : 1.3 — *promu*. **Nature** : skill.
+> **Changelog** : v1.3 — alignement sur la **révision de la sortie de firme** (décision du gardien, 12 juin 2026 ; `anonymisation.md` v1.4, doctrine v1.6, `organisation.md` v1.3) : §5 — l'envoi au client par un **humain collaborateur** est **libre** (hors crans) ; l'envoi par l'**agent** reste **validé**, porte tenue par un **grade habilité** ; §7 — déclencheur aligné (**communication grand public** ; **matière d'un client tiers** avant insertion dans un livrable). La réutilisation interne nominative est inchangée. v1.2 — repointage du renvoi de câblage vers `T-0002b` après le découpage (PR #23) du chantier d'écriture Graph, 7 juin 2026 : le renvoi du §6 pointe désormais vers `T-0002b` (déploiement / écriture réelle). Aucun changement de comportement du skill. v1.1 — **CORRECTION du §7 (anonymisation)**, 7 juin 2026 : aligné sur `anonymisation.md` v1.3 — un relevé réutilisé **en interne** (même pour un autre client) reste **nominatif** ; l'anonymisation ne se déclenche qu'à la **sortie externe de la firme**. v1.0 — promu via boucle de promotion (procédure allégée) ; alignement sur le statut backlog (T-0001 `promu`, PR #11). Artefact référencé « v1.0 » par T-0001 et les dérivés.
 > **Domicile** : `skills/releve-de-decisions/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `doctrine/doctrine.md` (§6, §7), `contrats/socle/table-des-crans.yaml`, `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/modele-donnees.md`, `skills/compte-rendu-reunion/SKILL.md` (référence de format), `CLAUDE.md`.
 
@@ -58,7 +58,8 @@ Source : <CR « <objet> » du <date> | notes brutes>
 | Action | Cran | Note |
 |---|---|---|
 | **Produire le relevé** (écrit en zone de proposition) | **auto** | réversible, interne, local — l'agent agit seul |
-| **Envoyer le relevé hors firme** (client, externe) | **validé** | sort de la firme — porte humaine du gardien |
+| **Envoi du relevé au client par un humain collaborateur** | **libre** | hors crans — les crans gouvernent les agents, pas les humains (`organisation.md` §4 bis) |
+| **Envoi du relevé au client par l'agent** | **validé** | porte tenue par un **grade habilité** (`organisation.md` §4 bis) |
 | **Réutiliser** pour un autre client / **entrée au canon** | **porte anonymisation** | déclenchée par règle — voir §7 et `anonymisation.md` §1 |
 
 ## 6. Zone de proposition
@@ -67,10 +68,10 @@ Le relevé est un **dérivé** : il s'écrit dans la **zone de proposition** (`m
 
 ## 7. Anonymisation
 
-Par défaut, un relevé **reste nominatif** : tant qu'il circule **à l'intérieur de la firme** — même mission, même client, **ou réutilisé pour une autre mission / un autre client en interne** — **pas d'anonymisation** (c'est l'avantage qui compose, `anonymisation.md` §1). La porte se déclenche dès que la matière **quitte la firme vers l'extérieur** (critère décisif d'`anonymisation.md` §1) :
+Par défaut, un relevé **reste nominatif** : tant qu'il circule **à l'intérieur de la firme** — même mission, même client, **ou réutilisé pour une autre mission / un autre client en interne** — **pas d'anonymisation** (c'est l'avantage qui compose, `anonymisation.md` §1 — inchangé). La porte se déclenche (déclencheur d'`anonymisation.md` §1, révisé le 12 juin 2026) :
 
-- le relevé **est publié hors de la firme** ;
-- le relevé **est rendu hors de la firme** (livrable client).
+- à la **communication grand public** (site, publication, communication institutionnelle) ;
+- sur la **matière issue d'un client tiers**, anonymisée **avant insertion** dans un livrable destiné à un client (exigence NDA) — les données du client destinataire restent **nominatives** : un relevé rendu au client pour ses propres données n'est **pas** anonymisé.
 
 Dans ces cas, appliquer `anonymisation.md` (§1→§4) **avant** usage. Attention particulière : un libellé de décision peut contenir un nom de client, un montant, une échéance datée — autant de quasi-identifiants à généraliser.
 

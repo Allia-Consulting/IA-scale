@@ -1,4 +1,4 @@
-version: "1.4 — promu"
+version: "1.5 — promu"
 statut: "contrat socle — fait foi"
 domicile: "contrats/socle/table-des-crans.yaml"
 autorite_de_promotion: "gardien du temple"
@@ -6,7 +6,7 @@ adosse_a:
   - "doctrine/doctrine.md (§6)"
   - "contrats/socle/organisation.md"
   - "contrats/socle/anonymisation.md"
-# Changelog : v1.4 — cosmétique, 7 juin 2026 : renommage de l'id d'action « reutiliser_matiere_interclient » → « reutiliser_matiere_interne » (le cran est auto depuis v1.3 ; le nom reflète désormais qu'il s'agit de réutilisation INTERNE, nominative). Aucun cran, condition ni comportement modifié ; aucune autre référence à cet id dans le dépôt. v1.3 — CORRECTION du déclencheur d'anonymisation (version machine) : la porte se déclenche à la SORTIE EXTERNE de la firme (publication externe / livrable hors firme), plus sur le « change_de_destinataire » ni sur la réutilisation inter-client interne (qui reste nominative). Aligne anonymisation.md v1.3. v1.2 — promu (contenu inchangé). v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran).
+# Changelog : v1.5 — RÉVISION du déclencheur d'anonymisation et requalification des portes (décision du gardien, 12 juin 2026 ; aligne anonymisation.md v1.4, doctrine v1.6, organisation.md v1.3) : la porte anonymisation se déclenche (i) à la COMMUNICATION GRAND PUBLIC et (ii) sur la MATIÈRE D'UN CLIENT TIERS insérée dans un livrable client — le livrable rendu au client pour ses propres données ne déclenche plus (la relation firme-client est la firme) ; « sort de la firme » se lit désormais « communication grand public OU action d'AGENT engageant la firme vis-à-vis d'un client » ; envoyer_livrable_client : cran valide MAINTENU pour l'AGENT, porte tenue par un grade habilité (organisation.md §4 bis) — l'envoi par un HUMAIN collaborateur est libre, hors de cette table ; publier_contenu_externe : pourquoi = communication grand public, porte anonymisation maintenue. v1.4 — cosmétique, 7 juin 2026 : renommage de l'id d'action « reutiliser_matiere_interclient » → « reutiliser_matiere_interne » (le cran est auto depuis v1.3 ; le nom reflète désormais qu'il s'agit de réutilisation INTERNE, nominative). Aucun cran, condition ni comportement modifié ; aucune autre référence à cet id dans le dépôt. v1.3 — CORRECTION du déclencheur d'anonymisation (version machine) : la porte se déclenche à la SORTIE EXTERNE de la firme (publication externe / livrable hors firme), plus sur le « change_de_destinataire » ni sur la réutilisation inter-client interne (qui reste nominative). Aligne anonymisation.md v1.3. v1.2 — promu (contenu inchangé). v1.1 — porte anonymisation rendue explicite dans la dérivation (orthogonale au cran).
 
 # cran = f( réversible ? · sort_de_la_firme ? · rayon_impact )
 crans:
@@ -18,19 +18,24 @@ crans:
     qui_decide: "l'agent agit ; le gardien est informé"
   valide:
     conditions: "irréversible OU sort de la firme OU rayon d'impact large"
+    # « sort de la firme » se lit désormais : « communication grand public OU action d'AGENT engageant la
+    # firme vis-à-vis d'un client » (décision du gardien, 12 juin 2026 — D1/D4). L'envoi d'un livrable par
+    # un HUMAIN collaborateur n'est pas une action d'agent : il est LIBRE, hors crans (organisation.md §4 bis).
     qui_decide: "porte humaine (gardien ou rôle désigné) avant l'action"
   anonymisation:
-    conditions: "sortie externe de la firme : publication externe ou livrable rendu hors firme — porte automatique, orthogonale ; déclencheur détaillé dans anonymisation.md §1"
+    conditions: "communication grand public ; matière d'un client tiers insérée dans un livrable client — porte automatique, orthogonale ; déclencheur détaillé dans anonymisation.md §1"
     qui_decide: "déclenchée par règle, sans humain ; voir anonymisation.md"
 
 # Évaluation : la première règle qui matche gagne.
 # PORTE ANONYMISATION — orthogonale : évaluée À PART, en plus du cran dérivé ci-dessous.
 # Elle ne remplace pas le cran ; elle s'ajoute. Voir anonymisation.md §1.
 anonymisation_gate:
-  - si: "sortie_externe_de_la_firme == true"   # publication externe OU livrable rendu hors firme ; PAS la réutilisation inter-client interne (qui reste nominative)
+  - si: "communication_grand_public == true"   # site internet, publication, institutionnel — tout canal non adressé à un client identifié dans une relation contractuelle
     alors: "appliquer anonymisation.md AVANT l'action (en plus du cran)"
+  - si: "matiere_client_tiers_dans_livrable_client == true"   # le NDA du client Y ne s'étend pas au client X ; les données du client destinataire restent nominatives
+    alors: "appliquer anonymisation.md À CETTE MATIÈRE avant insertion (en plus du cran)"
 derivation:
-  - si: "sort_de_la_firme == true"
+  - si: "sort_de_la_firme == true"   # se lit : communication grand public OU action d'AGENT engageant la firme vis-à-vis d'un client (D1/D4, 12 juin 2026)
     alors: valide
   - si: "reversible == false"
     alors: valide
@@ -61,12 +66,12 @@ actions:
     exemple: "message de nomination à l'équipe"
   - id: publier_contenu_externe
     cran: valide
-    pourquoi: "sort de la firme"
-    # Publication externe = sortie de firme : passe AUSSI la porte d'anonymisation (anonymisation.md §1).
+    pourquoi: "communication grand public"
+    # Communication grand public : passe AUSSI la porte d'anonymisation (anonymisation.md §1).
   - id: envoyer_livrable_client
     cran: valide
-    pourquoi: "sort de la firme"
-    # Livrable client = sortie de firme : passe AUSSI la porte d'anonymisation (anonymisation.md §1).
+    qui: "grade habilité (organisation.md §4 bis)"
+    pourquoi: "action d'AGENT : engage la firme vis-à-vis du client — porte humaine de supervision de l'agent. L'envoi par un HUMAIN collaborateur n'est pas une action d'agent : il est LIBRE, hors de cette table (organisation.md §4 bis). La porte anonymisation ne joue que pour la matière d'un client tiers (anonymisation.md §1)."
   - id: merger_sur_main
     cran: valide
     qui: "gardien seulement"
@@ -83,7 +88,7 @@ actions:
   - id: reutiliser_matiere_interne
     cran: auto
     pourquoi: "réutilisation INTERNE (autre mission / autre client, sans sortie de firme) : réversible, interne, local — reste NOMINATIF, pas d'anonymisation (avantage qui compose)"
-    note: "L'anonymisation ne se déclenche qu'à la SORTIE EXTERNE — voir publier_contenu_externe / envoyer_livrable_client et anonymisation.md §1. La réutilisation inter-client interne ne la déclenche plus (correction v1.3)."
+    note: "L'anonymisation ne se déclenche qu'aux déclencheurs d'anonymisation.md §1 (communication grand public ; matière d'un client tiers insérée dans un livrable client — révision v1.5/12 juin 2026). La réutilisation inter-client interne ne la déclenche pas (correction v1.3, inchangée)."
   - id: deleguer_un_perimetre
     cran: valide
     qui: "gardien"
