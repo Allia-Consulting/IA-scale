@@ -1,6 +1,7 @@
 # Parc collaborateur — politique de poste de travail — Allia Consulting
 
-> **Version** : 1.0 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle — *en attente de promotion par le gardien*.
+> **Version** : 1.0 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Les §3–§5 restent des squelettes à renseigner par candidats ultérieurs avant exécution de T-0006.
 > **Domicile** : `contrats/socle/parc-collaborateur.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2, §8 — chaîne d'autorité étendue aux **appareils**, ligne candidate v1.4), `contrats/socle/organisation.md` (§2 capacité « parc & gestion de poste » ; §5 réconciliation au moindre privilège).
 > **Rattachement** : capacité *Socle d'exploitation & gouvernance / parc & gestion de poste* ; chantiers `backlog/chantiers/T-0006.yaml` (config effective, runbook) et `backlog/chantiers/T-0008.yaml` (réconciliateur politique→Intune, Phase 3/4).
@@ -50,8 +51,8 @@ Le parc est l'une des **trois réconciliations** de la capacité chapeau **onboa
 
 ## 9. Comment ce contrat évolue
 
-Contrat socle **candidat** : il devient *fait foi* à sa **promotion** par le gardien (doctrine §7). Tout changement de politique (profil, apps, posture, groupes) est ensuite un candidat promu — jamais une édition directe de la config.
+Contrat socle **promu** — il fait foi (doctrine §7). Tout changement de politique (profil, apps, posture, groupes) est un candidat promu — jamais une édition directe de la config.
 
 ---
 
-*Contrat socle candidat — il canonise la POLITIQUE de parc, pas son exécution. Il attend la promotion du gardien. La config ABM/Intune/Entra est un runbook humain ; la réconciliation auto est un chantier Phase 3/4.*
+*Contrat socle promu — il canonise la POLITIQUE de parc, pas son exécution. Il fait foi et évolue par la boucle de promotion. La config ABM/Intune/Entra est un runbook humain ; la réconciliation auto est un chantier Phase 3/4.*

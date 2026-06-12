@@ -1,7 +1,7 @@
 # Mémoire d'organisation — Allia Consulting
 
-> **Version** : 1.1 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle **interne, nominatif** — *en attente de promotion par le gardien*.
-> **Changelog** : v1.1 — candidat, 9 juin 2026 : ajout du **renvoi normatif vers `contrats/socle/rgpd-ecoute-teams.md`** (cadre RGPD de l'écoute Teams/Claude) en en-tête et au §5. Régime **nominatif §4 confirmé, non modifié** ; aucun autre changement de fond. v1.0 — candidat (mécanisme initial).
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle **interne, nominatif** — fait foi.
+> **Changelog** : v1.2 — promu via boucle de promotion, 12 juin 2026 ; §2 : justification périmée « en attendant T-0002b » remplacée (chapeau T-0002b promue le 10 juin 2026) — les synthèses « mémoire hebdo » restent simulées en local sous `zone-proposition/memoire/` jusqu'à T-0005. Aucun autre changement de fond. v1.1 — candidat, 9 juin 2026 : ajout du **renvoi normatif vers `contrats/socle/rgpd-ecoute-teams.md`** (cadre RGPD de l'écoute Teams/Claude) en en-tête et au §5. Régime **nominatif §4 confirmé, non modifié** ; aucun autre changement de fond. v1.0 — candidat (mécanisme initial).
 > **Domicile** : `contrats/socle/memoire-organisation.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §7 boucle de promotion), `contrats/socle/modele-donnees.md` (§2 bis/§3 — zone de proposition, champ d'origine « mémoire hebdo »).
 > **Renvoi normatif** : `contrats/socle/anonymisation.md` — ce contrat est **interne et nominatif** ; toute **sortie externe** d'un fragment de mémoire **déclenche la porte d'anonymisation** (anonymisation.md §1). Voir §5. **`contrats/socle/rgpd-ecoute-teams.md`** — **cadre RGPD de conformité de l'écoute** Teams/Claude (finalité, base légale, minimisation/rétention, transparence, droits des personnes) ; prérequis normatif de l'écoute réelle.
@@ -22,7 +22,7 @@ Ce contrat dit **comment** cette mémoire se produit, **où** elle vit transitoi
 ## 2. Domicile transitoire — zone de proposition, champ d'origine « mémoire hebdo »
 
 - **Cible réelle** : liste **« Zone-de-proposition »** du site AlliaConsuling, avec un **champ d'origine = « mémoire hebdo »** qui distingue ces synthèses des autres faits dérivés (`modele-donnees.md` §2 bis/§3).
-- **En attendant `T-0002b`** (déploiement du connecteur Graph MCP en écriture) : la zone est **simulée en local**, sous **`zone-proposition/memoire/`**. Aucune écriture réelle dans M365 tant que T-0002b n'est pas déployé.
+- Le connecteur Graph MCP en écriture est **déployé et prouvé** (chapeau `T-0002b` promue le 10 juin 2026). Les synthèses « mémoire hebdo » restent **simulées en local** sous **`zone-proposition/memoire/`** jusqu'à la mise en service du batch (`T-0005`).
 - **Aucune copie** de la mémoire ailleurs : une seule vérité, un seul domicile (doctrine §2).
 
 ## 3. Validation — ligne à ligne, le vendredi ; non-validé = oublié
@@ -51,8 +51,8 @@ Conformément à `anonymisation.md` §1 (déclencheur), **toute sortie externe d
 
 ## 7. Comment ce contrat évolue
 
-Contrat socle **candidat** : il devient *fait foi* à sa **promotion** par le gardien (doctrine §7). Toute évolution ultérieure (cadence, champs, seuils de rétention) est elle-même un candidat. `CLAUDE.md` renvoie à ce contrat (« résous aussi `memoire-organisation.md` ») ; le renvoi se résout pleinement une fois ce contrat promu.
+Contrat socle **promu** — il fait foi (doctrine §7). Toute évolution ultérieure (cadence, champs, seuils de rétention) est elle-même un candidat, promu par le gardien. `CLAUDE.md` renvoie à ce contrat (« résous aussi `memoire-organisation.md` ») ; le renvoi se résout pleinement.
 
 ---
 
-*Contrat socle candidat — interne et nominatif. Il attend la promotion du gardien. La mémoire qu'il régit est un dérivé : proposée, validée, jamais saisie.*
+*Contrat socle promu — interne et nominatif. Il fait foi et évolue par la boucle de promotion. La mémoire qu'il régit est un dérivé : proposée, validée, jamais saisie.*
