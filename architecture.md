@@ -4,7 +4,7 @@
 > **Ce n'est PAS un contrat socle. Il ne fait pas foi.** En cas de **divergence** avec `doctrine/doctrine.md` ou un contrat socle (`contrats/socle/*`), **c'est le canon qui fait foi**, jamais ce document. Si une ligne d'ici contredit le canon, c'est cette ligne qui a tort — corrigez-la.
 > **Domicile** : `/architecture.md` (racine du dépôt de fondations).
 > **Ne duplique aucune règle.** Quand une règle est nécessaire, ce document **renvoie** au texte qui fait foi. Répartition : la doctrine dit *le pourquoi et les règles* ; `backlog/plan.md` dit *le chantier* ; `contrats/socle/organisation.md` dit *qui répond de quoi* ; **ce document dit la *topologie technique* et l'*état du SI***.
-> **État** : photo datée du **8 juin 2026** (session doctrine — entrée en Phase 1). La Partie C **se périme** — vérifier les *sources de vérité* indiquées.
+> **État** : photo datée du **8 juin 2026** (session doctrine — entrée en Phase 1). La Partie C **se périme** — vérifier les *sources de vérité* indiquées. **Partie C actualisée au 13 juin 2026** pour la **couche parc / poste de travail** (runbook T-0006).
 
 ---
 
@@ -79,6 +79,9 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 7. **La mémoire d'organisation s'écrit par batch nocturne, en proposition — l'écriture continue est abandonnée.** *(Décision du 8 juin 2026.)*
    *Pourquoi* : un **batch Cowork nocturne** (jeudi → vendredi) écoute les conversations Claude + Teams de la semaine et produit **une** synthèse **candidate** ; la validation est **ligne à ligne le vendredi** (non-validé = oublié). C'est « le dérivé n'est jamais le saisi » appliqué à la mémoire : la synthèse atterrit en **zone de proposition** (liste « Zone-de-proposition », champ d'origine **« mémoire hebdo »** — `modele-donnees.md` §2 bis/§3), **simulée en local** sous `zone-proposition/memoire/` en attendant `T-0002b`. Le contrat qui régit ce mécanisme est `contrats/socle/memoire-organisation.md` (candidat), à renvoi normatif vers `anonymisation.md`. *Pourquoi pas l'écriture continue* : une mémoire qui se réécrit en continu n'est ni relisible ni gouvernable à la promotion ; un rendez-vous hebdomadaire candidat l'est. *(Décision du 10 juin 2026 — stop doctrine : le batch tourne en **Cowork local** sur le poste du gardien, sous l'**identité Entra du gardien** — zéro secret, `identites-et-secrets.md` §2 cas 3. **Écart à B.4 assumé et borné** : limité à la mémoire d'organisation, réversible à la fédération du rôle gardien — voir `T-0005`.)*
 
+8. **Mise en service prudente de l'accès conditionnel du parc.** *(Décision du gardien, 13 juin 2026, runbook T-0006.)*
+   *Pourquoi* : éviter tout **verrouillage hors M365**. La stratégie « appareil conforme » est créée en **Rapport seul**, ciblée sur le **seul groupe du parc** et **excluant le compte du gardien**, **sans exclusion de plateforme**. **Prérequis avant bascule en « Activé »** : (1) les **security defaults** du tenant, encore actifs, ne sont coupés qu'avec un jeu de **stratégies CA de remplacement (MFA)** dans le **même geste** ; (2) un **compte break-glass** dédié existe et est exclu. La règle qui **fait foi** pour la politique est `contrats/socle/parc-collaborateur.md` §5 ; **ce document ne fait que décrire l'état.**
+
 ---
 
 ## Partie C — Inventaire du SI
@@ -129,10 +132,12 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 ### Couche parc / poste de travail (ABM · Intune · Entra)
 | Composant | État | Source de vérité |
 |---|---|---|
-| Politique de parc (profil de poste, apps, posture sécurité, groupes Entra d'enrôlement) | **PARTIEL** — **politique canonisée** (candidat) ; rien de déployé | `contrats/socle/parc-collaborateur.md` (candidat) |
-| Enrôlement ABM (rattachement matériel → firme) | **À FAIRE** — **runbook humain** (config tenant/ABM, proscrite à l'agent) | portail Apple Business Manager + tenant |
-| Profils & conformité Intune (apps, posture) | **À FAIRE** — **runbook humain** | portail Intune |
-| Groupes Entra d'enrôlement | **À FAIRE** — **runbook humain** ; projection au moindre privilège (cf. `organisation.md` §5) | portail Entra |
+| Politique de parc (profil de poste, apps, posture sécurité, groupes Entra d'enrôlement) | **PARTIEL** — **politique canonisée** (candidat, enrichie le 13 juin 2026) ; mise en œuvre amorcée au runbook T-0006 | `contrats/socle/parc-collaborateur.md` (candidat) |
+| Enrôlement ABM (rattachement matériel → firme) + profil zéro-touch | **PARTIEL** — enrôlement ABM et **profil zéro-touch** posés au runbook T-0006 le 13 juin 2026 ; **numéro de client Apple À FAIRE** (différé au runbook) — **runbook humain** | portail Apple Business Manager + tenant |
+| Profils & conformité Intune (apps, posture) | **PARTIEL** — profils Intune (**FileVault**, **verrouillage**) et **conformité** posés au runbook T-0006 le 13 juin 2026 ; **profil MAJ macOS 10 j À FAIRE** (différé au runbook) — **runbook humain** | portail Intune |
+| Groupes Entra d'enrôlement | **PARTIEL** — groupe **`grp-parc-collaborateur`** posé au runbook T-0006 le 13 juin 2026 — **runbook humain** ; projection au moindre privilège (cf. `organisation.md` §5) | portail Entra |
+| Accès conditionnel « appareil conforme » | **PARTIEL** — stratégie **créée en « Rapport seul »** le 13 juin 2026 (n'applique encore **aucun blocage**) ; **bascule en « Activé » À FAIRE**, après preuve sur poste de test enrôlé — **runbook humain** ; règle qui fait foi : `contrats/socle/parc-collaborateur.md` §5 | portail Entra (accès conditionnel) |
+| Security defaults du tenant | **encore ACTIVÉS** au 13 juin 2026 (constaté au runbook T-0006) ; mutuellement exclusifs avec l'accès conditionnel — non désactivés tant que le socle MFA en dépend (cf. `parc-collaborateur.md` §5) | portail Entra |
 | Réconciliateur automatique *politique → Intune* | **À FAIRE** — chantier **Phase 3/4** (backlog), non construit | `backlog/chantiers/` |
 
 ### Couche agents / skills
