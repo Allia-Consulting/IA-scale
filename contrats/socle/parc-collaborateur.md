@@ -2,6 +2,7 @@
 
 > **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
 > **Changelog** :
+> - v1.1 (enrichissement candidat) — 13 juin 2026 : §5 précisé sur la posture d'accès conditionnel (security defaults, mode Rapport seul avant bascule, pas d'exclusion de plateforme, compte break-glass comme préalable à la bascule) ; §5 alignement macOS min. Décisions du gardien du 13 juin 2026 lors du runbook T-0006. Contenu antérieur inchangé.
 > - v1.1 — candidat, 12 juin 2026 : renseignement des §3–§6 (décisions du gardien, 12 juin 2026) — canal d'acquisition rattaché à l'ABM, profil unique "collaborateur", apps socle, posture de sécurité, groupes d'enrôlement. Le contrat cesse d'être un squelette ; prérequis normatif de T-0006 satisfait à sa promotion.
 > - 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Les §3–§5 restent des squelettes à renseigner par candidats ultérieurs avant exécution de T-0006.
 > **Domicile** : `contrats/socle/parc-collaborateur.md`. **Autorité de promotion** : gardien du temple.
@@ -44,8 +45,14 @@ La configuration d'un poste est un **dérivé** d'une décision de parc promue i
 - **FileVault obligatoire**, clé de récupération séquestrée dans Intune ;
 - **verrouillage de session** à 5 minutes d'inactivité, mot de passe requis immédiatement ;
 - **mises à jour macOS gérées par Intune**, fenêtre de conformité : 10 jours calendaires de retard maximum ;
-- **accès conditionnel** : l'accès M365 est conditionné à l'état « appareil conforme » (Intune *compliant*) — c'est le verrou qui rend la posture opposable ;
-- **version macOS minimale** : N-1 (la version courante ou la précédente).
+- **accès conditionnel** : l'accès M365 est conditionné à l'état « appareil conforme » (Intune *compliant*) — c'est le verrou qui rend la posture opposable. La stratégie :
+  - cible le **seul** groupe `grp-parc-collaborateur` (jamais « tous les utilisateurs »), **exclut le compte du gardien**, et vise **toutes les ressources** ;
+  - est mise en service en **deux temps** : créée d'abord en **« Rapport seul »** (observation, aucun blocage), puis basculée en **« Activé »** **seulement après** preuve de bout en bout sur un poste de test enrôlé ;
+  - **n'exclut aucune plateforme** (pas d'option « configuration sélectionnée ») ; conséquence assumée : en Rapport seul, un poste macOS peut recevoir une **invite de sélection de certificat** (nuisance d'expérience, sans blocage) ;
+- **prérequis Entra à la bascule en « Activé »** :
+  - les **security defaults** du tenant et l'accès conditionnel sont **mutuellement exclusifs** ; tant que les security defaults assurent le socle (MFA), ils **ne sont pas désactivés** ; leur désactivation n'est admise qu'au moment où un jeu de stratégies d'accès conditionnel de remplacement (au minimum **MFA pour tous** / **MFA administrateurs**) est prêt à prendre le relais **dans le même geste** — jamais avant ;
+  - au moins un **compte break-glass** dédié (cloud-only, non nominatif, exclu de toute stratégie d'accès conditionnel, secret long en coffre) existe et est exclu de la stratégie **avant toute bascule en « Activé »** ; sa création est un **runbook humain** (geste exclusif du gardien) ;
+- **version macOS minimale** : N-1 (la version courante ou la précédente ; au 13 juin 2026 : macOS 15 / Sequoia, courant grand public = macOS 26 / Tahoe).
 
 ## 6. Groupes Entra d'enrôlement
 
