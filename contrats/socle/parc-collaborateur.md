@@ -2,6 +2,7 @@
 
 > **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
 > **Changelog** :
+> - v1.1 (enrichissement candidat) — 15 juin 2026 : §4 — ajout de la politique de sauvegarde des données utilisateur (OneDrive Folder Backup / KFM) : redirection silencieuse et verrouillée des dossiers Bureau et Documents vers OneDrive ; blocage de la synchronisation de comptes OneDrive personnels sur le poste géré. Décision du gardien du 15 juin 2026. Contenu antérieur inchangé.
 > - v1.1 (enrichissement candidat) — 13 juin 2026 : §5 précisé sur la posture d'accès conditionnel (security defaults, mode Rapport seul avant bascule, pas d'exclusion de plateforme, compte break-glass comme préalable à la bascule) ; §5 alignement macOS min. Décisions du gardien du 13 juin 2026 lors du runbook T-0006. Contenu antérieur inchangé.
 > - v1.1 — candidat, 12 juin 2026 : renseignement des §3–§6 (décisions du gardien, 12 juin 2026) — canal d'acquisition rattaché à l'ABM, profil unique "collaborateur", apps socle, posture de sécurité, groupes d'enrôlement. Le contrat cesse d'être un squelette ; prérequis normatif de T-0006 satisfait à sa promotion.
 > - 12 juin 2026 — promu via boucle de promotion ; contenu inchangé hors en-tête/statut. Les §3–§5 restent des squelettes à renseigner par candidats ultérieurs avant exécution de T-0006.
@@ -39,6 +40,16 @@ La configuration d'un poste est un **dérivé** d'une décision de parc promue i
 - **Socle** (poussé par défaut via Intune) : suite Microsoft 365 (Word, Excel, PowerPoint, Outlook, Teams, OneDrive) ; Claude desktop ; Claude Code CLI (l'authentification OAuth des serveurs MCP `.mcp.json` projet se fait au CLI — fait durci T-0010) ; Google Chrome (navigateur géré) ; git et gh (la connexion Git vise le dépôt commun de la firme — org GitHub Allia-Consulting ; le geste d'authentification `gh auth login` reste celui de la personne, sous son identité).
 - **Company Portal** : implicite à l'enrôlement Intune.
 - **Apps conditionnées à une fonction ou un périmètre** : aucune à ce stade ; s'ajoutent par candidats ultérieurs.
+
+### Sauvegarde des données utilisateur (OneDrive)
+
+- Les dossiers **Bureau** et **Documents** de chaque poste sont redirigés vers OneDrive (fonction *Folder Backup* / *Known Folder Move*), en mode **silencieux** (sans interaction utilisateur) et **verrouillé** (l'utilisateur ne peut pas désactiver la sauvegarde).
+- **Finalité** : continuité des données. En cas de perte ou de remplacement du poste, le collaborateur retrouve ses fichiers Bureau et Documents en se reconnectant à OneDrive avec son identité Entra sur un poste réenrôlé. La reconstruction du **poste** (profil, apps, posture) relève de l'enrôlement Intune ; la restauration des **fichiers** relève de OneDrive. Les deux canaux sont distincts et complémentaires.
+- **Périmètre** : Bureau et Documents uniquement (le dossier Téléchargements n'est pas couvert).
+- **Nature** : synchronisation miroir, non archive — la suppression d'un fichier local le supprime aussi dans OneDrive.
+- Le poste géré ne synchronise **que** les données de la firme : la synchronisation de comptes OneDrive **personnels** est bloquée.
+- **Prérequis techniques** (exécution = runbook humain T-0006, jamais un agent) : client OneDrive « standalone » (le client Mac App Store n'est pas supporté pour *Folder Backup*) ; *Full Disk Access* accordé à OneDrive ; profil de configuration « Background Services » autorisant le daemon OneDrive (requis depuis macOS 13).
+- **Clés de configuration de référence** (renvoi runbook, non normatif sur la syntaxe) : `KFMSilentOptIn` (tenant firme), `KFMBlockOptOut`, `DisablePersonalSync`.
 
 ## 5. Posture de sécurité
 
