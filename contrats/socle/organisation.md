@@ -1,11 +1,11 @@
 # Organisation & délégations — Allia Consulting
 
-> **Version** : 1.3 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
+> **Version** : 1.4 — *promu*. Troisième contrat socle, aux côtés de `/doctrine/doctrine.md` et `/backlog/plan.md`.
 > **Statut** : Contrat socle — fait foi.
 > **Domicile** : Dépôt de fondations (Git), `/contrats/socle/organisation.md`.
 > **Autorité de promotion** : Gardien du temple.
 > **Portée** : Toute l'organisation Allia.
-> **Changelog** : v1.3 — promu via boucle de promotion, 12 juin 2026. **D3 REQUALIFIÉE (décision du gardien, 12 juin 2026)** : la grille d'habilitation du §4 bis (grades habilités + délégation, **contenu inchangé**) ne conditionne **plus l'envoi humain** d'un livrable — tout collaborateur envoie **librement** son livrable à son client, responsable de son acte (les crans gouvernent les agents, pas les humains — doctrine §6). La grille définit désormais **qui tient la porte du cran *validé*** pour (i) les **actions d'AGENT engageant la firme vis-à-vis d'un client** (envoi de livrable par un agent) et (ii) la **communication grand public**. Aligne doctrine v1.6, anonymisation.md v1.4, table-des-crans.yaml v1.5. v1.2 — promu via boucle de promotion, 8 juin 2026 (session doctrine). **D4 (carte des capacités, §2)** : ajout de deux capacités au domicile canonique de la carte (la grille des périmètres) — **« onboarding & intégration »** (capacité chapeau orchestrant les trois réconciliations d'une décision « X devient collaborateur du périmètre P » : matériel, droits, connaissance) sous *Capacités habilitantes*, et **« parc & gestion de poste »** (profil de poste, apps déployées, posture sécurité, groupes Entra d'enrôlement ; politique canonisée, exécution = runbook) sous *Socle d'exploitation & gouvernance*. v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
+> **Changelog** : v1.4 — promu via boucle de promotion, 15 juin 2026. PREMIÈRE DÉLÉGATION RÉELLE (§3) : Sarah Shaiek passe de candidate à collaboratrice et devient animatrice du périmètre « Communication & marque ». La table des titulaires passe d'un état gardien-unique à un état à deux. §10 (hypothèse 3) aligné en conséquence. Aucune autre section modifiée. v1.3 — promu via boucle de promotion, 12 juin 2026. **D3 REQUALIFIÉE (décision du gardien, 12 juin 2026)** : la grille d'habilitation du §4 bis (grades habilités + délégation, **contenu inchangé**) ne conditionne **plus l'envoi humain** d'un livrable — tout collaborateur envoie **librement** son livrable à son client, responsable de son acte (les crans gouvernent les agents, pas les humains — doctrine §6). La grille définit désormais **qui tient la porte du cran *validé*** pour (i) les **actions d'AGENT engageant la firme vis-à-vis d'un client** (envoi de livrable par un agent) et (ii) la **communication grand public**. Aligne doctrine v1.6, anonymisation.md v1.4, table-des-crans.yaml v1.5. v1.2 — promu via boucle de promotion, 8 juin 2026 (session doctrine). **D4 (carte des capacités, §2)** : ajout de deux capacités au domicile canonique de la carte (la grille des périmètres) — **« onboarding & intégration »** (capacité chapeau orchestrant les trois réconciliations d'une décision « X devient collaborateur du périmètre P » : matériel, droits, connaissance) sous *Capacités habilitantes*, et **« parc & gestion de poste »** (profil de poste, apps déployées, posture sécurité, groupes Entra d'enrôlement ; politique canonisée, exécution = runbook) sous *Socle d'exploitation & gouvernance*. v1.1 — promu via boucle de promotion, 7 juin 2026. **D1 (cohérence, §7)** : la règle d'anonymisation gouverne la **sortie externe**, non la réutilisation inter-client interne (aligne `anonymisation.md` v1.3). **D2 (décision d'organisation nouvelle, §3 bis)** : introduction du rôle **associé** comme rôle métier distinct du gardien, les deux tenus par le fondateur. **D3 (décision d'organisation nouvelle, §4 bis)** : grille d'habilitation des portes de sortie de firme (grade habilité + délégation, cumulatifs). v1.0 — candidat (état initial).
 
 La doctrine définit *les règles et les rôles* (en abstrait). Le plan définit *le chantier*. Ce document définit **qui répond de quoi** : il lie les rôles abstraits de la doctrine à des périmètres concrets et à leurs titulaires, et il gouverne la délégation. C'est la « réalisation » de la gouvernance, rendue canonique et gouvernable — ce que la doctrine laisse délibérément de côté pour rester stable (principe « capacités stables, réalisation volatile »).
 
@@ -44,15 +44,15 @@ Le gardien décide de la granularité : on délègue rarement une capacité isol
 
 ## 3. Les titulaires aujourd'hui (état réel)
 
-La firme repose aujourd'hui sur une personne. Par défaut, **le gardien (fondateur) tient le rôle de gardien et anime tous les périmètres** ; aucune délégation n'est encore active.
+Par défaut, **le gardien (fondateur) tient le rôle de gardien et anime tous les périmètres non délégués**. Une première délégation est désormais active : la **communication & marque** est déléguée à Sarah Shaiek. La firme passe ainsi d'un état gardien-unique à un état à deux.
 
 | Périmètre | Animateur (titulaire) | Statut |
 |---|---|---|
-| Tous les périmètres | Le gardien (fondateur) | non délégué |
-| Communication & marque | Le gardien (fondateur) | délégable en priorité |
+| Tous les périmètres non délégués | Le gardien (fondateur) | non délégué |
+| Communication & marque | Sarah Shaiek (sarah.shaiek@allia-consulting.com) | délégué — 15 juin 2026 |
 | … | — | à déléguer |
 
-*Aucun nom de futur collaborateur n'est inventé : les lignes futures restent en attente jusqu'à une délégation réelle.*
+*Aucun nom de collaborateur **futur** n'est inventé : la règle « on n'invente pas de délégations à venir » demeure. L'état réel comporte désormais une délégation nommée (communication & marque → Sarah Shaiek) ; les lignes futures restent en attente jusqu'à une délégation réelle.*
 
 ## 3 bis. Gardien et associé : deux rôles, une même personne aujourd'hui
 
@@ -145,7 +145,7 @@ Contrat socle : chaque délégation, révocation ou redécoupage de périmètre 
 
 1. Les périmètres dérivent de la carte des capacités ; la granularité est au choix du gardien.
 2. Identités / RH dans M365 (référencées par identifiant), délégations dans Git. Séparation recommandée dès maintenant.
-3. Aujourd'hui : gardien unique tenant tous les périmètres ; aucun nom futur inventé.
+3. Aujourd'hui : le gardien tient les périmètres **non délégués** ; une première délégation est active (communication & marque → Sarah Shaiek) ; aucun nom **futur** inventé.
 4. Les droits sont un dérivé réconcilié de la décision promue (groupes Entra), jamais saisis ; la porte humaine reste à la promotion, le réconciliateur au moindre privilège. La mise en place du privilège (app registration, secret) reste un runbook humain.
 
 > Pour corriger : ouvre un candidat, ne modifie pas ce fichier directement.
