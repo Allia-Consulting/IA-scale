@@ -1,0 +1,40 @@
+id: T-0011
+titre: "Skill « newsletter-hebdo » : génération du brouillon de newsletter interne (inscrit au backlog, non construit)"
+capacite: "Cœur de métier / Connaissance, contenu & IP — communication & marque"
+phase: 4
+type_action: edition_contrat_local
+cran: valide            # rédaction du skill en branche = auto ; promotion du skill = gardien (procédure allégée, contrat local)
+produit:
+  - "skills/newsletter-hebdo/SKILL.md : procédure par laquelle un agent agrège les rubriques de la newsletter (recrutements/arrivées, dossiers gagnés, évolution du SI, leçon apprise) depuis leurs sources et rédige un BROUILLON dans la voix Allia"
+  - "écriture du brouillon en ZONE DE PROPOSITION (dérivé, cran auto) — la publication dans Teams est un geste distinct (T-0012)"
+depend_de: ["T-0012"]
+# Dépend de T-0012 (connecteur Teams en écriture) : un brouillon de newsletter n'a de cible
+#   de publication que si le tuyau Teams existe. ORDRE : T-0012 (connecteur) puis T-0011 (skill).
+#   Les IDs ne sont pas un ordre d'exécution (cf. T-0007 dépend de T-0008) — l'ordre vit ici.
+# PRÉREQUIS NORMATIF : promotion du contrat local contrats/local/communication/newsletter.md
+#   (le rituel que ce skill exécute). Plusieurs rubriques dépendent de sources non encore
+#   construites (pipeline candidat ; mémoire T-0005) : au démarrage, ces rubriques sont saisies
+#   à la main (note transitoire du contrat local §6).
+contrats_concernes:
+  - "contrats/local/communication/newsletter.md"
+  - "contrats/socle/memoire-organisation.md"
+  - "contrats/socle/design-system.md"
+  - "contrats/socle/anonymisation.md"
+criteres_acceptation:
+  - "Le skill produit un brouillon de newsletter respectant le contrat local (cadence, rubriques §3, régime interne nominatif, ordre du vendredi §4)"
+  - "La rubrique « leçon apprise » ne pioche QUE dans la mémoire VALIDÉE du vendredi (jamais le brut, jamais avant validation — memoire-organisation.md §3)"
+  - "Le brouillon est écrit en zone de proposition (dérivé, cran auto) ; l'agent ne publie pas et ne promeut pas"
+  - "Le rendu respecte le design system ; régime interne nominatif (pas d'anonymisation tant qu'interne)"
+  - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Première des deux briques reportées du §7 du contrat local newsletter
+  (contrats/local/communication/newsletter.md). INSCRIT AU BACKLOG, NON CONSTRUIT.
+  Ce skill couvre la GÉNÉRATION (brouillon en zone de proposition, cran auto), PAS la
+  publication (geste distinct porté par le connecteur Teams T-0012). Le passage de l'état
+  « rodage » (brouillon relu par un humain) à l'état « croisière » (agent génère et publie
+  au cran notifié) est une décision du gardien tracée dans le contrat local §6, prise au vu
+  de l'épreuve (« prouvé par l'usage »). Au démarrage du rituel, la newsletter est rédigée et
+  publiée À LA MAIN (note transitoire du contrat local §6) ; ce skill automatise la génération
+  quand ses sources et le connecteur Teams (T-0012) sont en service.

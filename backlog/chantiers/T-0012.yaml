@@ -1,0 +1,36 @@
+id: T-0012
+titre: "Connecteur Teams en écriture (envoi de message de canal) — infrastructure (inscrit au backlog, non construit)"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 4
+type_action: infrastructure_mcp
+cran: valide            # nature MIXTE : code du connecteur = agent (auto en branche) ; octroi de la permission Graph = RUNBOOK HUMAIN (validé)
+produit:
+  - "(agent — cran auto) extension du connecteur MCP (ou nouveau connecteur) exposant l'envoi d'un message dans un canal Teams via Microsoft Graph"
+  - "(runbook humain) octroi à l'identité managée de la permission Graph d'envoi de message de canal (ex. ChannelMessage.Send), au moindre privilège — geste du gardien, jamais un agent"
+depend_de: []
+# Inscrit au BACKLOG, PAS à construire maintenant (Phase 4). Aucune dépendance dure tant qu'il
+#   n'est pas ordonnancé. NATURE MIXTE (comme T-0002b-2) : le CODE du connecteur relève de l'agent
+#   (édition en branche, cran auto) ; l'OCTROI de la permission Graph d'envoi Teams à l'identité
+#   managée est un RUNBOOK HUMAIN (modifier des droits = proscrit à un agent, table-des-crans.yaml ;
+#   même séquence que T-0002a-bis pour Sites.Selected). PAS de sentinelle RUNBOOK-HUMAIN pour que
+#   l'agent puisse préparer le code ; la part octroi reste la porte du gardien (signalée dans produit).
+contrats_concernes:
+  - "contrats/local/communication/newsletter.md"
+  - "contrats/socle/identites-et-secrets.md"
+criteres_acceptation:
+  - "Le connecteur peut poster un message dans le canal Teams « Allia Consulting — vie interne » via Graph"
+  - "L'authentification suit le modèle zéro secret (identites-et-secrets.md) : identité managée pour le workload, aucun secret applicatif introduit"
+  - "La permission Graph d'envoi est octroyée au moindre privilège (runbook humain du gardien) ; tout octroi tracé"
+  - "Le connecteur ne sait QUE poster un message de canal — il n'élargit pas les droits Graph existants au-delà du strict nécessaire"
+rayon_impact: local
+statut: à_faire
+note: >
+  Seconde des deux briques reportées du §7 du contrat local newsletter
+  (contrats/local/communication/newsletter.md). INSCRIT AU BACKLOG, NON CONSTRUIT.
+  Le connecteur MCP Graph actuel (outils/mcp-graph/) LIT les Listes SharePoint et ÉCRIT en
+  Zone-de-proposition ; il NE POSTE PAS de message Teams. Publier la newsletter dans le canal
+  suppose cette brique — chantier d'infrastructure du même ordre que T-0002b (transport, image,
+  déploiement, auth), avec une PERMISSION GRAPH SUPPLÉMENTAIRE (envoi de message de canal) à
+  octroyer à l'identité managée par RUNBOOK HUMAIN (même nature que l'octroi Sites.Selected de
+  T-0002a-bis). Prérequis de l'exécution agentique de la newsletter (état « croisière », contrat
+  local §6) et du skill de génération T-0011.
