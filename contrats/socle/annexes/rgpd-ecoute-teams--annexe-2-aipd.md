@@ -1,6 +1,7 @@
 # Annexe 2 — Analyse d'impact (AIPD, art. 35) — écoute Teams/Claude — Allia Consulting
 
-> **Version** : 1.0 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-ecoute-teams.md` §7) — *en attente de promotion par le gardien*.
+> **Version** : 1.1 — *promu*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-ecoute-teams.md` §7) — fait foi.
+> **Changelog** : v1.1 — alignement en-tête candidat → promu, 16 juin 2026 : le gardien-DPO acte le fond de cette annexe (risque résiduel maîtrisé et non élevé au sens de l'art. 36 — pas de consultation préalable CNIL ; mesures du §3 ; revue bimestrielle). Contenu de fond byte-inchangé hors en-tête et note de clôture. v1.0 — candidat, 12 juin 2026.
 > **Domicile** : `contrats/socle/annexes/rgpd-ecoute-teams--annexe-2-aipd.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-ecoute-teams.md` (§7 — formalités, art. 35), `contrats/socle/annexes/rgpd-ecoute-teams--annexe-1-mise-en-balance.md` (nécessité et proportionnalité), `contrats/socle/identites-et-secrets.md` (§2 — identités appelantes), `contrats/socle/memoire-organisation.md` (mécanisme).
 > **Nature** : consigne les **arbitrages du gardien-DPO** (12 juin 2026) ; **pas un avis juridique**.
@@ -36,4 +37,4 @@ Le **risque résiduel est MAÎTRISÉ et NON ÉLEVÉ** au sens de l'**art. 36** :
 
 ---
 
-*Annexe normative candidate du cadre RGPD de l'écoute Teams/Claude (§7). Elle consigne l'analyse d'impact et la conclusion du gardien-DPO du 12 juin 2026 ; elle attend la promotion du gardien.*
+*Annexe normative promue du cadre RGPD de l'écoute Teams/Claude (§7). Elle consigne l'analyse d'impact et la conclusion du gardien-DPO du 12 juin 2026 ; elle fait foi et évolue par la boucle de promotion.*
