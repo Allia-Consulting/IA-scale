@@ -34,3 +34,55 @@ note: >
   HUMAINS, claim roles (MCP.Invoke) pour les WORKLOADS et la transition ; la JOURNALISATION de
   l'identité appelante (X-MS-CLIENT-PRINCIPAL-*) est la traçabilité par personne décidée le
   10 juin ; la signature des écritures reste APPLICATIVE (OBO non retenu aujourd'hui).
+
+cadrage_technique: |
+  Cadrage technique (recherche du 16 juin 2026 — doc Microsoft Learn + SDK MCP).
+  À LIRE AVANT d'implémenter : évite de refaire l'enquête et de tomber dans les pièges.
+
+  LECTURE DES CLAIMS (frontière d'entrée Easy Auth).
+  Le sidecar Easy Auth (Container Apps) injecte les claims du token validé dans des
+  EN-TÊTES de requête NON falsifiables de l'extérieur (présents seulement s'ils viennent
+  du sidecar — doc Microsoft « Authentication and authorization in Azure Container Apps »
+  et « Work with user identities in App Service authentication »). Deux voies :
+    - X-MS-CLIENT-PRINCIPAL : JSON base64 des claims, à décoder puis itérer sur le tableau
+      « claims » (objets {typ, val}). Voie documentée normale. PIÈGE : mapping de claims par
+      défaut — le « typ » de roles peut être mappé vers une URI longue
+      (ex. http://schemas.microsoft.com/ws/2008/06/identity/claims/role) au lieu du court
+      « roles ». Gérer les deux formes. Le mapping DÉPEND du token store activé.
+    - X-MS-TOKEN-AAD-ACCESS-TOKEN : le JWT brut tel qu'émis par Entra (claims roles/scp NON
+      mappés, noms stables). À décoder SANS revérifier la signature (le sidecar l'a déjà
+      validée) : simple split base64url + JSON, pas de crypto. Plus robuste car indépendant
+      du mapping ET du token store.
+
+  FAIT DE DÉPLOIEMENT À VÉRIFIER AVANT DE FIGER L'ARCHI : le token store est-il activé sur
+  ca-allia-mcp-graph ? Il n'apparaît PAS dans les traces T-0002b-4 (Easy Auth activé en
+  Return401, sans mention de token store). S'il est absent, le mapping de claims peut ne pas
+  s'appliquer -> PRÉFÉRER la voie JWT brut (X-MS-TOKEN-AAD-ACCESS-TOKEN), indépendante du
+  token store.
+
+  PIÈGE BIBLIOTHÈQUE (hard fact). Deux bibliothèques distinctes s'appellent « FastMCP » :
+  le SDK OFFICIEL mcp.server.fastmcp (package « mcp », celui d'outils/mcp-graph —
+  requirements.txt: mcp>=1.2.0) et le package TIERS « fastmcp » (jlowin, doc gofastmcp.com).
+  Le paramètre mcp.http_app(middleware=[...]) / streamable_http_app(user_middleware=...)
+  documenté sur gofastmcp.com appartient au TIERS, PAS au SDK officiel. Ne pas le transposer
+  aveuglément -> TypeError. (Même nature que le hard fact host/port constructeur vs run().)
+
+  POUR LE SDK OFFICIEL : insérer un middleware Starlette suppose un MONTAGE STARLETTE EXPLICITE
+  — mcp.streamable_http_app() retourné comme app ASGI, monté dans une Starlette parente, EN
+  PASSANT LE LIFESPAN de l'app FastMCP à la Starlette parente (les lifespans imbriqués ne sont
+  pas reconnus, sinon le session manager n'est pas initialisé). CONSÉQUENCE : le démarrage
+  actuel mcp.run(transport="streamable-http") devra CHANGER (montage explicite), ce qui touche
+  le bloc __main__ de server.py ET la commande de lancement du Dockerfile. Vérifier aussi que
+  @mcp.custom_route("/healthz") survit au remontage.
+
+  DÉCISION D'ARCHITECTURE À TRANCHER AU MOMENT DE FAIRE (non tranchée ici) :
+    - middleware Starlette : validation centralisée sur /mcp, /healthz épargné par filtrage de
+      chemin — plus propre, mais restructure le démarrage + Dockerfile + lifespan ;
+    - validation in-tool : addition pure sans toucher le démarrage, mais rejet au niveau
+      JSON-RPC plutôt que 403 HTTP (léger écart au critère « 403 »), dispersé sur chaque tool,
+      et suppose que le SDK expose la requête HTTP dans le contexte du tool (à confirmer).
+
+  CONDITION DE RÉALISATION : l'implémentation exige un REDÉPLOIEMENT de la container app et la
+  CI build-mcp-graph VERTE (import + sonde /healthz reprouvés). À faire quand un test de
+  redéploiement est possible. Risque en tenant solo : faible, accepté (décision du 10 juin) —
+  pas d'urgence.
