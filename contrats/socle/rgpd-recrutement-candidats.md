@@ -1,7 +1,7 @@
 # Cadre RGPD — recrutement & traitement des données candidats — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat socle — fait foi.
-> **Changelog** : v1.0 — candidat, 16 juin 2026 : création du cadre RGPD du traitement des données de candidats au recrutement. Consigne les arbitrages du gardien-DPO : double base légale (instruction = mesures précontractuelles art. 6.1.b ; vivier = intérêt légitime art. 6.1.f), durées (instruction = 3 mois après aboutissement du processus ; vivier = 2 ans à compter du dernier contact), régime des synthèses d'entretien (synthèse seule conservée au vivier, notes brutes purgées avec l'instruction), information préalable (informative, jamais consentement), droits des personnes dont l'opposition. Annexe 1 (mise en balance) et annexe éventuelle d'AIPD = candidats ultérieurs.
+> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : v1.1 — promu, 16 juin 2026 : §11.1 (mise en balance) et §11.2 (AIPD) TRANCHÉES — produites par l'annexe 1 (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`) : mise en balance documentée, AIPD non requise (risque non élevé, art. 35, annexe 1 §6). Statut aligné candidat→promu. Les cases §11.3–§11.7 restent ouvertes. Aucun autre changement de fond. v1.0 — candidat, 16 juin 2026 : création du cadre RGPD du traitement des données de candidats au recrutement. Consigne les arbitrages du gardien-DPO : double base légale (instruction = mesures précontractuelles art. 6.1.b ; vivier = intérêt légitime art. 6.1.f), durées (instruction = 3 mois après aboutissement du processus ; vivier = 2 ans à compter du dernier contact), régime des synthèses d'entretien (synthèse seule conservée au vivier, notes brutes purgées avec l'instruction), information préalable (informative, jamais consentement), droits des personnes dont l'opposition. Annexe 1 (mise en balance) et annexe éventuelle d'AIPD = candidats ultérieurs.
 > **Domicile** : `contrats/socle/rgpd-recrutement-candidats.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §9 confidentialité/conformité), `contrats/socle/anonymisation.md` (§1 — porte de sortie externe), `contrats/socle/organisation.md` (§5 — droits réconciliés, projection d'une décision promue), `contrats/socle/table-des-crans.yaml` (crans).
 > **Traitement-frère distinct** : `contrats/socle/rgpd-ecoute-teams.md` (écoute Teams/Claude) — **autre traitement, autres personnes** (collaborateurs internes vs candidats externes). Les deux cadres sont distincts et ne se recouvrent pas.
@@ -34,7 +34,7 @@ Ce contrat dit la **finalité**, la **base légale**, le **régime des données*
 - **Phase d'instruction** (candidature en cours, jusqu'à la décision) : **mesures précontractuelles** (RGPD **art. 6.1.b**). Le candidat est dans une démarche pré-contractuelle ; traiter ses données pour instruire sa candidature en découle directement. **Pas de test de mise en balance requis** pour cette phase.
 - **Phase de vivier** (conservation et consultation d'un candidat **non retenu**, au-delà de l'instruction) : **intérêt légitime** (RGPD **art. 6.1.f**). La mesure précontractuelle est éteinte ; la conservation poursuit l'intérêt légitime de la firme à disposer d'un vivier.
 
-L'intérêt légitime (vivier) exige un **test de mise en balance**, **à documenter en annexe** — **à produire** : annexe 1 (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`). Tant que cette annexe n'est pas promue, le vivier n'est pas réputé fondé par la seule mention de l'article.
+L'intérêt légitime (vivier) exige un **test de mise en balance**, **à documenter en annexe** — **produite — voir annexe 1** (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`). Tant que cette annexe n'est pas promue, le vivier n'est pas réputé fondé par la seule mention de l'article.
 
 ## 3. Régime des données — minimisation à la collecte
 
@@ -100,8 +100,8 @@ Aujourd'hui, le **fondateur cumule** trois rôles **distincts par nature** : **r
 
 Explicitement **non tranchées** dans ce candidat — à produire/valider par le gardien-DPO **avant le traitement réel** :
 
-1. **Test de mise en balance** de l'intérêt légitime du vivier (§2) — à documenter en **annexe 1**.
-2. **AIPD / DPIA** (art. 35) — *a priori* **non requise** (pas de surveillance systématique, pas de décision automatisée, pas de profilage) ; **à confirmer et justifier** par le gardien-DPO (annexe d'AIPD seulement si le périmètre réel le commande).
+1. **Test de mise en balance** de l'intérêt légitime du vivier (§2) — **Produit — voir annexe 1** (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`).
+2. **AIPD / DPIA** (art. 35) — **non requise — voir annexe 1 §6** : conclusion motivée du gardien-DPO (pas de surveillance systématique, pas de décision automatisée, pas de profilage, pas de données sensibles ; risque résiduel non élevé). Pas d'annexe d'AIPD distincte. Réexaminée si le périmètre évolue (profilage, tri automatisé, volume massif).
 3. **Contenu exact de la checklist** « ce qu'une synthèse couvre / ne couvre jamais » (§4).
 4. **Gabarit d'information préalable** réutilisable (§6) — annexe ultérieure, modelée sur `rgpd-ecoute-teams.md` annexe 3.
 5. **Interface d'exercice des droits** des candidats (§7).
