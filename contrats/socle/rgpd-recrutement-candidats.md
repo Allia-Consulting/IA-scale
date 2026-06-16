@@ -1,7 +1,7 @@
 # Cadre RGPD — recrutement & traitement des données candidats — Allia Consulting
 
-> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
-> **Changelog** : v1.1 — promu, 16 juin 2026 : §11.1 (mise en balance) et §11.2 (AIPD) TRANCHÉES — produites par l'annexe 1 (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`) : mise en balance documentée, AIPD non requise (risque non élevé, art. 35, annexe 1 §6). Statut aligné candidat→promu. Les cases §11.3–§11.7 restent ouvertes. Aucun autre changement de fond. v1.0 — candidat, 16 juin 2026 : création du cadre RGPD du traitement des données de candidats au recrutement. Consigne les arbitrages du gardien-DPO : double base légale (instruction = mesures précontractuelles art. 6.1.b ; vivier = intérêt légitime art. 6.1.f), durées (instruction = 3 mois après aboutissement du processus ; vivier = 2 ans à compter du dernier contact), régime des synthèses d'entretien (synthèse seule conservée au vivier, notes brutes purgées avec l'instruction), information préalable (informative, jamais consentement), droits des personnes dont l'opposition. Annexe 1 (mise en balance) et annexe éventuelle d'AIPD = candidats ultérieurs.
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : v1.2 — promu, 16 juin 2026 : §11.3 (checklist synthèse) TRANCHÉE — la checklist « couvre / ne couvre jamais » du §4 est figée et fait foi (mention « à affiner » retirée du §4). Les cases §11.4–§11.7 restent ouvertes. Aucun autre changement de fond. v1.1 — promu, 16 juin 2026 : §11.1 (mise en balance) et §11.2 (AIPD) TRANCHÉES — produites par l'annexe 1 (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`) : mise en balance documentée, AIPD non requise (risque non élevé, art. 35, annexe 1 §6). Statut aligné candidat→promu. Les cases §11.3–§11.7 restent ouvertes. Aucun autre changement de fond. v1.0 — candidat, 16 juin 2026 : création du cadre RGPD du traitement des données de candidats au recrutement. Consigne les arbitrages du gardien-DPO : double base légale (instruction = mesures précontractuelles art. 6.1.b ; vivier = intérêt légitime art. 6.1.f), durées (instruction = 3 mois après aboutissement du processus ; vivier = 2 ans à compter du dernier contact), régime des synthèses d'entretien (synthèse seule conservée au vivier, notes brutes purgées avec l'instruction), information préalable (informative, jamais consentement), droits des personnes dont l'opposition. Annexe 1 (mise en balance) et annexe éventuelle d'AIPD = candidats ultérieurs.
 > **Domicile** : `contrats/socle/rgpd-recrutement-candidats.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 « le dérivé n'est jamais le saisi », §9 confidentialité/conformité), `contrats/socle/anonymisation.md` (§1 — porte de sortie externe), `contrats/socle/organisation.md` (§5 — droits réconciliés, projection d'une décision promue), `contrats/socle/table-des-crans.yaml` (crans).
 > **Traitement-frère distinct** : `contrats/socle/rgpd-ecoute-teams.md` (écoute Teams/Claude) — **autre traitement, autres personnes** (collaborateurs internes vs candidats externes). Les deux cadres sont distincts et ne se recouvrent pas.
@@ -52,7 +52,7 @@ L'intérêt légitime (vivier) exige un **test de mise en balance**, **à docume
 - **Checklist en dur — ce qu'une synthèse couvre / ne couvre jamais.** Une synthèse est conforme si, et seulement si :
   - **elle couvre** : l'adéquation au poste (compétences observées, séniorité, motivation, points à creuser pour une future opportunité) ;
   - **elle ne contient jamais** : données sensibles (santé, origine, opinions, religion, orientation, situation familiale) ; éléments de vie privée sans lien avec le poste ; jugements de personnalité non étayés professionnellement ; toute appréciation qu'on ne voudrait pas relire au candidat exerçant son droit d'accès.
-  - *(Le contenu exact de cette checklist est affiné à la main du gardien-DPO — §11.)*
+  - *(Checklist figée — version normative ci-dessus ; toute évolution passe par la boucle de promotion, jamais une édition à la volée.)*
 
 ## 5. Minimisation et rétention — deux durées, la purge est un mécanisme
 
@@ -102,7 +102,7 @@ Explicitement **non tranchées** dans ce candidat — à produire/valider par le
 
 1. **Test de mise en balance** de l'intérêt légitime du vivier (§2) — **Produit — voir annexe 1** (`contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`).
 2. **AIPD / DPIA** (art. 35) — **non requise — voir annexe 1 §6** : conclusion motivée du gardien-DPO (pas de surveillance systématique, pas de décision automatisée, pas de profilage, pas de données sensibles ; risque résiduel non élevé). Pas d'annexe d'AIPD distincte. Réexaminée si le périmètre évolue (profilage, tri automatisé, volume massif).
-3. **Contenu exact de la checklist** « ce qu'une synthèse couvre / ne couvre jamais » (§4).
+3. **Contenu exact de la checklist** « ce qu'une synthèse couvre / ne couvre jamais » — **Tranchée — la checklist du §4 fait foi** (figée ; complétée par futur amendement si l'usage le révèle).
 4. **Gabarit d'information préalable** réutilisable (§6) — annexe ultérieure, modelée sur `rgpd-ecoute-teams.md` annexe 3.
 5. **Interface d'exercice des droits** des candidats (§7).
 6. **Information-consultation des représentants du personnel** — verrou droit du travail, le jour où les seuils d'effectif l'imposent (aucun seuil inventé ici).
