@@ -1,39 +1,106 @@
 id: T-0013
-titre: "Outil « vue candidat & suivi d'entretiens » (pipeline recrutement) — inscrit au backlog, non construit"
+titre: "Outil « vue candidat & suivi d'entretiens » (pipeline recrutement) — tâche-chapeau décomposée"
 capacite: "Capacités habilitantes / Talent & RH — Recrutement"
 phase: 4
 type_action: infrastructure_mcp
 cran: valide
 produit:
-  - "STUB (coquille de chantier) : point d'ancrage du renvoi normatif de contrats/socle/rgpd-recrutement-candidats.md. L'outil lui-même n'est PAS décomposé ici."
-  - "(à décomposer plus tard) vue candidat : étapes sourcing / entretien 1 / entretien 2 / proposition / accepté / refusé, et qui tient chaque étape"
-  - "(à décomposer plus tard) écriture des dérivés (synthèses candidates) en Zone-de-proposition, jamais dans une source"
-  - "(à décomposer plus tard) purge automatique comme MÉCANISME : instruction 3 mois après aboutissement ; vivier 2 ans à compter du dernier contact (rgpd-recrutement-candidats.md §5)"
+  - "TÂCHE-CHAPEAU : l'outil qui exécute le cadre RGPD recrutement promu (contrats/socle/rgpd-recrutement-candidats.md + annexes 1 et 3). Décomposée en quatre sous-tâches décrites ci-dessous (T-0013-a..d) — un seul fichier, pas d'éclatement prématuré tant que la chapeau n'est pas ordonnancée."
 depend_de: []
-# STUB inscrit au BACKLOG, PAS à construire maintenant (phase 4). Aucune dépendance dure de chantier
-# à ce stade. PRÉREQUIS NORMATIFS (non bloquants pour la sélection, mais à respecter avant tout
-# traitement réel de candidats) :
-#   1) PROMOTION du cadre socle contrats/socle/rgpd-recrutement-candidats.md (l'outil l'exécute) ;
-#   2) PROMOTION de son annexe 1 (mise en balance) AVANT toute constitution de vivier réel
-#      (base légale 6.1.f du vivier).
-# PAS de sentinelle RUNBOOK-HUMAIN : l'outil sera majoritairement du code agent-éditable (comme
-# T-0002b), préparable sous PR le moment venu ; la part droits/config M365 éventuelle restera runbook.
+# STUB désormais DÉCOMPOSÉ (le cadre RGPD est tranché : §11.1–§11.4 fermées, parent v1.3).
+# Phase 4, cohérent avec l'écosystème RH non encore construit. PRÉREQUIS NORMATIFS :
+#   1) cadre contrats/socle/rgpd-recrutement-candidats.md — PROMU (v1.3) ;
+#   2) annexe 1 (mise en balance) — ENCORE CANDIDATE : prérequis BLOQUANT de la MISE EN SERVICE
+#      du vivier (base 6.1.f) et donc du code de T-0013-d (purge vivier). La décomposition
+#      (conception) ne l'attend pas ; la mise en service du vivier, si.
+#   3) annexe 3 (gabarit d'information) — PROMUE : l'outil porte l'information au point de candidature.
+# Ordonnancement interne : a (données) → b (vue) → c (synthèses) → d (purge).
 contrats_concernes:
   - "contrats/socle/rgpd-recrutement-candidats.md"
+  - "contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md"
+  - "contrats/socle/annexes/rgpd-recrutement-candidats--annexe-3-gabarit-information.md"
   - "contrats/socle/modele-donnees.md"
   - "contrats/socle/anonymisation.md"
 criteres_acceptation:
-  - "Le stub existe comme point d'ancrage du renvoi de rgpd-recrutement-candidats.md (cohérence du canon : plus de référence morte)"
-  - "L'outil, quand il sera décomposé, exécute le cadre RGPD recrutement (finalités, double base légale, durées, synthèse seule, information préalable, droits)"
+  - "Les quatre sous-tâches a..d sont décrites avec nature, cran et critères propres"
+  - "L'outil exécute le cadre RGPD recrutement (finalités, double base légale, durées, synthèse seule, information préalable, droits)"
   - "Tout dérivé (synthèse candidate) est écrit en Zone-de-proposition, jamais dans une source ; l'agent ne promeut jamais"
-  - "La purge (instruction / vivier) est outillée comme mécanisme, pas laissée à un geste manuel"
-rayon_impact: local
+  - "La décision de recrutement reste HUMAINE (jamais automatisée) ; destinataires = seules les personnes en charge du poste"
+  - "La purge est outillée comme MÉCANISME gouverné au moindre privilège, jamais un geste manuel"
+rayon_impact: large
 statut: à_faire
-note: >
-  STUB (coquille de chantier) créé pour ancrer le renvoi normatif du cadre socle
-  contrats/socle/rgpd-recrutement-candidats.md (qui désigne T-0013 comme l'outil dont il est le
-  prérequis). Le CADRE vient AVANT l'OUTIL (comme les annexes RGPD sont venues avant le gabarit) :
-  ce chantier n'est PAS décomposé ici — la vue candidat (étapes, rôles par étape), l'écriture des
-  synthèses en Zone-de-proposition et la purge automatique seront éclatées en sous-tâches plus tard.
-  Phase 4, cohérent avec l'écosystème RH/communication non encore construit. PRÉREQUIS NORMATIFS :
-  promotion du cadre RGPD recrutement, puis de son annexe 1 (mise en balance) avant tout vivier réel.
+
+sous_taches:
+
+  - id: T-0013-a
+    titre: "Modèle de données « candidat » (couture M365)"
+    type_action: edition_contrat_socle
+    cran: valide          # édition modele-donnees.md = contrat socle → porte du gardien
+    produit:
+      - "entité Candidat dans modele-donnees.md : étapes du pipeline (sourcing / entretien 1 / entretien 2 / proposition / accepté / refusé / vivier) + rattachement des synthèses d'entretien"
+      - "régime d'accès : données personnelles candidat — même vigilance que Ressources-RH/CVs (journalisation d'audit AVANT accès agent réel, cf. T-0003)"
+    depend_de: []
+    criteres_acceptation:
+      - "modele-donnees.md décrit où vit chaque fait candidat sous le site AlliaConsuling et son identifiant stable"
+      - "Le régime « données personnelles » est explicite ; la journalisation est posée comme prérequis (runbook, cf. T-0003) avant tout accès agent réel"
+      - "Aucune écriture agent dans une source : seule la Zone-de-proposition reçoit les dérivés (§3 modele-donnees.md)"
+    note: >
+      Prérequis des trois autres sous-tâches : on dit d'abord OÙ vivent les faits avant de les
+      manipuler. Édition de contrat socle (cran validé). La création effective des listes au
+      tenant et l'activation de la journalisation sont des RUNBOOKS HUMAINS (proscrites à l'agent).
+
+  - id: T-0013-b
+    titre: "Vue candidat & suivi d'entretiens (étapes + qui tient chaque étape)"
+    type_action: infrastructure_mcp
+    cran: valide          # nature MIXTE : code agent (auto en branche) ; part droits/config M365 = runbook
+    produit:
+      - "(agent — cran auto) vue suivant un candidat le long du pipeline (étapes de T-0013-a)"
+      - "porte la notion de « dernier interviewer » (point d'ancrage de la sous-capacité 1b : proposition relue et envoyée par le dernier interviewer)"
+      - "(runbook humain) droits d'accès projetés au moindre privilège : destinataires = seules les personnes en charge du poste (organisation.md §5)"
+    depend_de: ["T-0013-a"]
+    criteres_acceptation:
+      - "La vue suit un candidat à travers les étapes et trace qui tient chaque étape"
+      - "La décision de recrutement reste HUMAINE — aucune décision automatisée à effet juridique (cadre §1)"
+      - "L'accès est restreint aux personnes en charge du poste (cadre §3) ; ressources liées aux groupes, jamais aux individus"
+    note: >
+      Cœur fonctionnel. Majoritairement code agent-éditable (comme T-0002b) ; la part droits/config
+      M365 reste runbook humain. La notion de « dernier interviewer » prépare la sous-capacité 1b.
+
+  - id: T-0013-c
+    titre: "Écriture des synthèses d'entretien en Zone-de-proposition (checklist en dur)"
+    type_action: edition_contrat_local
+    cran: auto            # skill + écriture dérivé en branche = auto ; promotion du skill = gardien
+    produit:
+      - "skill produisant une SYNTHÈSE candidate d'entretien, écrite en Zone-de-proposition (dérivé), jamais dans une source, jamais promue par l'agent"
+      - "application en dur de la checklist du cadre §4 : couvre l'adéquation au poste ; ne contient JAMAIS données sensibles, vie privée hors poste, jugement non étayé"
+      - "notes brutes ÉPHÉMÈRES : supprimées à la clôture de l'instruction, jamais versées au vivier (cadre §4)"
+    depend_de: ["T-0013-a"]
+    criteres_acceptation:
+      - "La synthèse respecte la checklist §4 (figée) ; le rendu suit le design system"
+      - "Écriture en Zone-de-proposition via le connecteur existant ; garde-fou structurel (jamais une source)"
+      - "Seule la synthèse subsiste au vivier ; les notes brutes sont éphémères"
+      - "Régime interne nominatif ; toute sortie externe passe la porte d'anonymisation (anonymisation.md §1)"
+    note: >
+      Le dérivé n'est jamais le saisi appliqué au recrutement. Skill agent-éditable (cran auto en
+      branche) ; promotion du skill = porte du gardien (procédure allégée).
+
+  - id: T-0013-d
+    titre: "Purge automatique comme mécanisme gouverné (instruction 3 mois / vivier 2 ans)"
+    type_action: infrastructure_mcp
+    cran: valide
+    produit:
+      - "mécanisme de purge AUTOMATIQUE, au MOINDRE PRIVILÈGE : il ne sait QUE purger selon les durées promues, applique une décision déjà inscrite au canon (cadre §5), jamais une suppression libre"
+      - "instruction : purge 3 mois après aboutissement du processus ; vivier : purge 2 ans à compter du dernier contact (tout nouveau contact redéfinit le départ)"
+      - "(runbook humain) mise en place du privilège du mécanisme (identité/droits) — jamais un agent"
+    depend_de: ["T-0013-a", "T-0013-c"]
+    criteres_acceptation:
+      - "La purge est un MÉCANISME outillé, pas un geste manuel (cadre §5 : « la purge est un mécanisme, pas une intention »)"
+      - "Au moindre privilège : il ne purge que selon les durées promues, rien d'autre ; tout passage tracé"
+      - "Aucune suppression libre par un agent : le garde-fou supprimer_definitivement_des_donnees (table-des-crans, proscrites) est respecté — la purge applique une règle promue, sous privilège posé en runbook"
+      - "PRÉREQUIS BLOQUANT du volet vivier : promotion de l'annexe 1 (mise en balance) avant mise en service"
+    note: >
+      Point le plus sensible RGPD. RÉSOLUTION DE LA TENSION avec le garde-fou « suppression
+      définitive » : la purge est un mécanisme GOUVERNÉ au moindre privilège (même logique que les
+      réconciliateurs T-0008 / plan §9 T-4.3) — il applique une décision de durée DÉJÀ PROMUE au
+      canon (cadre §5), il ne supprime jamais librement. La mise en place de son privilège reste un
+      runbook humain. Le volet vivier attend la promotion de l'annexe 1.
