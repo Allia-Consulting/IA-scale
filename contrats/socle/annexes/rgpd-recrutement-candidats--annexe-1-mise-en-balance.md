@@ -1,7 +1,7 @@
 # Annexe 1 — Test de mise en balance de l'intérêt légitime (vivier de candidats) — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-recrutement-candidats.md` §2) — fait foi.
-> **Changelog** : v1.0 — candidat, 16 juin 2026 : test de mise en balance de l'intérêt légitime fondant la phase **vivier** (RGPD art. 6.1.f) du traitement de recrutement. Consigne les arbitrages du gardien-DPO : intérêt poursuivi (recontacter un profil pertinent), nécessité (minimisation — synthèse seule, notes brutes purgées), impact et atténuations, conclusion sous conditions. Porte AUSSI (§6) la conclusion **AIPD (art. 35)** : risque résiduel non élevé, pas d'AIPD distincte requise — ce qui **ferme** la case §11.2 du cadre parent (alignement du parent = candidat ultérieur).
+> **Version** : 1.1 — *promu*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-recrutement-candidats.md` §2) — fait foi.
+> **Changelog** : v1.1 — promu via boucle de promotion, 17 juin 2026 : alignement en-tête candidat → promu — le gardien-DPO acte le fond de cette annexe (intérêt légitime prévaut sous conditions §5 ; conclusion AIPD « pas d'AIPD distincte requise » §6, qui ferme §11.2 du parent, déjà aligné en v1.3). Fond byte-inchangé hors en-tête et note de clôture. v1.0 — candidat, 16 juin 2026 : test de mise en balance de l'intérêt légitime fondant la phase **vivier** (RGPD art. 6.1.f) du traitement de recrutement. Consigne les arbitrages du gardien-DPO : intérêt poursuivi (recontacter un profil pertinent), nécessité (minimisation — synthèse seule, notes brutes purgées), impact et atténuations, conclusion sous conditions. Porte AUSSI (§6) la conclusion **AIPD (art. 35)** : risque résiduel non élevé, pas d'AIPD distincte requise — ce qui **ferme** la case §11.2 du cadre parent (alignement du parent = candidat ultérieur).
 > **Domicile** : `contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§2 — base légale, intérêt légitime art. 6.1.f ; §4 — régime des synthèses ; §5 — durées ; §6 — information ; §7 — droits), `doctrine/doctrine.md` (§9 — l'avantage qui compose).
 > **Nature** : consigne les **arbitrages du gardien-DPO** (16 juin 2026) ; **pas un avis juridique**.
@@ -65,4 +65,4 @@ Annexe normative — elle évolue par la **boucle de promotion** (`doctrine.md` 
 
 ---
 
-*Annexe normative candidate du cadre RGPD recrutement (§2). Elle consigne le test de mise en balance et la conclusion AIPD du gardien-DPO du 16 juin 2026 ; elle attend la promotion du gardien.*
+*Annexe normative promue du cadre RGPD recrutement (§2). Elle consigne le test de mise en balance et la conclusion AIPD du gardien-DPO du 16 juin 2026 ; elle fait foi et évolue par la boucle de promotion.*
