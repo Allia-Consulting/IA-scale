@@ -37,7 +37,7 @@ sous_taches:
     type_action: edition_contrat_socle
     cran: valide          # édition modele-donnees.md = contrat socle → porte du gardien
     produit:
-      - "entité Candidat dans modele-donnees.md : étapes du pipeline (sourcing / entretien 1 / entretien 2 / proposition / accepté / refusé / vivier) + rattachement des synthèses d'entretien"
+      - "entité Candidat dans modele-donnees.md : étapes du pipeline (entretien 1 / entretien 2 / entretien 3 / proposition / accepté / refusé) + colonne native « Créé le » comme horloge de rétention (pas de colonne de date custom) + rattachement des synthèses d'entretien"
       - "régime d'accès : données personnelles candidat — même vigilance que Ressources-RH/CVs (journalisation d'audit AVANT accès agent réel, cf. T-0003)"
     depend_de: []
     criteres_acceptation:
@@ -85,17 +85,17 @@ sous_taches:
       branche) ; promotion du skill = porte du gardien (procédure allégée).
 
   - id: T-0013-d
-    titre: "Purge automatique comme mécanisme gouverné (instruction 3 mois / vivier 2 ans)"
+    titre: "Purge automatique comme mécanisme gouverné (refusé > 2 ans depuis l'inscription)"
     type_action: infrastructure_mcp
     cran: valide
     produit:
       - "mécanisme de purge AUTOMATIQUE, au MOINDRE PRIVILÈGE : il ne sait QUE purger selon les durées promues, applique une décision déjà inscrite au canon (cadre §5), jamais une suppression libre"
-      - "instruction : purge 3 mois après aboutissement du processus ; vivier : purge 2 ans à compter du dernier contact (tout nouveau contact redéfinit le départ)"
+      - "règle unique : purge des fiches « refusé » dont « Créé le » > 2 ans (horloge fixe depuis l'inscription, non glissante ; sauf opposition) — durée promue (cadre §5)"
       - "(runbook humain) mise en place du privilège du mécanisme (identité/droits) — jamais un agent"
     depend_de: ["T-0013-a", "T-0013-c"]
     criteres_acceptation:
       - "La purge est un MÉCANISME outillé, pas un geste manuel (cadre §5 : « la purge est un mécanisme, pas une intention »)"
-      - "Au moindre privilège : il ne purge que selon les durées promues, rien d'autre ; tout passage tracé"
+      - "Au moindre privilège : il ne purge que selon la durée promue (refusé > 2 ans depuis l'inscription), rien d'autre ; tout passage tracé"
       - "Aucune suppression libre par un agent : le garde-fou supprimer_definitivement_des_donnees (table-des-crans, proscrites) est respecté — la purge applique une règle promue, sous privilège posé en runbook"
       - "PRÉREQUIS BLOQUANT du volet vivier : promotion de l'annexe 1 (mise en balance) avant mise en service"
     note: >

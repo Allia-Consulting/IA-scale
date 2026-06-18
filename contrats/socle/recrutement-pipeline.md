@@ -1,7 +1,7 @@
 # Pipeline de recrutement — processus & rôles par étape — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat socle — fait foi.
-> **Changelog** : v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-b` de la chapeau `T-0013`. Canonise le **processus** du pipeline de recrutement : étapes, rôle qui tient chaque étape, notion de **dernier interviewer** (ancrage de la sous-capacité 1b : proposition relue et envoyée par lui). Ce contrat dit le **processus** ; le **droit** (RGPD) vit dans `rgpd-recrutement-candidats.md`, les **données** dans `modele-donnees.md`. La **surface (écran réel)** est explicitement **reportée** à la couche surface (doctrine §10) — non construite ici.
+> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
+> **Changelog** : v1.1 — promu via boucle de promotion, 18 juin 2026 : alignement sur la règle de rétention promue (`rgpd-recrutement-candidats.md` §5) et le schéma corrigé du modèle de données (v1.13). §1 : étapes = entretien 1 / 2 / 3 / proposition / accepté / refusé (**drop « sourcing » et « vivier »**) ; note ajoutée « refusé → vivier automatique (2 ans depuis l'inscription, sauf opposition) » ; footer durées « 3 mois / 2 ans … §2 et §5 » → « durée unique 2 ans à compter de l'inscription … §5 ». §3 : « dernier interviewer » matérialisé par la colonne **Owner d'action** (`ResponsableAction`) du modèle de données. v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-b` de la chapeau `T-0013`. Canonise le **processus** du pipeline de recrutement : étapes, rôle qui tient chaque étape, notion de **dernier interviewer** (ancrage de la sous-capacité 1b : proposition relue et envoyée par lui). Ce contrat dit le **processus** ; le **droit** (RGPD) vit dans `rgpd-recrutement-candidats.md`, les **données** dans `modele-donnees.md`. La **surface (écran réel)** est explicitement **reportée** à la couche surface (doctrine §10) — non construite ici.
 > **Domicile** : `contrats/socle/recrutement-pipeline.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§1 décision humaine, §3 destinataires, §4 synthèses), `contrats/socle/organisation.md` (§4 bis grille d'habilitation, §5 droits réconciliés), `contrats/socle/modele-donnees.md` (entités Candidat / Synthèse d'entretien, colonne étape), `skills/synthese-entretien/SKILL.md` (production des synthèses), `doctrine/doctrine.md` (§2, §6).
 > **Frontière** : ce contrat canonise le **processus** (étapes, rôles, dernier interviewer). Il ne porte **ni la surface** (écran de saisie/vue — couche surface, reportée), **ni le droit RGPD** (cadre dédié), **ni les durées/purge** (cadre §5 + `T-0013-d`).
@@ -16,15 +16,14 @@ Les étapes sont celles de la colonne **étape** de l'entité Candidat (`modele-
 
 | Étape | Ce qui s'y passe | Phase RGPD |
 |---|---|---|
-| sourcing | identification et premier contact d'un profil | instruction |
 | entretien 1 | premier entretien ; synthèse produite | instruction |
-| entretien 2 | second entretien ; synthèse produite | instruction |
+| entretien 2 | deuxième entretien ; synthèse produite | instruction |
+| entretien 3 | troisième entretien ; synthèse produite | instruction |
 | proposition | proposition formulée au candidat | instruction |
 | accepté | candidat retenu → bascule onboarding (`T-0007`) | fin d'instruction |
-| refusé | candidat non retenu → suppression ou versement au vivier | fin d'instruction |
-| vivier | profil conservé pour recontact (après refus) | vivier |
+| refusé | candidat non retenu → fin de l'instruction | fin d'instruction |
 
-> Les phases RGPD (instruction / vivier) et leurs **durées** (3 mois / 2 ans) font foi dans `rgpd-recrutement-candidats.md` §2 et §5 ; ce tableau ne fait que les **rattacher** aux étapes.
+> **refusé → vivier automatique** (2 ans depuis l'inscription, sauf opposition) — `rgpd-recrutement-candidats.md` §5 : le vivier n'est **plus une étape**, c'est le **devenir par défaut d'un refusé** (sauf opposition). La phase RGPD et la **durée unique** (2 ans à compter de l'inscription) font foi dans `rgpd-recrutement-candidats.md` §5 ; ce tableau ne fait que les **rattacher** aux étapes.
 
 ## 2. Qui tient chaque étape
 
@@ -38,7 +37,7 @@ La **décision de recrutement reste humaine** — aucune décision automatisée 
 **Décision de processus.** La **proposition** est relue et portée par le **dernier interviewer** — la personne qui a mené le dernier entretien du candidat.
 
 - C'est l'ancrage de la sous-capacité **1b** (proposition générée par agent, **relue et envoyée par le dernier interviewer**) : la génération est un dérivé d'agent (zone de proposition, cran auto), mais la **relecture et l'envoi** relèvent de l'humain qui a tenu le dernier entretien.
-- L'entité Candidat porte donc, fonctionnellement, la trace du **dernier interviewer** (qui a tenu la dernière étape d'entretien) — point de rattachement de la proposition. Sa matérialisation dans le modèle de données (colonne / dérivation depuis les synthèses) est laissée à l'outil `T-0013` ; ce contrat fixe la **règle**, pas l'implémentation.
+- L'entité Candidat porte donc, fonctionnellement, la trace du **dernier interviewer** (qui a tenu la dernière étape d'entretien) — point de rattachement de la proposition. Sa **matérialisation** dans le modèle de données est la colonne **Owner d'action** (`ResponsableAction`, `modele-donnees.md` §2 bis) : au stade **proposition**, l'owner d'action **est** le dernier interviewer. Ce contrat fixe la **règle** ; l'outil `T-0013` la réalise.
 
 ## 4. Les synthèses dans le pipeline
 

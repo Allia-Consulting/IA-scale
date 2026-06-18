@@ -1,8 +1,8 @@
 # Synthèse d'entretien — Skill
 
 > **id** : `synthese-entretien`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-c` de la chapeau `T-0013` (outil vue candidat & suivi d'entretiens). Produit une synthèse d'entretien structurée candidate, écrite en zone de proposition, exécutant la checklist en dur du cadre RGPD recrutement (`rgpd-recrutement-candidats.md` §4). Rubrique « recommandation » explicitement **non décisionnelle** (la décision de recrutement reste humaine — cadre §1).
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — promu via boucle de promotion, 18 juin 2026 : alignement des valeurs d'étape sur `recrutement-pipeline.md` / `modele-donnees.md` v1.13 — §2 (métadonnée « étape ») et §4 bis (ligne Étape du format de sortie) : valeurs = entretien 1 / entretien 2 / entretien 3 (**drop « sourcing » et « proposition »** — les synthèses naissent aux étapes d'entretien). v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-c` de la chapeau `T-0013` (outil vue candidat & suivi d'entretiens). Produit une synthèse d'entretien structurée candidate, écrite en zone de proposition, exécutant la checklist en dur du cadre RGPD recrutement (`rgpd-recrutement-candidats.md` §4). Rubrique « recommandation » explicitement **non décisionnelle** (la décision de recrutement reste humaine — cadre §1).
 > **Domicile** : `skills/synthese-entretien/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§1 décision humaine, §3 minimisation, §4 checklist synthèse, §5 durées, §7 droit d'accès), `contrats/socle/modele-donnees.md` (entité « Synthèse d'entretien », liste « Candidats-Synthèses » ; §3 zone de proposition), `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/table-des-crans.yaml`, `doctrine/doctrine.md` (§2, §6, §7), `CLAUDE.md`.
 
@@ -18,7 +18,7 @@ Transformer les **notes d'un entretien de recrutement** en une **synthèse struc
 - **Métadonnées** :
   - `candidat` — identifiant candidat (cf. `modele-donnees.md`, entité Candidat) ;
   - `poste` — poste visé ;
-  - `étape` — sourcing / entretien 1 / entretien 2 / proposition (cf. colonne étape) ;
+  - `étape` — entretien 1 / entretien 2 / entretien 3 (cf. colonne étape ; les synthèses naissent aux étapes d'entretien) ;
   - `date` — date de l'entretien ;
   - `interviewer` — qui a mené l'entretien.
 
@@ -53,7 +53,7 @@ Transformer les **notes d'un entretien de recrutement** en une **synthèse struc
 
 Candidat : <id candidat | à confirmer>
 Poste : <poste | à confirmer>
-Étape : <sourcing / entretien 1 / entretien 2 / proposition | à confirmer>
+Étape : <entretien 1 / entretien 2 / entretien 3 | à confirmer>
 Date : <date | à confirmer>
 Interviewer : <nom | à confirmer>
 
