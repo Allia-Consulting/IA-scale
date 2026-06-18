@@ -1,14 +1,14 @@
 # Annexe 1 — Test de mise en balance de l'intérêt légitime (vivier de candidats) — Allia Consulting
 
-> **Version** : 1.1 — *promu*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-recrutement-candidats.md` §2) — fait foi.
-> **Changelog** : v1.1 — promu via boucle de promotion, 17 juin 2026 : alignement en-tête candidat → promu — le gardien-DPO acte le fond de cette annexe (intérêt légitime prévaut sous conditions §5 ; conclusion AIPD « pas d'AIPD distincte requise » §6, qui ferme §11.2 du parent, déjà aligné en v1.3). Fond byte-inchangé hors en-tête et note de clôture. v1.0 — candidat, 16 juin 2026 : test de mise en balance de l'intérêt légitime fondant la phase **vivier** (RGPD art. 6.1.f) du traitement de recrutement. Consigne les arbitrages du gardien-DPO : intérêt poursuivi (recontacter un profil pertinent), nécessité (minimisation — synthèse seule, notes brutes purgées), impact et atténuations, conclusion sous conditions. Porte AUSSI (§6) la conclusion **AIPD (art. 35)** : risque résiduel non élevé, pas d'AIPD distincte requise — ce qui **ferme** la case §11.2 du cadre parent (alignement du parent = candidat ultérieur).
+> **Version** : 1.2 — *candidat*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-recrutement-candidats.md` §2) — *en attente de promotion par le gardien*.
+> **Changelog** : v1.2 — candidat, 18 juin 2026 : alignement sur la rétention simplifiée du cadre parent (v1.4). §2 (nécessité) : l'argument de minimisation devient « **durée fixe de 2 ans à compter de l'inscription** » et note qu'une horloge fixe est **plus minimisante** qu'un repère glissant « dernier contact » (qui pouvait prolonger la conservation). §3 (atténuations) et §5 (conditions) : durée → « **2 ans à compter de la date d'inscription** », purge outillée. §1/§4 (portée) : le vivier accueille **tout candidat refusé sauf opposition** ; le candidat est informé et peut s'opposer (a priori comme a posteriori). Conclusion (§5) et conclusion AIPD (§6) **inchangées au fond**. v1.1 — promu via boucle de promotion, 17 juin 2026 : alignement en-tête candidat → promu — le gardien-DPO acte le fond de cette annexe (intérêt légitime prévaut sous conditions §5 ; conclusion AIPD « pas d'AIPD distincte requise » §6, qui ferme §11.2 du parent, déjà aligné en v1.3). Fond byte-inchangé hors en-tête et note de clôture. v1.0 — candidat, 16 juin 2026 : test de mise en balance de l'intérêt légitime fondant la phase **vivier** (RGPD art. 6.1.f) du traitement de recrutement. Consigne les arbitrages du gardien-DPO : intérêt poursuivi (recontacter un profil pertinent), nécessité (minimisation — synthèse seule, notes brutes purgées), impact et atténuations, conclusion sous conditions. Porte AUSSI (§6) la conclusion **AIPD (art. 35)** : risque résiduel non élevé, pas d'AIPD distincte requise — ce qui **ferme** la case §11.2 du cadre parent (alignement du parent = candidat ultérieur).
 > **Domicile** : `contrats/socle/annexes/rgpd-recrutement-candidats--annexe-1-mise-en-balance.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§2 — base légale, intérêt légitime art. 6.1.f ; §4 — régime des synthèses ; §5 — durées ; §6 — information ; §7 — droits), `doctrine/doctrine.md` (§9 — l'avantage qui compose).
 > **Nature** : consigne les **arbitrages du gardien-DPO** (16 juin 2026) ; **pas un avis juridique**.
 
 ## 1. Intérêt légitime poursuivi
 
-L'intérêt poursuivi est la constitution d'un **vivier de candidats non retenus** : conserver, après un refus, de quoi **recontacter un profil pertinent** lors d'une future ouverture de poste. Cet intérêt est **réel** (la firme recrute et grandit — cap 50 → 200), **présent** (le mécanisme est contractualisé : `rgpd-recrutement-candidats.md`) et **licite** (finalité bornée ; un vivier constitué à partir d'une fausse offre n'est **pas** légitime — cadre parent §1).
+L'intérêt poursuivi est la constitution d'un **vivier de candidats non retenus** : conserver, après un refus, de quoi **recontacter un profil pertinent** lors d'une future ouverture de poste. Cet intérêt est **réel** (la firme recrute et grandit — cap 50 → 200), **présent** (le mécanisme est contractualisé : `rgpd-recrutement-candidats.md`) et **licite** (finalité bornée ; un vivier constitué à partir d'une fausse offre n'est **pas** légitime — cadre parent §1). Le vivier a vocation à accueillir **tout candidat non retenu** (sauf opposition de l'intéressé, §3, §4) : c'est une conservation **par défaut mais réfragable**, jamais un opt-in.
 
 La **phase d'instruction** d'une candidature ne relève **pas** de cette annexe : elle est fondée sur les **mesures précontractuelles** (art. 6.1.b — cadre parent §2) et n'exige pas de mise en balance. Cette annexe ne couvre que la **conservation au-delà de l'instruction** (le vivier).
 
@@ -18,7 +18,7 @@ La **phase d'instruction** d'une candidature ne relève **pas** de cette annexe 
 
 - **Conservation de la synthèse seule.** Seule la **synthèse structurée** d'entretien est versée au vivier ; les **notes brutes** sont supprimées avec la clôture de l'instruction (cadre parent §4). C'est le choix **minimisant** : on conserve le strict utile à recontacter, pas le verbatim.
 - **Checklist en dur.** La synthèse est bornée par la checklist « ce qu'elle couvre / ne couvre jamais » (cadre parent §4) : pas de données sensibles, pas de vie privée hors poste, pas de jugement non étayé.
-- **Alternatives écartées** : la **conservation intégrale** du dossier (CV, notes brutes, échanges) excède la finalité ; un **vivier sans durée** méconnaîtrait la limitation de conservation. Le couple **« synthèse seule + durée bornée »** est donc déjà le mécanisme minimisant.
+- **Alternatives écartées** : la **conservation intégrale** du dossier (CV, notes brutes, échanges) excède la finalité ; un **vivier sans durée** méconnaîtrait la limitation de conservation. Le couple **« synthèse seule + durée fixe de 2 ans à compter de l'inscription »** est donc déjà le mécanisme minimisant — et une **horloge fixe** (point de départ = date de création de la fiche) est **plus minimisante** qu'un repère **glissant** « dernier contact », qui pouvait **prolonger** la conservation à chaque recontact.
 
 ## 3. Impact sur les personnes et atténuations
 
@@ -28,20 +28,20 @@ Atténuations portées par le cadre parent :
 
 - **checklist de rédaction en dur** (§4) — ce qu'une synthèse ne contient jamais ;
 - **notes brutes purgées** avec l'instruction (§4) — seule la synthèse subsiste ;
-- **durée bornée** : 2 ans à compter du dernier contact, **purge comme mécanisme** (§5) ;
+- **durée fixe** : 2 ans à compter de la **date d'inscription** de la fiche (horloge non glissante), **purge comme mécanisme** (§5) ;
 - **information préalable** du candidat avant son entrée au vivier (§6) ;
 - **droits des personnes**, dont l'**opposition** — clé sous intérêt légitime (§7).
 
 ## 4. Attentes raisonnables des personnes
 
-Un candidat à un poste **s'attend raisonnablement** à ce que sa candidature soit conservée un temps après un refus, en vue d'opportunités futures — c'est un usage courant du recrutement. **ARBITRAGE du gardien-DPO** : cette attente n'est légitime que si elle est **alignée sur le réel** — l'**information préalable** (cadre parent §6) **précède l'entrée au vivier** et indique la **durée** (2 ans), la **finalité** (recontact) et le **droit d'opposition**. Personne n'est versé au vivier sans le savoir.
+Un candidat à un poste **s'attend raisonnablement** à ce que sa candidature soit conservée un temps après un refus, en vue d'opportunités futures — c'est un usage courant du recrutement. **ARBITRAGE du gardien-DPO** : **tout candidat refusé est versé au vivier** (sauf opposition de sa part) ; cette attente n'est légitime que si elle est **alignée sur le réel** — l'**information préalable** (cadre parent §6) **précède l'entrée au vivier** et indique la **durée** (2 ans à compter de l'inscription de la fiche), la **finalité** (recontact) et le **droit d'opposition**, exerçable **avant comme après** le versement. Personne n'est versé au vivier sans le savoir, et chacun peut en sortir.
 
 ## 5. Conclusion de la mise en balance
 
 **L'intérêt légitime prévaut**, SOUS CONDITIONS :
 
 1. **respect effectif de la checklist** de rédaction des synthèses (cadre parent §4) — pas de données sensibles ni de jugement hors poste ;
-2. **conservation limitée à 2 ans à compter du dernier contact**, purge outillée comme mécanisme (cadre parent §5) ;
+2. **conservation limitée à 2 ans à compter de la date d'inscription** de la fiche (horloge fixe, non glissante), purge outillée comme mécanisme (cadre parent §5) ;
 3. **information préalable** de chaque candidat avant son entrée au vivier, et **droit d'opposition** effectif (cadre parent §6, §7).
 
 **REVUE** : ce test est revu **annuellement**, **à chaque évolution du processus de recrutement**, et **déclenché dès le premier candidat réellement versé au vivier**.
