@@ -1,8 +1,8 @@
 # Synthèse d'entretien — Skill
 
 > **id** : `synthese-entretien`
-> **Version** : 1.2 — *promu*. **Nature** : skill.
-> **Changelog** : v1.2 — promu via boucle de promotion, 18 juin 2026 : valeurs d'étape (§2 métadonnée, §4 bis format de sortie) basculées **E1 / E2 / E3** sur le substrat M365. v1.1 — promu via boucle de promotion, 18 juin 2026 : alignement des valeurs d'étape sur `recrutement-pipeline.md` / `modele-donnees.md` v1.13 — §2 (métadonnée « étape ») et §4 bis (ligne Étape du format de sortie) : valeurs = E1 / E2 / E3 (**drop « sourcing » et « proposition »** — les synthèses naissent aux étapes d'entretien). v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-c` de la chapeau `T-0013` (outil vue candidat & suivi d'entretiens). Produit une synthèse d'entretien structurée candidate, écrite en zone de proposition, exécutant la checklist en dur du cadre RGPD recrutement (`rgpd-recrutement-candidats.md` §4). Rubrique « recommandation » explicitement **non décisionnelle** (la décision de recrutement reste humaine — cadre §1).
+> **Version** : 1.3 — *candidat*. **Nature** : skill.
+> **Changelog** : v1.3 — candidat, 18 juin 2026 : §9 (exemple de sortie) — valeur du champ « Étape » alignée sur l'énumération (`entretien 1` → **E1**) ; clôt la non-conformité skill↔exemple relevée par l'agent-gardien (les mentions « entretien 2 » en prose, l.125/129/132, restent inchangées). v1.2 — promu via boucle de promotion, 18 juin 2026 : valeurs d'étape (§2 métadonnée, §4 bis format de sortie) basculées **E1 / E2 / E3** sur le substrat M365. v1.1 — promu via boucle de promotion, 18 juin 2026 : alignement des valeurs d'étape sur `recrutement-pipeline.md` / `modele-donnees.md` v1.13 — §2 (métadonnée « étape ») et §4 bis (ligne Étape du format de sortie) : valeurs = E1 / E2 / E3 (**drop « sourcing » et « proposition »** — les synthèses naissent aux étapes d'entretien). v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-c` de la chapeau `T-0013` (outil vue candidat & suivi d'entretiens). Produit une synthèse d'entretien structurée candidate, écrite en zone de proposition, exécutant la checklist en dur du cadre RGPD recrutement (`rgpd-recrutement-candidats.md` §4). Rubrique « recommandation » explicitement **non décisionnelle** (la décision de recrutement reste humaine — cadre §1).
 > **Domicile** : `skills/synthese-entretien/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§1 décision humaine, §3 minimisation, §4 checklist synthèse, §5 durées, §7 droit d'accès), `contrats/socle/modele-donnees.md` (entité « Synthèse d'entretien », liste « Candidats-Synthèses » ; §3 zone de proposition), `contrats/socle/anonymisation.md`, `contrats/socle/design-system.md`, `contrats/socle/table-des-crans.yaml`, `doctrine/doctrine.md` (§2, §6, §7), `CLAUDE.md`.
 
@@ -116,7 +116,7 @@ Entretien 1 candidat C-014, poste Consultant. 12/06, interviewer Léa.
 
 Candidat : C-014
 Poste : Consultant
-Étape : entretien 1
+Étape : E1
 Date : 12/06 (année à confirmer)
 Interviewer : Léa
 
