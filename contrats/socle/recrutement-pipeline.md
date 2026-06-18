@@ -1,7 +1,7 @@
 # Pipeline de recrutement — processus & rôles par étape — Allia Consulting
 
-> **Version** : 1.1 — *promu*. **Statut** : contrat socle — fait foi.
-> **Changelog** : v1.1 — promu via boucle de promotion, 18 juin 2026 : alignement sur la règle de rétention promue (`rgpd-recrutement-candidats.md` §5) et le schéma corrigé du modèle de données (v1.13). §1 : étapes = entretien 1 / 2 / 3 / proposition / accepté / refusé (**drop « sourcing » et « vivier »**) ; note ajoutée « refusé → vivier automatique (2 ans depuis l'inscription, sauf opposition) » ; footer durées « 3 mois / 2 ans … §2 et §5 » → « durée unique 2 ans à compter de l'inscription … §5 ». §3 : « dernier interviewer » matérialisé par la colonne **Owner d'action** (`ResponsableAction`) du modèle de données. v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-b` de la chapeau `T-0013`. Canonise le **processus** du pipeline de recrutement : étapes, rôle qui tient chaque étape, notion de **dernier interviewer** (ancrage de la sous-capacité 1b : proposition relue et envoyée par lui). Ce contrat dit le **processus** ; le **droit** (RGPD) vit dans `rgpd-recrutement-candidats.md`, les **données** dans `modele-donnees.md`. La **surface (écran réel)** est explicitement **reportée** à la couche surface (doctrine §10) — non construite ici.
+> **Version** : 1.2 — *candidat*. **Statut** : contrat socle — *en attente de promotion par le gardien*.
+> **Changelog** : v1.2 — candidat, 18 juin 2026 : §1 — valeurs d'étape basculées sur le substrat M365 (**E1 / E2 / E3 · Proposition · Acceptée · Refusée**) ; footer et prose inchangés. v1.1 — promu via boucle de promotion, 18 juin 2026 : alignement sur la règle de rétention promue (`rgpd-recrutement-candidats.md` §5) et le schéma corrigé du modèle de données (v1.13). §1 : étapes = entretien 1 / 2 / 3 / proposition / accepté / refusé (**drop « sourcing » et « vivier »**) ; note ajoutée « refusé → vivier automatique (2 ans depuis l'inscription, sauf opposition) » ; footer durées « 3 mois / 2 ans … §2 et §5 » → « durée unique 2 ans à compter de l'inscription … §5 ». §3 : « dernier interviewer » matérialisé par la colonne **Owner d'action** (`ResponsableAction`) du modèle de données. v1.0 — candidat, 17 juin 2026 : création. Sous-tâche `T-0013-b` de la chapeau `T-0013`. Canonise le **processus** du pipeline de recrutement : étapes, rôle qui tient chaque étape, notion de **dernier interviewer** (ancrage de la sous-capacité 1b : proposition relue et envoyée par lui). Ce contrat dit le **processus** ; le **droit** (RGPD) vit dans `rgpd-recrutement-candidats.md`, les **données** dans `modele-donnees.md`. La **surface (écran réel)** est explicitement **reportée** à la couche surface (doctrine §10) — non construite ici.
 > **Domicile** : `contrats/socle/recrutement-pipeline.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§1 décision humaine, §3 destinataires, §4 synthèses), `contrats/socle/organisation.md` (§4 bis grille d'habilitation, §5 droits réconciliés), `contrats/socle/modele-donnees.md` (entités Candidat / Synthèse d'entretien, colonne étape), `skills/synthese-entretien/SKILL.md` (production des synthèses), `doctrine/doctrine.md` (§2, §6).
 > **Frontière** : ce contrat canonise le **processus** (étapes, rôles, dernier interviewer). Il ne porte **ni la surface** (écran de saisie/vue — couche surface, reportée), **ni le droit RGPD** (cadre dédié), **ni les durées/purge** (cadre §5 + `T-0013-d`).
@@ -16,12 +16,12 @@ Les étapes sont celles de la colonne **étape** de l'entité Candidat (`modele-
 
 | Étape | Ce qui s'y passe | Phase RGPD |
 |---|---|---|
-| entretien 1 | premier entretien ; synthèse produite | instruction |
-| entretien 2 | deuxième entretien ; synthèse produite | instruction |
-| entretien 3 | troisième entretien ; synthèse produite | instruction |
-| proposition | proposition formulée au candidat | instruction |
-| accepté | candidat retenu → bascule onboarding (`T-0007`) | fin d'instruction |
-| refusé | candidat non retenu → fin de l'instruction | fin d'instruction |
+| E1 | premier entretien ; synthèse produite | instruction |
+| E2 | deuxième entretien ; synthèse produite | instruction |
+| E3 | troisième entretien ; synthèse produite | instruction |
+| Proposition | proposition formulée au candidat | instruction |
+| Acceptée | candidat retenu → bascule onboarding (`T-0007`) | fin d'instruction |
+| Refusée | candidat non retenu → fin de l'instruction | fin d'instruction |
 
 > **refusé → vivier automatique** (2 ans depuis l'inscription, sauf opposition) — `rgpd-recrutement-candidats.md` §5 : le vivier n'est **plus une étape**, c'est le **devenir par défaut d'un refusé** (sauf opposition). La phase RGPD et la **durée unique** (2 ans à compter de l'inscription) font foi dans `rgpd-recrutement-candidats.md` §5 ; ce tableau ne fait que les **rattacher** aux étapes.
 

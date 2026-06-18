@@ -37,7 +37,7 @@ sous_taches:
     type_action: edition_contrat_socle
     cran: valide          # édition modele-donnees.md = contrat socle → porte du gardien
     produit:
-      - "entité Candidat dans modele-donnees.md : étapes du pipeline (entretien 1 / entretien 2 / entretien 3 / proposition / accepté / refusé) + colonne native « Créé le » comme horloge de rétention (pas de colonne de date custom) + rattachement des synthèses d'entretien"
+      - "entité Candidat dans modele-donnees.md : étapes du pipeline (E1 / E2 / E3 / Proposition / Acceptée / Refusée) + colonne native « Créé le » comme horloge de rétention (pas de colonne de date custom) + rattachement des synthèses d'entretien"
       - "régime d'accès : données personnelles candidat — même vigilance que Ressources-RH/CVs (journalisation d'audit AVANT accès agent réel, cf. T-0003)"
     depend_de: []
     criteres_acceptation:
