@@ -6,8 +6,7 @@ type_action: infrastructure_mcp
 cran: valide
 produit:
   - "mécanisme de purge AUTOMATIQUE, au MOINDRE PRIVILÈGE : il ne sait QUE supprimer les données de recrutement échues selon les durées promues, et rien d'autre"
-  - "règle instruction : suppression 3 mois après l'aboutissement du processus (date-aboutissement-instruction, modele-donnees.md) — sauf versement au vivier (synthèse seule)"
-  - "règle vivier : suppression 2 ans à compter du dernier contact (date-dernier-contact, modele-donnees.md) ; tout nouveau contact redéfinit le point de départ"
+  - "règle unique : purge des fiches à l'étape « refusé » dont la date d'inscription (colonne native « Créé le », modele-donnees.md) remonte à plus de 2 ans — durée promue (rgpd-recrutement-candidats.md §5) ; horloge FIXE depuis l'inscription, non glissante (un recontact ne la prolonge pas) ; sauf opposition de la personne"
   - "traçabilité : chaque purge est journalisée (quoi, quand, sur quelle règle de durée)"
   - "(runbook humain) mise en place du privilège du mécanisme (identité/octrois Graph de suppression au moindre privilège) — jamais un agent"
 depend_de: ["T-0013-a", "T-0013-c"]
@@ -24,8 +23,8 @@ contrats_concernes:
 criteres_acceptation:
   - "La purge est un MÉCANISME outillé, pas un geste manuel (cadre §5 : « la purge est un mécanisme, pas une intention »)"
   - "Au moindre privilège : il ne supprime QUE les données de recrutement échues selon les durées promues ; aucune autre donnée, aucune autre liste"
-  - "Instruction : purge 3 mois après aboutissement, sauf versement au vivier (synthèse seule conservée)"
-  - "Vivier : purge 2 ans à compter du dernier contact ; nouveau contact = nouveau départ"
+  - "Règle unique : purge des fiches « refusé » dont « Créé le » > 2 ans (horloge fixe depuis l'inscription, non glissante ; sauf opposition) — durée promue (cadre §5)"
+  - "Nouvelle candidature = nouvelle fiche = nouvelle horloge ; aucune prolongation d'une fiche existante"
   - "Chaque purge est tracée ; la suppression est l'application d'une durée promue, jamais une décision d'agent"
   - "L'exception gouvernée « purge » est inscrite dans table-des-crans.yaml (même PR) — sans elle le mécanisme contredirait les proscrites"
   - "La mise en place du privilège (octrois Graph de suppression) est un runbook humain ; ni Claude ni un agent ne l'exécutent"
@@ -35,8 +34,8 @@ note: >
   Dernier morceau de la chapeau T-0013. Point le plus sensible RGPD : la SUPPRESSION
   définitive. RÉSOLUTION DE LA TENSION avec le proscrit supprimer_definitivement_des_donnees :
   la purge est un MÉCANISME GOUVERNÉ au moindre privilège, sur le modèle EXACT de la
-  réconciliation de droits (organisation.md §5) — il applique des durées DÉJÀ PROMUES
-  (rgpd-recrutement-candidats.md §5), il ne supprime jamais librement. Cette autorisation est
+  réconciliation de droits (organisation.md §5) — il applique une durée DÉJÀ PROMUE
+  (rgpd-recrutement-candidats.md §5 : 2 ans depuis l'inscription), il ne supprime jamais librement. Cette autorisation est
   portée par l'exception inscrite dans table-des-crans.yaml v1.6 (même PR). La mise en place de
   son privilège (identité, octrois Graph de suppression) reste un RUNBOOK HUMAIN. INSCRIT au
   backlog, NON construit ici : ce chantier définit le mécanisme et son autorisation de cran ;
