@@ -26,5 +26,11 @@ criteres_acceptation:
   - "Un accès test agent est visible dans le journal dans les 24h"
 echeance: "avant arrivée des premiers collaborateurs"
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: >
+  Aligné le 19 juin 2026 : journalisation d'audit unifié M365 ACTIVÉE par le gardien
+  (UnifiedAuditLogIngestionEnabled = True) et CAPTATION PROUVÉE (recherche d'audit retournant des
+  événements réels, dont une opération sur la liste Candidats). Le prérequis « journalisation
+  active avant accès agent réel » (modele-donnees.md section 2 bis / section 4) est levé. Runbook
+  humain ; aucune règle modifiée.
 note: "Décision du gardien : agents autorisés en lecture sur Ressources-RH et CVs. Contrepartie RGPD obligatoire avant accès réel. Runbook humain — ni Claude ni un agent ne configurent les journaux d'audit M365."

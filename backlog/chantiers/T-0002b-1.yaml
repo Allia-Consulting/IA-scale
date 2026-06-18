@@ -22,7 +22,13 @@ criteres_acceptation:
   - "README outils/mcp-graph mis à jour (transport HTTP, /healthz, identité managée) ; aucun secret dans le dépôt"
   - "L'agent ouvre une PR (candidat) ; il ne merge pas"
 rayon_impact: local
-statut: à_faire
+statut: promu
+execution: >
+  Aligné le 19 juin 2026 (check du gardien) : le transport HTTP streamable + identité managée
+  est déployé et prouvé — chapeau T-0002b promue le 10 juin 2026 ; serveur
+  outils/mcp-graph/server.py instancié stateless_http avec ManagedIdentityCredential ; endpoint
+  live (modele-donnees.md section 4, v1.8). Statut resté à_faire par oubli ; aligné sans aucun
+  changement de code.
 note: >
   Sous-tâche CODE de la chapeau T-0002b. Réécrit outils/mcp-graph/ pour le modèle HTTP distant
   (architecture.md B.4 bis). Frontière de SORTIE Graph = zéro secret (identité managée) : c'est ICI
