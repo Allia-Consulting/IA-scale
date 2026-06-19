@@ -1,0 +1,4 @@
+# Dependances du script de purge gouvernee (outils/purge-recrutement/purge.py).
+# Installation : python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+httpx>=0.27.0
+azure-identity>=1.16.0
