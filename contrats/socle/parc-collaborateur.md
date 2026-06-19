@@ -1,6 +1,6 @@
 # Parc collaborateur — politique de poste de travail — Allia Consulting
 
-> **Version** : 1.2 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
 > **Changelog** :
 > - v1.2 (enrichissement candidat) — 19 juin 2026 : §5 — bloc sécurité Entra soldé : security defaults désactivés, deux stratégies CA actives (`ca-mfa-admins` : MFA sur Administrateur général, brise-glace exclu ; `ca-parc-collaborateur-conforme` : appareil conforme sur `grp-parc-collaborateur`, brise-glace exclu) ; compte break-glass `brise-glace@AlliaConsuling.onmicrosoft.com` opérationnel (cloud-only, Global Admin permanent, YubiKey FIDO2 device-bound). Hygiène break-glass à instruire hors de ce geste (mot de passe non-expiry, alerte de connexion). Prérequis Entra à la bascule CA : entièrement satisfait. Décisions du gardien du 19 juin 2026.
 > - v1.1 (enrichissement candidat) — 15 juin 2026 : §4 — ajout de la politique de sauvegarde des données utilisateur (OneDrive Folder Backup / KFM) : redirection silencieuse et verrouillée des dossiers Bureau et Documents vers OneDrive ; blocage de la synchronisation de comptes OneDrive personnels sur le poste géré. Décision du gardien du 15 juin 2026. Contenu antérieur inchangé.
