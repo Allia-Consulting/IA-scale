@@ -10,9 +10,8 @@ depend_de: []
 # STUB désormais DÉCOMPOSÉ (le cadre RGPD est tranché : §11.1–§11.4 fermées, parent v1.3).
 # Phase 4, cohérent avec l'écosystème RH non encore construit. PRÉREQUIS NORMATIFS :
 #   1) cadre contrats/socle/rgpd-recrutement-candidats.md — PROMU (v1.3) ;
-#   2) annexe 1 (mise en balance) — ENCORE CANDIDATE : prérequis BLOQUANT de la MISE EN SERVICE
-#      du vivier (base 6.1.f) et donc du code de T-0013-d (purge vivier). La décomposition
-#      (conception) ne l'attend pas ; la mise en service du vivier, si.
+#   2) annexe 1 (mise en balance) — PROMUE v1.2 (PR #74, 18 juin 2026) : prérequis levé.
+#      T-0013-d constructible (a et c faits, annexe 1 promue, table-des-crans v1.7 alignée).
 #   3) annexe 3 (gabarit d'information) — PROMUE : l'outil porte l'information au point de candidature.
 # Ordonnancement interne : a (données) → b (vue) → c (synthèses) → d (purge).
 contrats_concernes:
@@ -28,7 +27,7 @@ criteres_acceptation:
   - "La décision de recrutement reste HUMAINE (jamais automatisée) ; destinataires = seules les personnes en charge du poste"
   - "La purge est outillée comme MÉCANISME gouverné au moindre privilège, jamais un geste manuel"
 rayon_impact: large
-statut: à_faire
+statut: en_cours  # a et c promues ; d débloquée (skill candidat) ; b reportée
 
 sous_taches:
 
