@@ -1,7 +1,8 @@
 # Parc collaborateur — politique de poste de travail — Allia Consulting
 
-> **Version** : 1.1 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
 > **Changelog** :
+> - v1.2 (enrichissement candidat) — 19 juin 2026 : §5 — bloc sécurité Entra soldé : security defaults désactivés, deux stratégies CA actives (`ca-mfa-admins` : MFA sur Administrateur général, brise-glace exclu ; `ca-parc-collaborateur-conforme` : appareil conforme sur `grp-parc-collaborateur`, brise-glace exclu) ; compte break-glass `brise-glace@AlliaConsuling.onmicrosoft.com` opérationnel (cloud-only, Global Admin permanent, YubiKey FIDO2 device-bound). Hygiène break-glass à instruire hors de ce geste (mot de passe non-expiry, alerte de connexion). Prérequis Entra à la bascule CA : entièrement satisfait. Décisions du gardien du 19 juin 2026.
 > - v1.1 (enrichissement candidat) — 15 juin 2026 : §4 — ajout de la politique de sauvegarde des données utilisateur (OneDrive Folder Backup / KFM) : redirection silencieuse et verrouillée des dossiers Bureau et Documents vers OneDrive ; blocage de la synchronisation de comptes OneDrive personnels sur le poste géré. Décision du gardien du 15 juin 2026. Contenu antérieur inchangé.
 > - v1.1 (enrichissement candidat) — 13 juin 2026 : §5 précisé sur la posture d'accès conditionnel (security defaults, mode Rapport seul avant bascule, pas d'exclusion de plateforme, compte break-glass comme préalable à la bascule) ; §5 alignement macOS min. Décisions du gardien du 13 juin 2026 lors du runbook T-0006. Contenu antérieur inchangé.
 > - v1.1 — candidat, 12 juin 2026 : renseignement des §3–§6 (décisions du gardien, 12 juin 2026) — canal d'acquisition rattaché à l'ABM, profil unique "collaborateur", apps socle, posture de sécurité, groupes d'enrôlement. Le contrat cesse d'être un squelette ; prérequis normatif de T-0006 satisfait à sa promotion.
@@ -63,6 +64,7 @@ La configuration d'un poste est un **dérivé** d'une décision de parc promue i
 - **prérequis Entra à la bascule en « Activé »** :
   - les **security defaults** du tenant et l'accès conditionnel sont **mutuellement exclusifs** ; tant que les security defaults assurent le socle (MFA), ils **ne sont pas désactivés** ; leur désactivation n'est admise qu'au moment où un jeu de stratégies d'accès conditionnel de remplacement (au minimum **MFA pour tous** / **MFA administrateurs**) est prêt à prendre le relais **dans le même geste** — jamais avant ;
   - au moins un **compte break-glass** dédié (cloud-only, non nominatif, exclu de toute stratégie d'accès conditionnel, secret long en coffre) existe et est exclu de la stratégie **avant toute bascule en « Activé »** ; sa création est un **runbook humain** (geste exclusif du gardien) ;
+  - **État au 19 juin 2026 (clos)** : les prérequis ci-dessus sont satisfaits. Security defaults désactivés. Stratégies actives : `ca-mfa-admins` (MFA, Administrateur général, brise-glace exclu) et `ca-parc-collaborateur-conforme` (appareil conforme, `grp-parc-collaborateur`, brise-glace exclu). Break-glass `brise-glace@AlliaConsuling.onmicrosoft.com` opérationnel (YubiKey FIDO2, testé). La bascule de `ca-parc-collaborateur-conforme` en « Activé » n'a d'effet réel qu'à l'arrivée du premier appareil conforme (Intune, T-0006).
 - **version macOS minimale** : N-1 (la version courante ou la précédente ; au 13 juin 2026 : macOS 15 / Sequoia, courant grand public = macOS 26 / Tahoe).
 
 ## 6. Groupes Entra d'enrôlement
