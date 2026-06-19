@@ -23,11 +23,10 @@ criteres_acceptation:
   - "Aucun droit ni paramètre n'a été saisi par un agent : tout vient d'une décision promue dans le guide"
 echeance: "avant arrivée des premiers collaborateurs équipés"
 rayon_impact: local
-statut: à_faire
+statut: en_cours
 note: >
-  Exécution de la POLITIQUE canonisée dans contrats/socle/parc-collaborateur.md (candidat).
-  On canonise la politique (le guide), pas l'exécution : cette tâche est le RUNBOOK HUMAIN qui
-  applique la politique dans ABM/Intune/Entra. PRÉREQUIS NORMATIF : promotion de
-  parc-collaborateur.md par le gardien. La réconciliation AUTOMATIQUE politique→Intune (qui
-  remplacerait une partie de ce runbook) est le chantier Phase 3/4 T-0008 — non construite ici.
-  Chaîne d'autorité guide → Claude → M365 étendue aux APPAREILS (doctrine §8, ligne candidate v1.4).
+  Exécution de la POLITIQUE canonisée dans contrats/socle/parc-collaborateur.md (promu v1.2).
+  Prérequis Entra (bloc sécurité) : soldé le 19 juin 2026 — security defaults désactivés,
+  CA actives, break-glass opérationnel. Runbook humain restant : ABM (rattachement matériel),
+  Intune (profils, apps, conformité), test bout en bout sur poste de test. La réconciliation
+  automatique politique→Intune (T-0008) est non construite ici.
