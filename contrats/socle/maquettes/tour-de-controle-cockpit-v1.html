@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!--
+  Maquette de référence — Tour de contrôle, cockpit manager-gestionnaire v1 (NON NORMATIVE).
+  Artefact illustratif rattaché à contrats/socle/tour-de-controle.md (socle promu v1.0).
+  Décrit l'INTENTION d'expérience ; ne gouverne pas (comme un schéma décrit sans gouverner).
+  Le code SPFx réel (chantier T-0014) projette ce parti-pris ; il n'est PAS ce fichier.
+  Données entièrement fictives (démonstration). Aucune lecture de liste réelle ici.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tour de contrôle — cockpit manager (maquette de référence v1)</title>
+<style>
+  :root {
+    --bg-page: #f5f4ef; --bg-card: #ffffff; --bg-surface: #f1efe8;
+    --text-primary: #2c2c2a; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+    --border: rgba(44,44,42,0.15); --border-strong: rgba(44,44,42,0.3);
+    --info-bg: #e6f1fb; --info-tx: #0c447c;
+    --success-bg: #eaf3de; --success-tx: #27500a;
+    --warning-bg: #faeeda; --warning-tx: #633806;
+    --radius-md: 8px; --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg-page); color: var(--text-primary); font-family: var(--font); margin: 0; padding: 24px; line-height: 1.5; }
+  .cockpit { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .banner { font-size: 12px; color: var(--text-tertiary); font-style: italic; text-align: center; margin-bottom: 4px; }
+  .zone { background: var(--bg-card); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
+  .zone-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .zone-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
+  .zone-title { font-size: 16px; font-weight: 500; margin: 0; }
+  .zone-sub { font-size: 13px; color: var(--text-secondary); margin: 0; }
+  .demo-tag { font-size: 11px; color: var(--text-tertiary); font-style: italic; }
+  .counters { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+  .counter { background: var(--bg-surface); border: none; border-radius: var(--radius-md); padding: 12px; cursor: pointer; text-align: left; font-family: inherit; transition: background .15s; }
+  .counter:hover { background: var(--border); }
+  .counter-label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; }
+  .counter-val { font-size: 24px; font-weight: 500; margin-top: 2px; }
+  .detail { margin-top: 12px; border-top: 0.5px solid var(--border); padding-top: 12px; }
+  .detail.hidden { display: none; }
+  .detail-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 0.5px solid var(--border); }
+  .detail-row:last-child { border-bottom: none; }
+  .pill { font-size: 11px; padding: 2px 9px; border-radius: 11px; font-weight: 500; }
+  .pill-info { background: var(--info-bg); color: var(--info-tx); }
+  .pill-success { background: var(--success-bg); color: var(--success-tx); }
+  .pill-warning { background: var(--warning-bg); color: var(--warning-tx); }
+  .act { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 12px; background: transparent; border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); cursor: pointer; font-size: 13px; color: var(--text-primary); font-family: inherit; width: 100%; transition: background .15s; }
+  .act:hover { background: var(--bg-surface); }
+  .act .arr { margin-left: auto; color: var(--text-secondary); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ask-row { display: flex; gap: 8px; }
+  .ask-row .act { width: auto; flex: 1; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="cockpit">
+
+  <p class="banner">Maquette de référence — données fictives — illustre l'intention, ne gouverne pas</p>
+
+  <div class="zone" style="background: var(--bg-surface); border: none;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <p style="font-size: 15px; font-weight: 500; margin: 0;">Bonjour Adrien</p>
+        <p class="zone-sub" style="margin-top: 2px;">Vendredi 19 juin · 3 choses appellent ta décision aujourd'hui</p>
+      </div>
+      <button class="counter" style="padding: 8px 12px;">3 alertes</button>
+    </div>
+  </div>
+
+  <div class="zone">
+    <div class="zone-head">
+      <span class="zone-num" style="background: var(--info-bg); color: var(--info-tx);">1</span>
+      <div><p class="zone-title">Pipe commercial</p><p class="zone-sub">Le premier coup d'œil — <span class="demo-tag">données de démonstration</span></p></div>
+    </div>
+    <div class="counters">
+      <button class="counter" onclick="toggle('pipe-oppo')"><span class="counter-label">Opportunités</span><span class="counter-val">7</span></button>
+      <button class="counter" onclick="toggle('pipe-prop')"><span class="counter-label">Propositions à relire</span><span class="counter-val">2</span></button>
+      <button class="counter" onclick="toggle('pipe-conv')"><span class="counter-label">Conversion</span><span class="counter-val">34%</span></button>
+    </div>
+    <div id="pipe-oppo" class="detail hidden">
+      <div class="detail-row"><span>Acme Corp — refonte SI</span><span class="pill pill-info">qualifiée</span></div>
+      <div class="detail-row"><span>Banque Helios — cost analysis</span><span class="pill pill-warning">à relancer</span></div>
+      <div class="detail-row"><span>Groupe Vela — TOM</span><span class="pill pill-info">proposition envoyée</span></div>
+    </div>
+    <div id="pipe-prop" class="detail hidden">
+      <div class="detail-row"><span>Acme Corp — proposition v2</span><span class="demo-tag">reçue il y a 2 j</span></div>
+      <div class="detail-row"><span>Groupe Vela — kickoff deck</span><span class="demo-tag">reçue hier</span></div>
+    </div>
+    <div id="pipe-conv" class="detail hidden">
+      <div class="detail-row"><span>Opportunités gagnées (trim.)</span><span style="font-weight: 500;">4 / 12</span></div>
+      <div class="detail-row"><span>Délai moyen de cycle</span><span style="font-weight: 500;">38 j</span></div>
+    </div>
+    <button class="act">Relancer une opportunité <span class="arr">↗</span></button>
+  </div>
+
+  <div class="zone">
+    <div class="zone-head">
+      <span class="zone-num" style="background: var(--success-bg); color: var(--success-tx);">2</span>
+      <div><p class="zone-title">Recrutement</p><p class="zone-sub">Pipeline candidats par étape — <span class="demo-tag">données de démonstration</span></p></div>
+    </div>
+    <div class="counters">
+      <button class="counter" onclick="toggle('rec-etape')"><span class="counter-label">Candidats actifs</span><span class="counter-val">5</span></button>
+      <button class="counter" onclick="toggle('rec-synth')"><span class="counter-label">Synthèses à valider</span><span class="counter-val">3</span></button>
+      <button class="counter" onclick="toggle('rec-dec')"><span class="counter-label">Décisions en attente</span><span class="counter-val">1</span></button>
+    </div>
+    <div id="rec-etape" class="detail hidden">
+      <div class="detail-row"><span>C-021 — Consultant Senior</span><span class="pill pill-info">E2</span></div>
+      <div class="detail-row"><span>C-022 — Manager</span><span class="pill pill-info">E1</span></div>
+      <div class="detail-row"><span>C-019 — Consultant</span><span class="pill pill-success">Proposition</span></div>
+    </div>
+    <div id="rec-synth" class="detail hidden">
+      <div class="detail-row"><span>C-021-E2 — en Zone-de-proposition</span><span class="demo-tag">à valider</span></div>
+      <div class="detail-row"><span>C-022-E1 — en Zone-de-proposition</span><span class="demo-tag">à valider</span></div>
+      <div class="detail-row"><span>C-018-E3 — en Zone-de-proposition</span><span class="demo-tag">à valider</span></div>
+    </div>
+    <div id="rec-dec" class="detail hidden">
+      <div class="detail-row"><span>C-019 — décision finale</span><span class="pill pill-warning">ta décision</span></div>
+    </div>
+    <button class="act">Valider les synthèses en attente <span class="arr">↗</span></button>
+  </div>
+
+  <div class="two-col">
+    <div class="zone">
+      <div class="zone-head">
+        <span class="zone-num" style="background: var(--warning-bg); color: var(--warning-tx);">3</span>
+        <div><p class="zone-title" style="font-size: 15px;">Rentabilité</p></div>
+      </div>
+      <button class="counter" style="width: 100%;" onclick="toggle('rent-det')"><span class="counter-label">Missions à surveiller</span><span class="counter-val">—</span></button>
+      <div id="rent-det" class="detail hidden">
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Aucune mission active facturée. La marge et le TACE s'afficheront dès que les temps et imputations seront saisis.</p>
+      </div>
+      <button class="act">Comprendre le calcul <span class="arr">↗</span></button>
+    </div>
+    <div class="zone">
+      <div class="zone-head">
+        <span class="zone-num" style="background: var(--bg-surface); color: var(--text-secondary);">4</span>
+        <div><p class="zone-title" style="font-size: 15px;">Activité équipes</p></div>
+      </div>
+      <button class="counter" style="width: 100%;" onclick="toggle('act-det')"><span class="counter-label">Temps non saisis</span><span class="counter-val">—</span></button>
+      <div id="act-det" class="detail hidden">
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Pas encore de collaborateurs équipés. La charge par personne s'affichera après l'onboarding des premiers collaborateurs.</p>
+      </div>
+      <button class="act">Relancer la saisie <span class="arr">↗</span></button>
+    </div>
+  </div>
+
+  <div class="zone" style="background: var(--bg-surface); border: none;">
+    <p style="font-size: 14px; font-weight: 500; margin: 0 0 4px;">Demande à ton SI</p>
+    <p class="zone-sub" style="margin: 0 0 10px;">L'agent exécute en Zone-de-proposition ; tu valides l'irréversible.</p>
+    <div class="ask-row">
+      <button class="act">Affecter <span class="arr">↗</span></button>
+      <button class="act">Synthèse <span class="arr">↗</span></button>
+      <button class="act">Vue d'ensemble <span class="arr">↗</span></button>
+    </div>
+  </div>
+
+</div>
+<script>
+  function toggle(id) {
+    document.getElementById(id).classList.toggle('hidden');
+  }
+</script>
+</body>
+</html>

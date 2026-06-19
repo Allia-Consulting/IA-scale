@@ -1,0 +1,33 @@
+id: T-0014
+titre: "Tour de contrôle — cockpit utilisateur SPFx (construction)"
+capacite: "Socle d'exploitation & gouvernance / Adoption & exploitation multi-utilisateurs (RBAC)"
+phase: 3
+type_action: infrastructure_spfx
+cran: valide
+produit:
+- "web part SPFx (React / Fluent UI) déployée sur une page d'accueil du site AlliaConsuling, exécutant le parti-pris du contrat socle tour-de-controle.md"
+- "(agent — cran auto) code de la web part : zones du cockpit manager (pipe, recrutement, rentabilité, activité), lecture des listes via le contexte SharePoint, modèle voir → creuser → agir"
+- "(runbook humain) déploiement du .sppkg dans l'App Catalog du tenant ; mise en page de l'accueil — configuration tenant, proscrite à l'agent"
+depend_de: ["RUNBOOK-HUMAIN"]
+contrats_concernes:
+- "contrats/socle/tour-de-controle.md"
+- "contrats/socle/organisation.md"
+- "contrats/socle/design-system.md"
+- "contrats/socle/modele-donnees.md"
+- "contrats/socle/table-des-crans.yaml"
+criteres_acceptation:
+- "La web part projette le parti-pris figé dans tour-de-controle.md (hiérarchie des zones, modèle voir → creuser → agir, honnêteté des données)"
+- "Le cockpit lit les listes en consommateur (pull) ; il n'écrit jamais dans une source"
+- "Les actions déclenchées portent le cran de l'action sous-jacente ; un dérivé reste écrit en Zone-de-proposition"
+- "Le déploiement du .sppkg et la mise en page de l'accueil sont des runbooks humains, jamais l'agent"
+- "Le rendu suit le design system (on consomme, on ne recopie pas)"
+rayon_impact: large
+statut: à_faire
+note: >
+  Construction du cockpit dont la POLITIQUE est figée dans contrats/socle/tour-de-controle.md
+  (promu v1.0). Répond au chantier nommé en doctrine §10 (« le cockpit du collaborateur reste
+  à concevoir — le vrai test de l'adoption »). Phase 3 : suppose des données réelles dans les
+  listes pour avoir de la valeur (substrat aujourd'hui quasi vide). Recommandation de séquençage :
+  bâtir la web part contre des données de démonstration, la confronter à de vrais utilisateurs
+  (Sarah, premiers consultants) avant de figer, puis brancher sur le réel quand les missions
+  tournent. Maquette de référence : contrats/socle/maquettes/tour-de-controle-cockpit-v1.html.
