@@ -5,7 +5,7 @@
 >   de travail, figé à partir des trois offres réelles émises en juin 2026 (Consultant Senior,
 >   Manager). Modèle de document — variables explicitement marquées. Aucune valeur de
 >   rémunération arrêtée par l'agent : le plancher du grade est un point de départ « à valider ».
-> **Domicile** : `contrats/local/recrutement/gabarit-offre.md`.
+> **Domicile** : `contrats/local/talent-rh/gabarit-offre.md`.
 > **Autorité de promotion** : gardien du temple (procédure allégée — contrat local).
 > **Animateur du périmètre** : Recrutement — non encore désigné ; tenu par le gardien-DPO
 >   aujourd'hui (cf. organisation.md, double casquette assumée).

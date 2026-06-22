@@ -11,7 +11,7 @@ depend_de: ["T-0013", "T-0013-a"]
 # T-0013-b (vue candidat & suivi d'entretiens) — REPORTÉE — qui porte la notion de « dernier
 # interviewer » et le suivi du candidat le long du pipeline. Dépendance assumée par le gardien.
 contrats_concernes:
-  - "contrats/local/recrutement/gabarit-offre.md"
+  - "contrats/local/talent-rh/gabarit-offre.md"
   - "contrats/socle/rgpd-recrutement-candidats.md"
   - "contrats/socle/table-des-crans.yaml"
   - "contrats/socle/modele-donnees.md"
@@ -19,7 +19,7 @@ contrats_concernes:
 criteres_acceptation:
   - "Les trois sous-tâches a..c sont décrites avec nature, cran et critères propres"
   - "L'agent PRÉPARE un brouillon d'offre, écrit en Zone-de-proposition, rattaché à la fiche candidat ; il n'émet jamais l'offre (engagement juridique PROSCRIT — table-des-crans.yaml)"
-  - "Le brouillon suit le gabarit figé (contrats/local/recrutement/gabarit-offre.md) ; montant = plancher du grade marqué « à valider », jamais arrêté par l'agent"
+  - "Le brouillon suit le gabarit figé (contrats/local/talent-rh/gabarit-offre.md) ; montant = plancher du grade marqué « à valider », jamais arrêté par l'agent"
   - "La ligne de rémunération variable n'apparaît que pour les grades >= Manager"
   - "La décision de recrutement reste HUMAINE (rgpd-recrutement-candidats.md §1, art. 22) ; le document est imprimé, signé et envoyé par le gestionnaire de la proposition"
   - "Le document d'offre SIGNÉ revient dans le SI (liste Propositions), rattaché à la fiche Candidat ; droits = runbook humain"
@@ -33,7 +33,7 @@ sous_taches:
     type_action: edition_contrat_local
     cran: valide  # contrat local → porte du gardien, procédure allégée
     produit:
-      - "contrats/local/recrutement/gabarit-offre.md — modèle figé d'après les offres réelles de juin 2026, variables marquées, planchers de grade comme repère « à valider »"
+      - "contrats/local/talent-rh/gabarit-offre.md — modèle figé d'après les offres réelles de juin 2026, variables marquées, planchers de grade comme repère « à valider »"
     depend_de: []
     criteres_acceptation:
       - "Le gabarit fige la structure du document (en-tête, objet, tableau des conditions, validité, signatures)"
