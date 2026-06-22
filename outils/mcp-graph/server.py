@@ -45,12 +45,15 @@ aucun appel réseau (le credential et la configuration ne sont lus qu'au moment 
 
 from __future__ import annotations
 
+import base64
+import json
+import logging
 import os
 from typing import Any
 
 import httpx
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -61,6 +64,10 @@ GRAPH_SCOPE = "https://graph.microsoft.com/.default"  # scope unique (moindre pr
 # Un clientId est un identifiant PUBLIC, PAS un secret. Sert de défaut si AZURE_CLIENT_ID est absente.
 # (clientId, PAS le principalId.)
 MANAGED_IDENTITY_CLIENT_ID = "f2a3c40a-a447-4295-90da-76d6b0898d61"
+
+# Logger de traçabilité des appels entrants (identité appelante Easy Auth).
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 
 # Variables d'environnement attendues (injectées à l'exécution — jamais ici, aucun secret).
 ENV_AZURE_ENV = "AZURE_ENV"                # local | prod (défaut prod) — pilote le credential
@@ -93,6 +100,118 @@ async def healthz(request: Request) -> JSONResponse:
     une sonde de l'hébergement (Container Apps) doit pouvoir l'appeler sans config M365.
     """
     return JSONResponse({"status": "ok"})
+
+
+def _verifier_appelant(ctx: Context) -> None:
+    """Valide le claim du token entrant et journalise l'identité appelante. FAIL-CLOSED.
+
+    Appelée en tête de chaque outil exposé sur /mcp (validation in-tool, décision T-0009,
+    22 juin 2026). Easy Auth authentifie le token (signature, expiry, tenant) mais ne vérifie
+    PAS le claim roles — cette validation revient au code applicatif (doc Microsoft).
+
+    Accès vérifié par sondage du SDK (mcp 1.28.0) : ctx.request_context.request est un objet
+    Starlette Request portant .headers ; ctx est injecté automatiquement dans la signature du tool.
+
+    Voie de lecture des claims : X-MS-TOKEN-AAD-ACCESS-TOKEN (JWT brut — pas de mapping de claims,
+    indépendant du token store, recommandation cadrage T-0009), fallback X-MS-CLIENT-PRINCIPAL.
+
+    Politique FAIL-CLOSED : si la requête HTTP est absente (transport non-HTTP / hors requête),
+    ou si aucun token n'est présent, ou si ni scp=access_as_user (humains) ni roles=MCP.Invoke
+    (workloads) n'autorisent l'appel — l'accès est REFUSÉ.
+
+    Raises:
+        PermissionError: dans tous les cas de refus (porte qui ne peut pas vérifier = porte fermée).
+    """
+    # --- request Optional : None en stdio / hors-requête. FAIL-CLOSED. ---
+    request = None
+    try:
+        request = ctx.request_context.request
+    except (AttributeError, LookupError):
+        request = None
+
+    if request is None:
+        logger.warning("accès refusé — aucune requête HTTP dans le contexte (transport non-HTTP ?)")
+        raise PermissionError(
+            "Accès refusé : aucune requête HTTP dans le contexte. La validation d'identité "
+            "exige le transport streamable-http derrière Easy Auth."
+        )
+
+    # --- Journalisation de l'identité appelante (en-têtes posés par Easy Auth) ---
+    principal_id = request.headers.get("X-MS-CLIENT-PRINCIPAL-ID", "inconnu")
+    principal_name = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME", "inconnu")
+    principal_idp = request.headers.get("X-MS-CLIENT-PRINCIPAL-IDP", "inconnu")
+    logger.info(
+        "appel /mcp — principal_id=%s principal_name=%s idp=%s",
+        principal_id, principal_name, principal_idp,
+    )
+
+    # --- Extraction des claims depuis le JWT brut (voie recommandée) ---
+    claims: dict = {}
+    jwt_brut = request.headers.get("X-MS-TOKEN-AAD-ACCESS-TOKEN", "")
+    if jwt_brut:
+        try:
+            parties = jwt_brut.split(".")
+            if len(parties) >= 2:
+                # base64url, padding rétabli ; AUCUNE vérif de signature (Easy Auth l'a déjà faite).
+                segment = parties[1]
+                segment += "=" * (-len(segment) % 4)
+                claims = json.loads(base64.urlsafe_b64decode(segment).decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("décodage JWT brut impossible — %s", exc)
+
+    # --- Fallback : X-MS-CLIENT-PRINCIPAL (base64 JSON, claims potentiellement mappés) ---
+    if not claims:
+        principal_b64 = request.headers.get("X-MS-CLIENT-PRINCIPAL", "")
+        if principal_b64:
+            try:
+                decoded = json.loads(base64.b64decode(principal_b64).decode("utf-8"))
+                # Format : {"claims": [{"typ": "...", "val": "..."}]} -> dict plat (multi-val = liste).
+                for entry in decoded.get("claims", []):
+                    typ = entry.get("typ", "")
+                    val = entry.get("val", "")
+                    if not typ:
+                        continue
+                    if typ in claims:
+                        existant = claims[typ]
+                        claims[typ] = existant if isinstance(existant, list) else [existant]
+                        claims[typ].append(val)
+                    else:
+                        claims[typ] = val
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("décodage X-MS-CLIENT-PRINCIPAL impossible — %s", exc)
+
+    if not claims:
+        logger.warning("accès refusé — principal_id=%s : aucun claim lisible", principal_id)
+        raise PermissionError(
+            "Accès refusé : aucun token exploitable dans les en-têtes Easy Auth."
+        )
+
+    # --- Humains : claim scp contenant access_as_user ---
+    scp = claims.get("scp", "")
+    scp_valeurs = scp.split() if isinstance(scp, str) else (scp if isinstance(scp, list) else [])
+    if "access_as_user" in scp_valeurs:
+        return
+
+    # --- Workloads / transition : claim roles contenant MCP.Invoke ---
+    # roles : liste (JWT standard) ou chaîne (mapping). Gérer aussi l'URI longue (cadrage T-0009).
+    roles = claims.get("roles", [])
+    if isinstance(roles, str):
+        roles = [roles]
+    roles_uri = claims.get("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", [])
+    if isinstance(roles_uri, str):
+        roles_uri = [roles_uri]
+    roles_effectifs = set(roles) | set(roles_uri)
+    if "MCP.Invoke" in roles_effectifs:
+        return
+
+    logger.warning(
+        "accès refusé — principal_id=%s scp=%r roles=%r",
+        principal_id, scp, sorted(roles_effectifs),
+    )
+    raise PermissionError(
+        "Accès refusé : le token ne porte ni scp=access_as_user ni roles=MCP.Invoke. "
+        "Vérifiez l'octroi de l'app role MCP.Invoke à l'application cliente (T-0002b-5)."
+    )
 
 
 def _config() -> dict[str, str]:
@@ -143,7 +262,7 @@ def _entetes() -> dict[str, str]:
 
 
 @mcp.tool()
-def list_items(list_id: str, top: int = 50) -> dict[str, Any]:
+def list_items(ctx: Context, list_id: str, top: int = 50) -> dict[str, Any]:
     """Lit (lecture seule) les éléments d'une liste SharePoint du site AlliaConsuling.
 
     GET /sites/{site-id}/lists/{list-id}/items?$expand=fields
@@ -159,6 +278,7 @@ def list_items(list_id: str, top: int = 50) -> dict[str, Any]:
     (modele-donnees.md §2 bis) exigent une journalisation active (chantier T-0003) AVANT
     tout accès agent — contrôle côté tenant, hors de ce code.
     """
+    _verifier_appelant(ctx)
     cfg = _config()
     url = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{list_id}/items"
     params = {"$expand": "fields", "$top": str(max(1, min(top, 200)))}
@@ -171,7 +291,7 @@ def list_items(list_id: str, top: int = 50) -> dict[str, Any]:
 
 
 @mcp.tool()
-def create_list_item(fields: dict[str, Any]) -> dict[str, Any]:
+def create_list_item(ctx: Context, fields: dict[str, Any]) -> dict[str, Any]:
     """Crée un élément UNIQUEMENT dans la liste « Zone-de-proposition ».
 
     POST /sites/{site-id}/lists/{PROPOSITION_LIST_ID}/items  body: {"fields": {...}}
@@ -187,6 +307,7 @@ def create_list_item(fields: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Un dict {"created_id": "...", "fields": {...}} décrivant l'élément créé.
     """
+    _verifier_appelant(ctx)
     if not isinstance(fields, dict) or not fields:
         raise ValueError("`fields` doit être un dictionnaire non vide des colonnes à écrire.")
 
