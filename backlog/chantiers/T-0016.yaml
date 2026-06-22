@@ -1,0 +1,79 @@
+id: T-0016
+titre: "Agent « brouillon d'offre de contrat de travail » (génération + archivage du signé) — chantier-chapeau"
+capacite: "Capacités habilitantes / Talent & RH — Recrutement"
+phase: 4
+type_action: edition_contrat_local
+cran: valide
+produit:
+  - "CHANTIER-CHAPEAU exécutant la sous-capacité 1b nommée dans T-0013-b : « proposition relue et envoyée par le dernier interviewer ». Décomposé en sous-tâches T-0016-a..c."
+depend_de: ["T-0013", "T-0013-a"]
+# Lien fort à T-0013 (tâche-chapeau recrutement). Le maillon archivage (T-0016-c) dépend de
+# T-0013-b (vue candidat & suivi d'entretiens) — REPORTÉE — qui porte la notion de « dernier
+# interviewer » et le suivi du candidat le long du pipeline. Dépendance assumée par le gardien.
+contrats_concernes:
+  - "contrats/local/recrutement/gabarit-offre.md"
+  - "contrats/socle/rgpd-recrutement-candidats.md"
+  - "contrats/socle/table-des-crans.yaml"
+  - "contrats/socle/modele-donnees.md"
+  - "contrats/socle/design-system.md"
+criteres_acceptation:
+  - "Les trois sous-tâches a..c sont décrites avec nature, cran et critères propres"
+  - "L'agent PRÉPARE un brouillon d'offre, écrit en Zone-de-proposition, rattaché à la fiche candidat ; il n'émet jamais l'offre (engagement juridique PROSCRIT — table-des-crans.yaml)"
+  - "Le brouillon suit le gabarit figé (contrats/local/recrutement/gabarit-offre.md) ; montant = plancher du grade marqué « à valider », jamais arrêté par l'agent"
+  - "La ligne de rémunération variable n'apparaît que pour les grades >= Manager"
+  - "La décision de recrutement reste HUMAINE (rgpd-recrutement-candidats.md §1, art. 22) ; le document est imprimé, signé et envoyé par le gestionnaire de la proposition"
+  - "Le document d'offre SIGNÉ revient dans le SI (liste Propositions), rattaché à la fiche Candidat ; droits = runbook humain"
+rayon_impact: large
+statut: à_faire
+
+sous_taches:
+
+  - id: T-0016-a
+    titre: "Gabarit d'offre (contrat local recrutement)"
+    type_action: edition_contrat_local
+    cran: valide  # contrat local → porte du gardien, procédure allégée
+    produit:
+      - "contrats/local/recrutement/gabarit-offre.md — modèle figé d'après les offres réelles de juin 2026, variables marquées, planchers de grade comme repère « à valider »"
+    depend_de: []
+    criteres_acceptation:
+      - "Le gabarit fige la structure du document (en-tête, objet, tableau des conditions, validité, signatures)"
+      - "La borne dure est inscrite : l'agent prépare un brouillon, n'émet jamais l'offre (engagement juridique proscrit)"
+      - "Les variables candidat sont explicitement listées ; le variable de rémunération est conditionnel au grade"
+    note: >
+      Premier contrat local du périmètre Recrutement (second périmètre local d'Allia après
+      communication). Animateur recrutement non désigné : tenu par le gardien-DPO aujourd'hui.
+
+  - id: T-0016-b
+    titre: "Skill « génération du brouillon d'offre » (écriture en Zone-de-proposition)"
+    type_action: edition_contrat_local
+    cran: auto  # skill + écriture dérivé en branche = auto ; promotion du skill = gardien
+    produit:
+      - "skill produisant un BROUILLON d'offre à partir de la fiche candidat (grade, civilité, nom, infos) + le gabarit (pull), écrit en Zone-de-proposition, rattaché au candidat, jamais dans une source, jamais promu par l'agent"
+      - "destinataire du brouillon = le gestionnaire de la proposition (dernier interviewer / personne en charge du poste)"
+      - "montant = plancher du grade marqué « à valider » ; ligne variable conditionnelle (>= Manager)"
+    depend_de: ["T-0016-a"]
+    criteres_acceptation:
+      - "Le brouillon respecte le gabarit figé ; le rendu suit le design system"
+      - "Écriture en Zone-de-proposition via le connecteur existant ; garde-fou structurel (jamais une source, jamais émis)"
+      - "Aucun montant arrêté par l'agent : plancher du grade en point de départ, marqué « à valider »"
+      - "Régime interne nominatif (données candidat) ; cohérent avec rgpd-recrutement-candidats.md §3"
+    note: >
+      Cœur fonctionnel : épargne au gestionnaire la rédaction. Skill agent-éditable (cran auto
+      en branche) ; promotion du skill = porte du gardien (procédure allégée).
+
+  - id: T-0016-c
+    titre: "Archivage de l'offre signée dans le SI (rattachée à la fiche candidat)"
+    type_action: infrastructure_mcp
+    cran: valide  # dépôt dans une source (liste Propositions) + part droits = runbook
+    produit:
+      - "mécanisme reversant le document d'offre SIGNÉ (PDF) dans la liste Propositions, rattaché à la fiche Candidat (lien stable)"
+      - "(runbook humain) droits d'accès projetés au moindre privilège : accès restreint aux personnes en charge du poste (organisation.md §5)"
+    depend_de: ["T-0013-b", "T-0016-b"]
+    criteres_acceptation:
+      - "Le PDF signé est rattaché de façon stable à la fiche Candidat dans la liste Propositions"
+      - "L'accès est restreint aux personnes en charge du poste ; ressources liées aux groupes, jamais aux individus"
+      - "Le dépôt du fichier signé est tracé ; aucune suppression libre (table-des-crans : proscrites)"
+    note: >
+      Maillon 4 du flux. Dépend de T-0013-b (vue candidat & suivi d'entretiens, REPORTÉE) qui
+      porte la notion de « dernier interviewer ». À ordonnancer avec T-0013-b ; non constructible
+      tant que la vue candidat n'est pas posée. La part droits/config M365 reste runbook humain.
