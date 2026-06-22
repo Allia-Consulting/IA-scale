@@ -112,8 +112,9 @@ def _verifier_appelant(ctx: Context) -> None:
     Accès vérifié par sondage du SDK (mcp 1.28.0) : ctx.request_context.request est un objet
     Starlette Request portant .headers ; ctx est injecté automatiquement dans la signature du tool.
 
-    Voie de lecture des claims : X-MS-TOKEN-AAD-ACCESS-TOKEN (JWT brut — pas de mapping de claims,
-    indépendant du token store, recommandation cadrage T-0009), fallback X-MS-CLIENT-PRINCIPAL.
+    Voie de lecture des claims (T-0015, 22 juin 2026) : Authorization: Bearer (le token présenté,
+    porte le scp du flux délégué sans dépendre du token store) ; puis X-MS-TOKEN-AAD-ACCESS-TOKEN
+    (JWT brut, si token store activé) ; puis fallback X-MS-CLIENT-PRINCIPAL.
 
     Politique FAIL-CLOSED : si la requête HTTP est absente (transport non-HTTP / hors requête),
     ou si aucun token n'est présent, ou si ni scp=access_as_user (humains) ni roles=MCP.Invoke
@@ -143,14 +144,6 @@ def _verifier_appelant(ctx: Context) -> None:
     logger.info(
         "appel /mcp — principal_id=%s principal_name=%s idp=%s",
         principal_id, principal_name, principal_idp,
-    )
-
-    # --- Diagnostic (présence uniquement, JAMAIS le contenu) : quel canal porte le token ? ---
-    logger.info(
-        "headers présents — Authorization=%s X-MS-TOKEN-AAD-ACCESS-TOKEN=%s X-MS-CLIENT-PRINCIPAL=%s",
-        bool(request.headers.get("Authorization")),
-        bool(request.headers.get("X-MS-TOKEN-AAD-ACCESS-TOKEN")),
-        bool(request.headers.get("X-MS-CLIENT-PRINCIPAL")),
     )
 
     # --- Helper local : décode le payload d'un JWT (base64url), sans vérif de signature ---
