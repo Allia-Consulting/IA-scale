@@ -1,0 +1,67 @@
+id: T-0015
+titre: "MCP Graph : débloquer l'accès délégué (scp vide dans le token OAuth client)"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 2
+type_action: diagnostic_puis_runbook
+cran: valide
+produit:
+- "le token délégué obtenu par Claude Code (client public PKCE) pour l'audience api://0028a5ff-925a-4700-b703-2f2d0ce728fc porte effectivement scp=access_as_user"
+- "l'agent (flux humain délégué) lit la liste Missions via list_items et la porte T-0009 l'autorise (plus de refus scp='')"
+depend_de: ["T-0009"]
+contrats_concernes:
+- "contrats/socle/identites-et-secrets.md"
+- "outils/mcp-graph/README.md"
+criteres_acceptation:
+- "Un appel list_items via Claude Code sous l'identité d'un humain du groupe grp-mcp-graph-users retourne des données (plus de PermissionError scp='')"
+- "Le log applicatif montre scp=access_as_user (et non scp='') pour cet appel"
+- "Aucun secret introduit ; le flux reste client public PKCE (identites-et-secrets.md cas humain)"
+rayon_impact: local
+statut: à_faire
+note: >
+  SCINDÉ de T-0009 le 22 juin 2026. T-0009 (code de validation + déploiement) est SOLDÉ et sa porte
+  fail-closed est prouvée vivante. CE chantier porte le PROBLÈME RÉSIDUEL distinct : le flux humain
+  délégué est refusé parce que le token qui atteint server.py a scp='' et roles=[] (log prod du
+  22 juin), alors même que tout l'amont a été vérifié correct. La porte fait son travail ; c'est le
+  token qui n'est pas conforme.
+diagnostic_point_de_reprise: |
+  Symptôme : appel list_items via Claude Code => « Accès refusé : ni scp=access_as_user ni
+  roles=MCP.Invoke » ; log prod : « accès refusé — principal_name=adrien.raque@allia-consulting.com
+  idp=aad scp='' roles=[] ». L'identité est bien reconnue (Easy Auth authentifie) ; ce sont les
+  claims d'autorisation qui sont vides.
+
+  CAUSES ÉLIMINÉES PAR LES FAITS (ne pas refaire) :
+  1. Cache de token périmé — purgé via /mcp > Clear Authentication puis Reauthenticate ; une mire
+     Entra s'est rouverte (vrai flux interactif), token frais émis. Échoue toujours.
+  2. Consentement Entra manquant — l'app cliente alliamcp-graph-client
+     (77aa6010-e3a8-4404-8c34-5f352e0c589a) a, en API autorisées : access_as_user (Déléguée,
+     api://0028a5ff-...) ET MCP.Invoke (Application), tous deux « Accordé pour Allia Consulting »
+     (consentement admin, coches vertes vérifiées le 22 juin).
+  3. Audience Easy Auth incorrecte — az containerapp auth show ca-allia-mcp-graph : clientId
+     0028a5ff-925a-4700-b703-2f2d0ce728fc, allowedAudiences ["api://0028a5ff-..."], openIdIssuer
+     login.microsoftonline.com/a8d48a4e-329b-4302-b83a-5b085cefa944/v2.0,
+     unauthenticatedClientAction Return401, pas de token store. Config correcte.
+
+  CAUSE RESTANTE À TRAITER : la négociation de scope du flux OAuth client public PKCE de Claude
+  Code. Le scope api://0028a5ff-.../access_as_user déclaré dans .mcp.json (oauth.scopes, chaîne)
+  n'aboutit pas à un scp peuplé dans le token émis par Entra pour cette audience.
+
+  PISTES DE REPRISE (à froid, séance dédiée) :
+  - Décoder aud + scp + appid RÉELS du token (jwt.ms ou décodage base64url du payload) pour voir ce
+    qu'Entra émet vraiment vs ce qui est demandé.
+  - Vérifier la plateforme/redirect URI de l'app cliente 77aa6010 : un flux client public PKCE
+    exige une plateforme « Mobile and desktop applications » / « public client » avec le bon
+    redirect (callbackPort 8080 du .mcp.json => http://localhost:8080/...). Une app mal typée
+    (web au lieu de public/native) peut émettre un token sans scp.
+  - Consulter doc Microsoft : flux authorization_code + PKCE pour client public, et la façon dont
+    Claude Code négocie le scope MCP OAuth (ordre authorize vs token, scope dans quel paramètre).
+  - Plan B documenté README T-0010 : headersHelper az account get-access-token --resource
+    api://0028a5ff-... sous l'identité Entra (az login) — même cible zéro-secret, confort moindre.
+
+  NB IMPORTANT : T-0002b-5 (octroi de l'app role MCP.Invoke à l'app cliente) ne débloque PAS ce
+  flux — MCP.Invoke alimente la branche roles (workloads), pas scp (humains délégués). Ne pas
+  confondre les deux branches.
+
+  ÉTAT D'ATTENTE : accès agent à M365 fermé tant que ce point n'est pas résolu. Sans risque en
+  tenant solo. Rollback possible vers l'image 0.1.0 (sans validation) si un accès agent urgent est
+  nécessaire avant résolution : az containerapp revision activate --revision
+  ca-allia-mcp-graph--0000002 -n ca-allia-mcp-graph -g rg-ia-scale.
