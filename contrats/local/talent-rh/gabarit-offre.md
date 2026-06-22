@@ -1,13 +1,13 @@
 # Gabarit — offre de contrat de travail (recrutement) — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat local — périmètre Recrutement.
-> **Changelog** : v1.0 — candidat, 22 juin 2026 : création du gabarit d'offre de contrat
+> **Version** : 1.1 — *candidat*. **Statut** : contrat local — périmètre Talent & RH.
+> **Changelog** : v1.1 — candidat, 22 juin 2026 : alignement du statut et de la ligne Animateur sur le périmètre propriétaire canonique « Talent & RH » (promu v1.7 d'organisation.md). Le titre garde « (recrutement) » à dessein : le recrutement est le sous-ensemble de Talent & RH objet de ce gabarit. Entrée v1.0 inchangée (fait historique). Aucune autre modification. v1.0 — candidat, 22 juin 2026 : création du gabarit d'offre de contrat
 >   de travail, figé à partir des trois offres réelles émises en juin 2026 (Consultant Senior,
 >   Manager). Modèle de document — variables explicitement marquées. Aucune valeur de
 >   rémunération arrêtée par l'agent : le plancher du grade est un point de départ « à valider ».
 > **Domicile** : `contrats/local/talent-rh/gabarit-offre.md`.
 > **Autorité de promotion** : gardien du temple (procédure allégée — contrat local).
-> **Animateur du périmètre** : Recrutement — non encore désigné ; tenu par le gardien-DPO
+> **Animateur du périmètre** : Talent & RH — non encore désigné ; tenu par le gardien-DPO
 >   aujourd'hui (cf. organisation.md, double casquette assumée).
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (cadre RGPD : décision humaine,
 >   §1 art. 22), `contrats/socle/table-des-crans.yaml` (prendre_engagement_juridique_ou_financier
