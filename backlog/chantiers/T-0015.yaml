@@ -16,7 +16,7 @@ criteres_acceptation:
 - "Le log applicatif montre scp=access_as_user (et non scp='') pour cet appel"
 - "Aucun secret introduit ; le flux reste client public PKCE (identites-et-secrets.md cas humain)"
 rayon_impact: local
-statut: a_faire
+statut: à_faire
 note: >
   SCINDÉ de T-0009 le 22 juin 2026. T-0009 (code de validation + déploiement) est SOLDÉ et sa porte
   fail-closed est prouvée vivante. CE chantier porte le PROBLÈME RÉSIDUEL distinct : le flux humain
