@@ -145,19 +145,44 @@ def _verifier_appelant(ctx: Context) -> None:
         principal_id, principal_name, principal_idp,
     )
 
-    # --- Extraction des claims depuis le JWT brut (voie recommandée) ---
+    # --- Diagnostic (présence uniquement, JAMAIS le contenu) : quel canal porte le token ? ---
+    logger.info(
+        "headers présents — Authorization=%s X-MS-TOKEN-AAD-ACCESS-TOKEN=%s X-MS-CLIENT-PRINCIPAL=%s",
+        bool(request.headers.get("Authorization")),
+        bool(request.headers.get("X-MS-TOKEN-AAD-ACCESS-TOKEN")),
+        bool(request.headers.get("X-MS-CLIENT-PRINCIPAL")),
+    )
+
+    # --- Helper local : décode le payload d'un JWT (base64url), sans vérif de signature ---
+    #     (Easy Auth a déjà validé signature/expiry/tenant en amont). ---
+    def _claims_depuis_jwt(jwt: str) -> dict:
+        parties = jwt.split(".")
+        if len(parties) < 2:
+            return {}
+        segment = parties[1]
+        segment += "=" * (-len(segment) % 4)
+        return json.loads(base64.urlsafe_b64decode(segment).decode("utf-8"))
+
     claims: dict = {}
-    jwt_brut = request.headers.get("X-MS-TOKEN-AAD-ACCESS-TOKEN", "")
-    if jwt_brut:
+
+    # --- Voie 1 : Authorization: Bearer (token présenté par le client, transmis par Easy Auth ---
+    #     en mode Return401). Porte scp pour le flux DÉLÉGUÉ humain SANS dépendre du token store ---
+    #     (désactivé ici, donc X-MS-TOKEN-AAD-ACCESS-TOKEN est vide). Voie zéro-secret, sans état. ---
+    en_tete_auth = request.headers.get("Authorization", "")
+    if en_tete_auth[:7].lower() == "bearer ":
         try:
-            parties = jwt_brut.split(".")
-            if len(parties) >= 2:
-                # base64url, padding rétabli ; AUCUNE vérif de signature (Easy Auth l'a déjà faite).
-                segment = parties[1]
-                segment += "=" * (-len(segment) % 4)
-                claims = json.loads(base64.urlsafe_b64decode(segment).decode("utf-8"))
+            claims = _claims_depuis_jwt(en_tete_auth[7:].strip())
         except Exception as exc:  # noqa: BLE001
-            logger.warning("décodage JWT brut impossible — %s", exc)
+            logger.warning("décodage Authorization Bearer impossible — %s", exc)
+
+    # --- Voie 2 : X-MS-TOKEN-AAD-ACCESS-TOKEN (JWT brut posé par Easy Auth SI token store activé) ---
+    if not claims:
+        jwt_brut = request.headers.get("X-MS-TOKEN-AAD-ACCESS-TOKEN", "")
+        if jwt_brut:
+            try:
+                claims = _claims_depuis_jwt(jwt_brut)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("décodage JWT brut impossible — %s", exc)
 
     # --- Fallback : X-MS-CLIENT-PRINCIPAL (base64 JSON, claims potentiellement mappés) ---
     if not claims:
