@@ -1,8 +1,8 @@
 # Purge des données de recrutement — Skill
 
 > **id** : `purge-recrutement`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.0 — candidat, 19 juin 2026 : création. Sous-tâche `T-0013-d` de la chapeau `T-0013` (outil vue candidat & suivi d'entretiens). Décrit le mécanisme de purge gouvernée des données de recrutement échues, au moindre privilège, appliquant la règle de rétention promue (`rgpd-recrutement-candidats.md` §5, v1.4). Le code d'exécution et le runbook du privilège sont des livrables distincts, construits après promotion de ce skill.
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — **promu** via boucle de promotion, 22 juin 2026 : promotion candidat → promu (Option B — aucune donnée de test disponible à ce jour, premier test réel viendra au premier candidat éligible à la purge). v1.0 — candidat, 19 juin 2026 : création. Sous-tâche `T-0013-d` de la chapeau `T-0013` (outil vue candidat & suivi d'entretiens). Décrit le mécanisme de purge gouvernée des données de recrutement échues, au moindre privilège, appliquant la règle de rétention promue (`rgpd-recrutement-candidats.md` §5, v1.4). Le code d'exécution et le runbook du privilège sont des livrables distincts, construits après promotion de ce skill.
 > **Domicile** : `skills/purge-recrutement/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/rgpd-recrutement-candidats.md` (§5 durées, §7 opposition), `contrats/socle/modele-donnees.md` (entité Candidat, colonne native « Créé le », liste « Candidats »), `contrats/socle/table-des-crans.yaml` (exception gouvernée `supprimer_definitivement_des_donnees`, v1.7), `doctrine/doctrine.md` (§2, §6), `CLAUDE.md`.
 
