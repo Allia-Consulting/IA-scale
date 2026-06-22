@@ -18,7 +18,7 @@ criteres_acceptation:
   - "Zéro secret introduit : la validation lit le JWT et les en-têtes transmis par Easy Auth, n'acquiert rien"
   - "PR dédiée ; CI build-mcp-graph verte (import + sonde /healthz reprouvés)"
 rayon_impact: local
-statut: à_faire
+statut: promu
 note: >
   Easy Auth AUTHENTIFIE (le token est valide, émis par le tenant) mais NE VÉRIFIE PAS le claim
   roles — la doc Microsoft est explicite : cette validation revient au code applicatif.
@@ -34,6 +34,34 @@ note: >
   HUMAINS, claim roles (MCP.Invoke) pour les WORKLOADS et la transition ; la JOURNALISATION de
   l'identité appelante (X-MS-CLIENT-PRINCIPAL-*) est la traçabilité par personne décidée le
   10 juin ; la signature des écritures reste APPLICATIVE (OBO non retenu aujourd'hui).
+
+execution: >
+  CODE SOLDÉ ET DÉPLOYÉ le 22 juin 2026. Décision du gardien : validation IN-TOOL (pas de
+  middleware Starlette — démarrage et Dockerfile inchangés) ; politique FAIL-CLOSED (requête HTTP
+  absente, token illisible, ou claim non autorisant => PermissionError). Accès au contexte vérifié
+  par sondage réel du SDK (mcp 1.28.0, exploration jetée) : ctx.request_context.request est un
+  objet Starlette Request portant .headers ; ctx: Context injecté automatiquement dans la signature
+  du tool ; request est Optional (None hors transport HTTP => refus, fail-closed). Voie de lecture
+  retenue : X-MS-TOKEN-AAD-ACCESS-TOKEN (JWT brut, indépendant du token store) avec fallback
+  X-MS-CLIENT-PRINCIPAL. Implémentation : server.py — fonction _verifier_appelant(ctx) appelée en
+  tête de list_items et create_list_item ; valide scp=access_as_user (humains) OU roles=MCP.Invoke
+  (workloads, + URI longue gérée) ; journalise X-MS-CLIENT-PRINCIPAL-* (id, name, idp) ; aucune
+  dépendance ajoutée (base64/json/logging = stdlib). PR #86 (commit 6ca6c32), CI build-mcp-graph
+  VERTE sur ce commit (import réel mcp 1.28.0 + sonde /healthz reprouvés — vérif anti-faux-vert :
+  SHA du check = commit candidat). Mergée en HEAD main 8e35791. DÉPLOIEMENT prouvé : image
+  acralliamcpgraph.azurecr.io/allia-mcp-graph:0.2.0 (digest
+  sha256:2264d3365ddfe4aa0820d7fe38d3635ee9f6495e61cd9e156cc6f9478688f61f) buildée az acr build
+  --platform linux/amd64 ; bascule az containerapp update --image (préserve env + probes) ;
+  révision ca-allia-mcp-graph--0000003 active/Healthy/trafficWeight 100 ; single revision mode
+  (zero-downtime). Rollback en une action : az containerapp revision activate --revision
+  ca-allia-mcp-graph--0000002 (ancienne image 0.1.0). PORTE FAIL-CLOSED PROUVÉE VIVANTE EN PROD —
+  log applicatif : « appel /mcp — principal_name=adrien.raque@allia-consulting.com idp=aad » suivi
+  de « accès refusé — scp='' roles=[] » : la défense en profondeur refuse exactement comme conçue,
+  journalise l'identité par personne, et renvoie un message actionnable. RÉSERVE — accès délégué
+  non débloqué : ce même log (scp='') révèle que le token émis pour le flux humain n'arrive PAS à
+  porter access_as_user malgré consentement Entra accordé et audience Easy Auth correcte ; ce
+  déblocage est un sujet DISTINCT du code de validation (qui, lui, est soldé) et fait l'objet du
+  chantier T-0015. Runbook humain (build + déploiement Azure) exécuté par le gardien.
 
 cadrage_technique: |
   Cadrage technique (recherche du 16 juin 2026 — doc Microsoft Learn + SDK MCP).
