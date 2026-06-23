@@ -1,7 +1,7 @@
 # Gabarit — offre de contrat de travail (recrutement) — Allia Consulting
 
-> **Version** : 1.1 — *candidat*. **Statut** : contrat local — périmètre Talent & RH.
-> **Changelog** : v1.1 — candidat, 22 juin 2026 : alignement du statut et de la ligne Animateur sur le périmètre propriétaire canonique « Talent & RH » (promu v1.7 d'organisation.md). Le titre garde « (recrutement) » à dessein : le recrutement est le sous-ensemble de Talent & RH objet de ce gabarit. Entrée v1.0 inchangée (fait historique). Aucune autre modification. v1.0 — candidat, 22 juin 2026 : création du gabarit d'offre de contrat
+> **Version** : 1.2 — *promu*. **Statut** : contrat local — périmètre Talent & RH.
+> **Changelog** : v1.2 — promu, 23 juin 2026 : le domicile du brouillon d'offre est le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif). Remplace la mention abstraite « Zone-de-proposition ». Borne : jamais au niveau « 01 » (offres signées). Corps inchangé hormis la formulation du domicile. v1.1 — candidat, 22 juin 2026 : alignement du statut et de la ligne Animateur sur le périmètre propriétaire canonique « Talent & RH » (promu v1.7 d'organisation.md). Le titre garde « (recrutement) » à dessein : le recrutement est le sous-ensemble de Talent & RH objet de ce gabarit. Entrée v1.0 inchangée (fait historique). Aucune autre modification. v1.0 — candidat, 22 juin 2026 : création du gabarit d'offre de contrat
 >   de travail, figé à partir des trois offres réelles émises en juin 2026 (Consultant Senior,
 >   Manager). Modèle de document — variables explicitement marquées. Aucune valeur de
 >   rémunération arrêtée par l'agent : le plancher du grade est un point de départ « à valider ».
@@ -19,7 +19,8 @@
 Ce gabarit fige le MODÈLE du document « offre de contrat de travail » qu'un agent peut
 PRÉPARER en brouillon. Borne dure, non négociable :
 
-- L'agent produit un BROUILLON, écrit en Zone-de-proposition, rattaché à la fiche candidat.
+- L'agent produit un BROUILLON, écrit dans le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif, bibliothèque Documents), rattaché à la fiche candidat.
+- Le brouillon est déposé dans « 00 - Proposition en cours » UNIQUEMENT ; jamais au niveau « 01 - Proposition d'embauche », domicile des offres SIGNÉES.
 - L'agent N'ÉMET JAMAIS l'offre : émettre une offre est un engagement juridique
   (table-des-crans.yaml : `prendre_engagement_juridique_ou_financier` — PROSCRIT à l'agent et à Claude).
 - La décision de recrutement reste HUMAINE (rgpd-recrutement-candidats.md §1, art. 22).
