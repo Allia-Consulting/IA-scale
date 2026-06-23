@@ -59,6 +59,7 @@ sous_taches:
       - "DOUBLE-ÉCRITURE vérifiée : (1) le .docx atterrit dans 00 - Proposition en cours via televerser_brouillon_offre (T-0017) ; (2) un item de traçabilité « brouillon généré » est créé en Zone-de-proposition via create_list_item (Title = BROUILLON-OFFRE-<candidat_id>-<date>, Origine = generation-offre, lien vers le .docx déposé)"
       - "Aucun montant arrêté par l'agent : plancher du grade en point de départ, marqué « à valider »"
       - "Régime interne nominatif (données candidat) ; cohérent avec rgpd-recrutement-candidats.md §3"
+    execution: "part skill prouvée le 23 juin 2026 — SKILL.md generation-offre créé (PR #96), génération .docx à la volée depuis gabarit-offre v1.2, double-écriture (docx dans 00 via televerser_brouillon_offre + journal Zone-de-proposition via create_list_item), garde-fous Etape==Proposition / civilité placeholder / variable conditionnelle / collision=fail. Mise en service subordonnée au runbook T-0017-b (variables connecteur) + T-0003 (journalisation)."
     note: >
       Cœur fonctionnel : épargne au gestionnaire la rédaction. Skill agent-éditable (cran auto
       en branche) ; promotion du skill = porte du gardien (procédure allégée).
