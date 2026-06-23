@@ -1,7 +1,7 @@
 # Gabarit — offre de contrat de travail (recrutement) — Allia Consulting
 
-> **Version** : 1.2 — *candidat*. **Statut** : contrat local — périmètre Talent & RH.
-> **Changelog** : v1.1 — candidat, 22 juin 2026 : alignement du statut et de la ligne Animateur sur le périmètre propriétaire canonique « Talent & RH » (promu v1.7 d'organisation.md). Le titre garde « (recrutement) » à dessein : le recrutement est le sous-ensemble de Talent & RH objet de ce gabarit. Entrée v1.0 inchangée (fait historique). Aucune autre modification. v1.0 — candidat, 22 juin 2026 : création du gabarit d'offre de contrat
+> **Version** : 1.2 — *promu*. **Statut** : contrat local — périmètre Talent & RH.
+> **Changelog** : v1.2 — promu, 23 juin 2026 : le domicile du brouillon d'offre est le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif). Remplace la mention abstraite « Zone-de-proposition ». Borne : jamais au niveau « 01 » (offres signées). Corps inchangé hormis la formulation du domicile. v1.1 — candidat, 22 juin 2026 : alignement du statut et de la ligne Animateur sur le périmètre propriétaire canonique « Talent & RH » (promu v1.7 d'organisation.md). Le titre garde « (recrutement) » à dessein : le recrutement est le sous-ensemble de Talent & RH objet de ce gabarit. Entrée v1.0 inchangée (fait historique). Aucune autre modification. v1.0 — candidat, 22 juin 2026 : création du gabarit d'offre de contrat
 >   de travail, figé à partir des trois offres réelles émises en juin 2026 (Consultant Senior,
 >   Manager). Modèle de document — variables explicitement marquées. Aucune valeur de
 >   rémunération arrêtée par l'agent : le plancher du grade est un point de départ « à valider ».
