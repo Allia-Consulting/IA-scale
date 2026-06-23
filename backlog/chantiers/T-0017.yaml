@@ -1,0 +1,74 @@
+id: T-0017
+titre: "Extension connecteur MCP Graph — téléversement du brouillon d'offre dans 00 - Proposition en cours (chantier-chapeau)"
+capacite: "Socle d'exploitation / Orchestration des agents"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "CHANTIER-CHAPEAU : le connecteur MCP Graph gagne un 3e outil televerser_brouillon_offre(nom_fichier, contenu_base64, candidat_id) qui dépose un .docx dans le dossier SharePoint « 00 - Proposition en cours » (bibliothèque Documents du site AlliaConsulting-Contratsetadministratif). Réalisé par les sous-tâches T-0017-a..b."
+  - "CIBLE FIGÉE côté serveur par ids — nouvelles variables d'environnement GRAPH_BROUILLON_DRIVE_ID + GRAPH_BROUILLON_FOLDER_ID (pattern identique à GRAPH_PROPOSITION_LIST_ID) : l'appelant ne choisit JAMAIS la cible."
+  - "Garde-fou structurel inscrit DANS LE CODE (comme create_list_item fige sa liste) : le dépôt ne peut viser que 00 - Proposition en cours ; jamais ailleurs, JAMAIS le niveau 01 - Proposition d'embauche (domicile des offres SIGNÉES)."
+  - "Comportement de collision = FAIL : l'agent n'écrase jamais un brouillon existant ; la régénération est un geste humain de retrait (cohérent avec supprimer_definitivement_des_donnees = proscrit)."
+  - "Contraintes de sûreté : extension .docx forcée ; nom de fichier assaini (pas de / \\ ..) ; contenu reçu en base64."
+depend_de: ["T-0002b"]
+# Le 3e outil étend le connecteur livré et prouvé par T-0002b (chapeau promue et SOLDÉE le 10 juin
+# 2026). T-0017 est un chantier NEUF — PAS un avenant à T-0002b (fiche close, historique immuable) :
+# il ajoute une action exposée et deux ids de cible, sur le même pattern « cible figée côté serveur ».
+contrats_concernes:
+  - "contrats/socle/table-des-crans.yaml"
+  - "contrats/socle/modele-donnees.md"
+  - "contrats/local/talent-rh/gabarit-offre.md"
+criteres_acceptation:
+  - "Les deux sous-tâches a..b sont décrites avec nature, cran et critères propres"
+  - "Le connecteur expose televerser_brouillon_offre(nom_fichier, contenu_base64, candidat_id) ; la cible est FIGÉE par GRAPH_BROUILLON_DRIVE_ID + GRAPH_BROUILLON_FOLDER_ID, jamais choisie par l'appelant"
+  - "Garde-fou structurel dans le code : dépôt uniquement dans 00 - Proposition en cours, jamais au niveau 01 des offres signées (sur le modèle du garde-fou de create_list_item)"
+  - "Collision de nom = fail (jamais d'écrasement) ; extension .docx forcée ; nom de fichier assaini"
+  - "Le cran de l'action exposée est auto (table-des-crans.yaml : televerser_brouillon_offre_zone_travail) ; l'émission de l'offre reste proscrite (prendre_engagement_juridique_ou_financier) et humaine"
+  - "La mise en service (rebuild image, redéploiement, pose des variables d'env, octroi write sur la bibliothèque) reste RUNBOOK HUMAIN du gardien"
+rayon_impact: local
+statut: à_faire
+
+sous_taches:
+
+  - id: T-0017-a
+    titre: "Code server.py — outil televerser_brouillon_offre (+ variables env, .env.example, README)"
+    type_action: infrastructure_mcp
+    cran: auto  # l'action exposée est réversible/interne/locale (cran auto) ; la mise en service = runbook gardien
+    produit:
+      - "server.py : nouvel outil televerser_brouillon_offre(nom_fichier, contenu_base64, candidat_id) — PUT du contenu docx dans le dossier 00 via Graph Drive API, cible lue dans GRAPH_BROUILLON_DRIVE_ID + GRAPH_BROUILLON_FOLDER_ID (jamais de l'appelant), collision=fail, .docx forcé, nom assaini"
+      - "deux nouvelles variables d'environnement documentées dans .env.example (GRAPH_BROUILLON_DRIVE_ID, GRAPH_BROUILLON_FOLDER_ID) ; échec clair (ConfigManquante) si absentes"
+      - "README mis à jour : 3e outil dans la table, paragraphe garde-fou cible figée, mention des deux variables"
+    depend_de: []
+    criteres_acceptation:
+      - "L'outil dépose un .docx dans 00 - Proposition en cours et NULLE PART ailleurs (cible figée côté serveur)"
+      - "Collision de nom → erreur explicite, aucun écrasement ; extension non-.docx → refus ; nom contenant / \\ .. → refus"
+      - "Aucun secret introduit : l'auth Graph reste l'identité managée (Sites.Selected + write sur le site)"
+    note: >
+      L'action exposée est cran auto (réversible, interne, local, non émise ; garde-fous structurels).
+      Mais la MISE EN SERVICE reste un RUNBOOK HUMAIN du gardien : rebuild de l'image, redéploiement
+      du Container App, pose des variables d'environnement, et VÉRIFICATION de l'octroi write sur la
+      bibliothèque Documents. Le code n'octroie aucun droit ; il consomme ceux déjà accordés.
+
+  - id: T-0017-b
+    titre: "Pose des ids cibles GRAPH_BROUILLON_DRIVE_ID + GRAPH_BROUILLON_FOLDER_ID (runbook humain)"
+    type_action: infrastructure_mcp
+    cran: valide  # pose de configuration de service + part identité/droits = porte du gardien
+    produit:
+      - "récupération via Graph de l'identifiant de la bibliothèque Documents (drive) et du dossier 00 - Proposition en cours (folder) du site AlliaConsulting-Contratsetadministratif"
+      - "pose des deux variables d'environnement sur le service déployé (GRAPH_BROUILLON_DRIVE_ID, GRAPH_BROUILLON_FOLDER_ID)"
+    depend_de: ["T-0017-a"]
+    criteres_acceptation:
+      - "Les deux ids pointent le dossier 00 - Proposition en cours réel et sont posés sur le service"
+      - "La part identité/droits (octroi write sur la bibliothèque) est vérifiée au runbook ; ressources liées aux groupes, jamais aux individus"
+    note: >
+      Runbook humain du gardien. La part identité/droits : l'octroi Sites.Selected + write couvre déjà
+      le site AlliaConsulting-Contratsetadministratif, donc la bibliothèque Documents a priori — à
+      VÉRIFIER au runbook avant la première écriture réelle. Aucune modification de droits à la main par
+      un agent (table-des-crans : proscrite) ; geste du gardien (organisation.md §5).
+
+note: >
+  Architecture « Voie 1 » actée par le gardien. Le brouillon d'offre vit comme .docx dans la
+  bibliothèque de travail 00 - Proposition en cours ; un item de traçabilité « brouillon généré » est
+  écrit EN PARALLÈLE en Zone-de-proposition via create_list_item (double-écriture portée par T-0016-b),
+  qui devient le JOURNAL des brouillons générés. Le connecteur ne gagne qu'UNE action d'écriture
+  fichier, à cible figée comme la liste l'est déjà — l'émission de l'offre reste proscrite et humaine.
