@@ -1,8 +1,8 @@
 # Génération du brouillon d'offre de contrat de travail — Skill
 
 > **id** : `generation-offre`
-> **Version** : 1.0 — *promu*. **Nature** : skill.
-> **Changelog** : v1.0 — promu, 23 juin 2026 : promotion par le gardien (prérequis T-0017-b et T-0003 levés). v1.0 — candidat, 23 juin 2026 : création. Sous-tâche `T-0016-b` de la chapeau `T-0016` (agent « brouillon d'offre de contrat de travail »). Décrit le skill qui produit un BROUILLON d'offre `.docx` à partir du gabarit canonique (`gabarit-offre.md` v1.2), le dépose dans « 00 - Proposition en cours » via `televerser_brouillon_offre` (connecteur étendu, `T-0017`), et journalise « brouillon généré » en Zone-de-proposition via `create_list_item` (double-écriture). La mise en service est subordonnée aux runbooks `T-0017-b` et `T-0003`.
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — promu, 23 juin 2026 : corps aligné post-promotion (§8 prérequis promotion marqué levé, §9 statut candidat → promu). v1.0 — promu, 23 juin 2026 : promotion par le gardien (prérequis T-0017-b et T-0003 levés). v1.0 — candidat, 23 juin 2026 : création. Sous-tâche `T-0016-b` de la chapeau `T-0016` (agent « brouillon d'offre de contrat de travail »). Décrit le skill qui produit un BROUILLON d'offre `.docx` à partir du gabarit canonique (`gabarit-offre.md` v1.2), le dépose dans « 00 - Proposition en cours » via `televerser_brouillon_offre` (connecteur étendu, `T-0017`), et journalise « brouillon généré » en Zone-de-proposition via `create_list_item` (double-écriture). La mise en service est subordonnée aux runbooks `T-0017-b` et `T-0003`.
 > **Domicile** : `skills/generation-offre/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/local/talent-rh/gabarit-offre.md` (v1.2 — **LE document**, source de vérité), `contrats/socle/table-des-crans.yaml` (v1.8 : `televerser_brouillon_offre_zone_travail` = **auto** ; `ecrire_fait_derive_zone_proposition` = **auto** ; `prendre_engagement_juridique_ou_financier` = **PROSCRIT**), `contrats/socle/modele-donnees.md` (§2 bis / §2 ter — liste « Candidats », liste « Zone-de-proposition »), `contrats/socle/rgpd-recrutement-candidats.md` (§1 art. 22 — décision humaine ; §3 — régime nominatif interne), `backlog/chantiers/T-0017.yaml` (connecteur étendu — outil `televerser_brouillon_offre`), `contrats/socle/design-system.md`, `CLAUDE.md`.
 
@@ -113,8 +113,8 @@ Ce skill **ne peut pas être mis en service** tant que les prérequis suivants n
 
 1. **`T-0017-b`** (runbook humain) : pose des variables `GRAPH_BROUILLON_DRIVE_ID` / `GRAPH_BROUILLON_FOLDER_ID` du connecteur **et** vérification de l'**octroi write** sur la bibliothèque Documents. Sans elles, `televerser_brouillon_offre` échoue (`ConfigManquante`).
 2. **`T-0003`** : journalisation active sur la liste « Candidats » — prérequis à tout accès agent réel aux données candidat.
-3. **Promotion de ce skill** par le gardien (procédure allégée).
+3. **Promotion de ce skill** par le gardien (procédure allégée) — *levé : promu le 23 juin 2026*.
 
 ## 9. Évolution
 
-Ce skill est un **candidat** (procédure allégée, portée locale — `doctrine.md` §5). Sa promotion suit la boucle (`doctrine.md` §7) avec montée de version. Retour arrière = repointage. Les runbooks de mise en service (§8) sont des livrables distincts, séquencés avant toute exécution réelle.
+Ce skill est **promu** (procédure allégée, portée locale — `doctrine.md` §5). Sa promotion suit la boucle (`doctrine.md` §7) avec montée de version. Retour arrière = repointage. Les runbooks de mise en service (§8) sont des livrables distincts, séquencés avant toute exécution réelle.
