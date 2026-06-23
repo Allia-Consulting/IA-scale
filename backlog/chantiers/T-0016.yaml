@@ -18,7 +18,7 @@ contrats_concernes:
   - "contrats/socle/design-system.md"
 criteres_acceptation:
   - "Les trois sous-tâches a..c sont décrites avec nature, cran et critères propres"
-  - "L'agent PRÉPARE un brouillon d'offre, écrit en Zone-de-proposition, rattaché à la fiche candidat ; il n'émet jamais l'offre (engagement juridique PROSCRIT — table-des-crans.yaml)"
+  - "L'agent PRÉPARE un brouillon d'offre, écrit dans le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif, bibliothèque Documents), rattaché à la fiche candidat ; il n'émet jamais l'offre (engagement juridique PROSCRIT — table-des-crans.yaml)"
   - "Le brouillon suit le gabarit figé (contrats/local/talent-rh/gabarit-offre.md) ; montant = plancher du grade marqué « à valider », jamais arrêté par l'agent"
   - "La ligne de rémunération variable n'apparaît que pour les grades >= Manager"
   - "La décision de recrutement reste HUMAINE (rgpd-recrutement-candidats.md §1, art. 22) ; le document est imprimé, signé et envoyé par le gestionnaire de la proposition"
@@ -54,7 +54,7 @@ sous_taches:
     depend_de: ["T-0016-a"]
     criteres_acceptation:
       - "Le brouillon respecte le gabarit figé ; le rendu suit le design system"
-      - "Écriture en Zone-de-proposition via le connecteur existant ; garde-fou structurel (jamais une source, jamais émis)"
+      - "Écriture dans le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif, bibliothèque Documents) via le connecteur existant ; garde-fou structurel (jamais une source, jamais émis, jamais au niveau « 01 » des offres signées)"
       - "Aucun montant arrêté par l'agent : plancher du grade en point de départ, marqué « à valider »"
       - "Régime interne nominatif (données candidat) ; cohérent avec rgpd-recrutement-candidats.md §3"
     note: >
