@@ -3,10 +3,11 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose DEUX opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose TROIS opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
-    - list_items        : LIT les éléments d'une liste SharePoint (lecture seule).
-    - create_list_item  : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
+    - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
+    - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
+    - televerser_brouillon_offre  : DÉPOSE un brouillon .docx UNIQUEMENT dans « 00 - Proposition en cours ».
 
 Transport & santé :
 
@@ -74,6 +75,8 @@ ENV_AZURE_ENV = "AZURE_ENV"                # local | prod (défaut prod) — pil
 ENV_AZURE_CLIENT_ID = "AZURE_CLIENT_ID"    # clientId de l'identité managée (défaut: MANAGED_IDENTITY_CLIENT_ID)
 ENV_SITE_ID = "GRAPH_SITE_ID"
 ENV_PROPOSITION_LIST_ID = "GRAPH_PROPOSITION_LIST_ID"
+ENV_BROUILLON_DRIVE_ID = "GRAPH_BROUILLON_DRIVE_ID"      # bibliothèque Documents (cible figée du dépôt de brouillon)
+ENV_BROUILLON_FOLDER_ID = "GRAPH_BROUILLON_FOLDER_ID"    # dossier « 00 - Proposition en cours » (seule cible de dépôt)
 
 # stateless_http=True : pas de session persistante côté serveur (exigence Container Apps).
 # host/port portés ICI (le SDK résolu n'accepte host/port NI via l'env FASTMCP_HOST, NI dans run() —
@@ -241,12 +244,16 @@ def _config() -> dict[str, str]:
     valeurs = {
         "site_id": os.environ.get(ENV_SITE_ID, ""),
         "proposition_list_id": os.environ.get(ENV_PROPOSITION_LIST_ID, ""),
+        "brouillon_drive_id": os.environ.get(ENV_BROUILLON_DRIVE_ID, ""),
+        "brouillon_folder_id": os.environ.get(ENV_BROUILLON_FOLDER_ID, ""),
     }
     manquantes = [k for k, v in valeurs.items() if not v]
     if manquantes:
         noms_env = {
             "site_id": ENV_SITE_ID,
             "proposition_list_id": ENV_PROPOSITION_LIST_ID,
+            "brouillon_drive_id": ENV_BROUILLON_DRIVE_ID,
+            "brouillon_folder_id": ENV_BROUILLON_FOLDER_ID,
         }
         absentes = ", ".join(noms_env[k] for k in manquantes)
         raise ConfigManquante(
@@ -342,6 +349,86 @@ def create_list_item(ctx: Context, fields: dict[str, Any]) -> dict[str, Any]:
         reponse.raise_for_status()
         corps = reponse.json()
     return {"created_id": corps.get("id"), "fields": corps.get("fields", {})}
+
+
+@mcp.tool()
+def televerser_brouillon_offre(
+    ctx: Context, nom_fichier: str, contenu_base64: str, candidat_id: str
+) -> dict[str, Any]:
+    """Dépose un BROUILLON d'offre (.docx) dans « 00 - Proposition en cours », et nulle part ailleurs.
+
+    PUT /drives/{BROUILLON_DRIVE_ID}/items/{BROUILLON_FOLDER_ID}:/{nom_fichier}:/content
+        ?@microsoft.graph.conflictBehavior=fail
+
+    Cible FIGÉE côté serveur par GRAPH_BROUILLON_DRIVE_ID + GRAPH_BROUILLON_FOLDER_ID : comme
+    `create_list_item` fige sa liste, cette fonction n'accepte AUCUN identifiant de cible de
+    l'appelant. Le dépôt vise UNIQUEMENT le dossier « 00 - Proposition en cours » (bibliothèque
+    de travail interne) ; JAMAIS le niveau « 01 - Proposition d'embauche », domicile des offres
+    SIGNÉES. `candidat_id` sert au nommage / à la traçabilité, PAS à choisir la cible.
+
+    Garde-fous inscrits dans le code (table-des-crans.yaml : televerser_brouillon_offre_zone_travail,
+    cran auto) :
+        - .docx FORCÉ (toute autre extension est refusée) ;
+        - nom de fichier ASSAINI : refus de « / », « \\ », « .. » et des caractères de contrôle
+          (pas d'évasion hors du dossier figé) ;
+        - COLLISION = FAIL : un brouillon de même nom n'est JAMAIS écrasé ; sa régénération est
+          un geste humain de retrait (cohérent avec supprimer_definitivement — proscrit).
+
+    Un BROUILLON n'est PAS une offre : l'émission de l'offre reste un acte HUMAIN
+    (prendre_engagement_juridique_ou_financier — PROSCRIT à l'agent et à Claude).
+
+    Args:
+        nom_fichier: nom du fichier à déposer, doit se terminer par « .docx ».
+        contenu_base64: contenu du .docx encodé en base64.
+        candidat_id: identifiant du candidat (nommage / traçabilité, jamais la cible).
+
+    Returns:
+        Un dict {"item_id": "...", "nom": "...", "web_url": "..."} décrivant le fichier déposé.
+    """
+    _verifier_appelant(ctx)
+
+    # --- Nom de fichier : .docx FORCÉ + assainissement (jamais d'évasion hors du dossier figé) ---
+    if not isinstance(nom_fichier, str) or not nom_fichier.lower().endswith(".docx"):
+        raise ValueError("`nom_fichier` doit être une chaîne se terminant par « .docx ».")
+    if any(motif in nom_fichier for motif in ("/", "\\", "..")) or any(ord(c) < 32 for c in nom_fichier):
+        raise ValueError(
+            "`nom_fichier` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. », "
+            "ni caractère de contrôle (le dépôt est figé dans « 00 - Proposition en cours »)."
+        )
+
+    # --- Décodage du contenu base64 ---
+    try:
+        contenu = base64.b64decode(contenu_base64, validate=True)
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(f"`contenu_base64` n'est pas un base64 valide : {exc}") from exc
+
+    cfg = _config()
+    # Cible d'écriture NON paramétrable par l'appelant : « 00 - Proposition en cours », et elle seule.
+    drive_id = cfg["brouillon_drive_id"]
+    folder_id = cfg["brouillon_folder_id"]
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_id}:/{nom_fichier}:/content"
+    params = {"@microsoft.graph.conflictBehavior": "fail"}  # jamais d'écrasement
+    type_docx = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    with httpx.Client(timeout=30) as client:
+        reponse = client.put(
+            url,
+            headers={**_entetes(), "Content-Type": type_docx},
+            content=contenu,
+            params=params,
+        )
+        # Collision : un brouillon de même nom existe déjà — NE PAS réessayer, NE PAS écraser.
+        if reponse.status_code == 409:
+            raise FileExistsError(
+                f"Brouillon déjà existant pour « {nom_fichier} » (candidat {candidat_id}) : "
+                "retrait humain requis (collision=fail). Aucun écrasement."
+            )
+        reponse.raise_for_status()
+        corps = reponse.json()
+    return {
+        "item_id": corps.get("id"),
+        "nom": corps.get("name"),
+        "web_url": corps.get("webUrl"),
+    }
 
 
 if __name__ == "__main__":

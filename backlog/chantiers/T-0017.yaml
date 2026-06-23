@@ -43,6 +43,7 @@ sous_taches:
       - "L'outil dépose un .docx dans 00 - Proposition en cours et NULLE PART ailleurs (cible figée côté serveur)"
       - "Collision de nom → erreur explicite, aucun écrasement ; extension non-.docx → refus ; nom contenant / \\ .. → refus"
       - "Aucun secret introduit : l'auth Graph reste l'identité managée (Sites.Selected + write sur le site)"
+    execution: "part code prouvée le 23 juin 2026 — outil televerser_brouillon_offre ajouté (PR #95), cible figée GRAPH_BROUILLON_DRIVE_ID + GRAPH_BROUILLON_FOLDER_ID, collision=fail, .docx forcé, nom assaini ; import réel + sonde /healthz verts en CI. Mise en service (rebuild image, redéploiement, pose des variables, octroi write) = runbook humain T-0017-b, non fait ici."
     note: >
       L'action exposée est cran auto (réversible, interne, local, non émise ; garde-fous structurels).
       Mais la MISE EN SERVICE reste un RUNBOOK HUMAIN du gardien : rebuild de l'image, redéploiement
