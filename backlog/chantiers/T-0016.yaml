@@ -44,11 +44,11 @@ sous_taches:
       communication). Animateur recrutement non désigné : tenu par le gardien-DPO aujourd'hui.
 
   - id: T-0016-b
-    titre: "Skill « génération du brouillon d'offre » (écriture en Zone-de-proposition)"
+    titre: "Skill « génération du brouillon d'offre » (écriture du brouillon dans 00 - Proposition en cours)"
     type_action: edition_contrat_local
     cran: auto  # skill + écriture dérivé en branche = auto ; promotion du skill = gardien
     produit:
-      - "skill produisant un BROUILLON d'offre à partir de la fiche candidat (grade, civilité, nom, infos) + le gabarit (pull), écrit en Zone-de-proposition, rattaché au candidat, jamais dans une source, jamais promu par l'agent"
+      - "skill produisant un BROUILLON d'offre à partir de la fiche candidat (grade, civilité, nom, infos) + le gabarit (pull), écrit dans le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif, bibliothèque Documents), rattaché au candidat, jamais dans une source, jamais promu par l'agent"
       - "destinataire du brouillon = le gestionnaire de la proposition (dernier interviewer / personne en charge du poste)"
       - "montant = plancher du grade marqué « à valider » ; ligne variable conditionnelle (>= Manager)"
     depend_de: ["T-0016-a"]
