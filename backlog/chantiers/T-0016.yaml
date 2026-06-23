@@ -51,10 +51,12 @@ sous_taches:
       - "skill produisant un BROUILLON d'offre à partir de la fiche candidat (grade, civilité, nom, infos) + le gabarit (pull), écrit dans le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif, bibliothèque Documents), rattaché au candidat, jamais dans une source, jamais promu par l'agent"
       - "destinataire du brouillon = le gestionnaire de la proposition (dernier interviewer / personne en charge du poste)"
       - "montant = plancher du grade marqué « à valider » ; ligne variable conditionnelle (>= Manager)"
-    depend_de: ["T-0016-a"]
+      - "DOUBLE-ÉCRITURE : (1) le .docx est déposé dans 00 - Proposition en cours via televerser_brouillon_offre (connecteur étendu par T-0017) ; (2) un item de traçabilité « brouillon généré » est créé en Zone-de-proposition via create_list_item (Title = BROUILLON-OFFRE-<candidat_id>-<date>, Origine = generation-offre, lien vers le .docx déposé) — la Zone-de-proposition est le JOURNAL des brouillons générés, le .docx vit dans 00"
+    depend_de: ["T-0016-a", "T-0017"]
     criteres_acceptation:
       - "Le brouillon respecte le gabarit figé ; le rendu suit le design system"
       - "Écriture dans le dossier SharePoint « 01 - Proposition d'embauche / 00 - Proposition en cours » (site AlliaConsulting-Contratsetadministratif, bibliothèque Documents) via le connecteur existant ; garde-fou structurel (jamais une source, jamais émis, jamais au niveau « 01 » des offres signées)"
+      - "DOUBLE-ÉCRITURE vérifiée : (1) le .docx atterrit dans 00 - Proposition en cours via televerser_brouillon_offre (T-0017) ; (2) un item de traçabilité « brouillon généré » est créé en Zone-de-proposition via create_list_item (Title = BROUILLON-OFFRE-<candidat_id>-<date>, Origine = generation-offre, lien vers le .docx déposé)"
       - "Aucun montant arrêté par l'agent : plancher du grade en point de départ, marqué « à valider »"
       - "Régime interne nominatif (données candidat) ; cohérent avec rgpd-recrutement-candidats.md §3"
     note: >

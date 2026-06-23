@@ -58,6 +58,9 @@ actions:
   - id: ecrire_fait_derive_zone_proposition
     cran: auto
     pourquoi: "réversible et interne ; le dérivé n'est jamais le saisi"
+  - id: televerser_brouillon_offre_zone_travail
+    cran: auto
+    pourquoi: "écrire un BROUILLON (docx non émis) dans une bibliothèque de travail interne, cible FIGÉE côté serveur (dossier 00 - Proposition en cours) ; réversible (collision=fail, jamais d'écrasement), interne, local. L'émission de l'offre reste proscrite (prendre_engagement_juridique_ou_financier) et humaine. Garde-fou structurel : la cible n'est jamais choisie par l'appelant, jamais le niveau 01 des offres signées."
   - id: ouvrir_pull_request
     cran: auto
     pourquoi: "un candidat est réversible et n'atteint pas main"
