@@ -1,0 +1,22 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "tour-de-controle",
+    "packageManager": "npm",
+    "useGulp": false,
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "TourDeControle",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.1",
+    "sdksVersions": {},
+    "version": "1.23.1",
+    "libraryName": "tour-de-controle",
+    "libraryId": "2fde3b3c-8586-4a4f-836d-95537dfb501b",
+    "environment": "spo",
+    "solutionShortDescription": "tour-de-controle description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false
+  }
+}
