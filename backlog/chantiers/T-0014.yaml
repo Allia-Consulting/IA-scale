@@ -22,7 +22,7 @@ criteres_acceptation:
 - "Le déploiement du .sppkg et la mise en page de l'accueil sont des runbooks humains, jamais l'agent"
 - "Le rendu suit le design system (on consomme, on ne recopie pas)"
 rayon_impact: large
-statut: à_faire
+statut: en_cours
 note: >
   Construction du cockpit dont la POLITIQUE est figée dans contrats/socle/tour-de-controle.md
   (promu v1.0). Répond au chantier nommé en doctrine §10 (« le cockpit du collaborateur reste
