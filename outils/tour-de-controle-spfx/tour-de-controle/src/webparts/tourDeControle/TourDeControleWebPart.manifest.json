@@ -18,11 +18,11 @@
   "preconfiguredEntries": [{
     "groupId": "5c03119e-3074-46fd-976b-c60198311f70", // Advanced
     "group": { "default": "Advanced" },
-    "title": { "default": "TourDeControle" },
-    "description": { "default": "TourDeControle description" },
-    "officeFabricIconFontName": "Page",
+    "title": { "default": "Tour de contrôle" },
+    "description": { "default": "Cockpit du collaborateur : voir ce qui me concerne et déclencher." },
+    "officeFabricIconFontName": "ViewDashboard",
     "properties": {
-      "description": "TourDeControle"
+      "description": "Tour de contrôle"
     }
   }]
 }
