@@ -1,29 +1,318 @@
-.tourDeControle {
-  overflow: hidden;
-  padding: 1em;
-  color: "[theme:bodyText, default: #323130]";
-  color: var(--bodyText);
+@import 'design-tokens';
+
+.cockpit {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  box-sizing: border-box;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 }
 
-.welcome {
+.banner {
+  font-size: var(--text-meta);
+  color: var(--color-stone-muted);
+  font-style: italic;
   text-align: center;
+  margin: 0;
 }
 
-.welcomeImage {
+/* En-tête : salutation + ce qui appelle une décision */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-ivory);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.hello {
+  font-family: var(--font-structure);
+  font-size: var(--text-lead);
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.helloSub {
+  font-size: var(--text-body-sm);
+  color: var(--color-stone-text);
+  margin: 4px 0 0;
+}
+
+.alertBadge {
+  flex: none;
+  font-family: var(--font-structure);
+  font-size: var(--text-label);
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-amber-wash);
+  color: var(--color-amber-deep);
+  border: 0.5px solid var(--color-accent);
+  white-space: nowrap;
+}
+
+/* Zones */
+.zone {
+  background: #ffffff;
+  border: 0.5px solid var(--color-stone-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.zoneHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.zoneNum {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-structure);
+  font-size: var(--text-meta);
+  font-weight: 700;
+  /* Numéro = repère structurel → bleu sobre pour les 4 zones (l'ambre reste un signal, pas un décor) */
+  background: var(--color-blue-wash);
+  color: var(--color-primary);
+}
+
+.zoneTitle {
+  font-family: var(--font-structure);
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.zoneTitleSm {
+  font-family: var(--font-structure);
+  font-size: var(--text-lead);
+  font-weight: 500;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.zoneSub {
+  font-size: var(--text-body-sm);
+  color: var(--color-stone-text);
+  margin: 2px 0 0;
+}
+
+.demoTag {
+  font-size: var(--text-label);
+  color: var(--color-stone-muted);
+  font-style: italic;
+}
+
+/* Compteurs (voir) */
+.counters {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.counter {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--color-ivory);
+  border: 0.5px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: var(--color-blue-wash);
+  }
+
+  /* Accessibilité (design system §8) : anneau de focus visible, absent de la maquette */
+  &:focus-visible {
+    outline: 2px solid var(--color-blue-bright);
+    outline-offset: 2px;
+  }
+}
+
+.counterWide {
   width: 100%;
-  max-width: 420px;
 }
 
-.links {
-  a {
-    text-decoration: none;
-    color: "[theme:link, default:#03787c]";
-    color: var(--link); // note: CSS Custom Properties support is limited to modern browsers only
+.counterLabel {
+  font-size: var(--text-meta);
+  color: var(--color-stone-text);
+}
 
-    &:hover {
-      text-decoration: underline;
-      color: "[theme:linkHovered, default: #014446]";
-      color: var(--linkHovered); // note: CSS Custom Properties support is limited to modern browsers only
+.counterVal {
+  font-family: var(--font-structure);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+/* Détail déplié (creuser) */
+.detail {
+  margin-top: 12px;
+  border-top: 0.5px solid var(--color-stone-border);
+  padding-top: 12px;
+}
+
+.detailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: var(--text-body-sm);
+  border-bottom: 0.5px solid var(--color-stone-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.emptyText {
+  font-size: var(--text-body-sm);
+  color: var(--color-stone-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Pastilles */
+.pill {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.pillInfo {
+  background: var(--color-blue-wash);
+  color: var(--color-blue-mid);
+  border: 0.5px solid var(--color-blue-light-border);
+}
+
+.pillSignal {
+  background: var(--color-amber-wash);
+  color: var(--color-amber-deep);
+  border: 0.5px solid var(--color-accent);
+}
+
+.metaText {
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  color: var(--color-stone-text);
+  white-space: nowrap;
+}
+
+/* Action (agir) — geste séparé, inerte en v1 */
+.action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px 12px;
+  background: transparent;
+  border: 0.5px solid var(--color-stone-border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  text-align: left;
+  color: var(--color-stone-muted);
+  cursor: not-allowed;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-blue-bright);
+    outline-offset: 2px;
+  }
+}
+
+.actionTag {
+  margin-left: auto;
+  font-size: var(--text-label);
+  font-style: italic;
+  color: var(--color-stone-muted);
+}
+
+/* Grille 2 colonnes pour les zones 3 & 4 */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Pied : « Demande à ton SI » */
+.footer {
+  background: var(--color-ivory);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.footerTitle {
+  font-family: var(--font-structure);
+  font-size: var(--text-body);
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--color-ink);
+}
+
+.footerNote {
+  font-size: var(--text-body-sm);
+  color: var(--color-stone-text);
+  margin: 0 0 10px;
+}
+
+.askRow {
+  display: flex;
+  gap: 8px;
+
+  .action {
+    width: auto;
+    flex: 1;
+    margin-top: 0;
+  }
+}
+
+/* Colonnes étroites de SharePoint : on bascule en pile */
+@media (max-width: 600px) {
+  .counters {
+    grid-template-columns: 1fr;
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+
+  .askRow {
+    flex-direction: column;
+
+    .action {
+      width: 100%;
     }
   }
 }
