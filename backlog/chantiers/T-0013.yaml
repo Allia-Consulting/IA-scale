@@ -27,7 +27,7 @@ criteres_acceptation:
   - "La décision de recrutement reste HUMAINE (jamais automatisée) ; destinataires = seules les personnes en charge du poste"
   - "La purge est outillée comme MÉCANISME gouverné au moindre privilège, jamais un geste manuel"
 rayon_impact: large
-statut: en_cours  # a et c promues ; d débloquée (skill candidat) ; b reportée
+statut: en_cours  # a et c promues ; d débloquée (skill candidat) ; b en cours (cockpit T-0014)
 
 sous_taches:
 
@@ -64,6 +64,11 @@ sous_taches:
     note: >
       Cœur fonctionnel. Majoritairement code agent-éditable (comme T-0002b) ; la part droits/config
       M365 reste runbook humain. La notion de « dernier interviewer » prépare la sous-capacité 1b.
+      RÉALISATION : enrichissement du cockpit T-0014 (surface unique du collaborateur,
+      décision gardien) — nouveau compteur « Suivi par étape » dans la zone Recrutement,
+      contre données de démonstration ; pas de web part autonome. Construction du code =
+      cran auto en branche ; mise en service (nouvelle carte) = cran validé, porte du
+      gardien (tour-de-controle.md §5). Part droits/config M365 = runbook humain, hors code.
 
   - id: T-0013-c
     titre: "Écriture des synthèses d'entretien en Zone-de-proposition (checklist en dur)"
