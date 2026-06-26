@@ -1,11 +1,11 @@
-# purge-recrutement — mécanisme de purge gouvernée (CANDIDAT)
+# purge-recrutement — mécanisme de purge gouvernée
 
-Skill de référence : `skills/purge-recrutement/SKILL.md` — **CANDIDAT (non promu)**.
+Skill de référence : `skills/purge-recrutement/SKILL.md` — **promu v1.1 (22 juin 2026)**.
 Chantier : `backlog/chantiers/T-0013.yaml` (T-0013-d).
 
-> **Artefact candidat — non exécutable en production** tant que les prérequis §6 du skill
-> ne sont pas tous soldés. En particulier : **la promotion du skill** (geste du gardien)
-> reste à faire. Les runbooks « colonne OppositionVivier » et « identité dédiée » sont posés.
+> **Artefact opérationnel** — skill promu v1.1, runbooks « colonne OppositionVivier » et
+> « identité dédiée » posés (19 juin 2026). Reste la **première exécution réelle** : aucun
+> candidat éligible à la purge à ce jour.
 
 ## Objet
 
@@ -29,7 +29,7 @@ Aucun secret. Les clientIds sont des identifiants publics — ils ne sont pas in
 canon socle (`identites-et-secrets.md` ne registre que les dettes de secrets, pas les
 identités managées, qui sont « zéro secret » par construction).
 
-## Exécution (après promotion du skill uniquement)
+## Exécution
 
 ~~~bash
 python -m venv .venv && . .venv/bin/activate

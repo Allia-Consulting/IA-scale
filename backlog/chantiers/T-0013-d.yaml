@@ -29,7 +29,7 @@ criteres_acceptation:
   - "L'exception gouvernée « purge » est inscrite dans table-des-crans.yaml (même PR) — sans elle le mécanisme contredirait les proscrites"
   - "La mise en place du privilège (octrois Graph de suppression) est un runbook humain ; ni Claude ni un agent ne l'exécutent"
 rayon_impact: large
-statut: à_faire
+statut: en_cours # skill promu v1.1 + code + privilège posés ; reste la 1re purge réelle
 note: >
   Dernier morceau de la chapeau T-0013. Point le plus sensible RGPD : la SUPPRESSION
   définitive. RÉSOLUTION DE LA TENSION avec le proscrit supprimer_definitivement_des_donnees :
@@ -37,6 +37,9 @@ note: >
   réconciliation de droits (organisation.md §5) — il applique une durée DÉJÀ PROMUE
   (rgpd-recrutement-candidats.md §5 : 2 ans depuis l'inscription), il ne supprime jamais librement. Cette autorisation est
   portée par l'exception inscrite dans table-des-crans.yaml v1.6 (même PR). La mise en place de
-  son privilège (identité, octrois Graph de suppression) reste un RUNBOOK HUMAIN. INSCRIT au
-  backlog, NON construit ici : ce chantier définit le mécanisme et son autorisation de cran ;
-  son implémentation (code + runbook privilège) viendra quand il sera ordonnancé.
+  son privilège (identité, octrois Graph de suppression) reste un RUNBOOK HUMAIN. CONSTRUIT ET PROMU AU CANON : skill purge-recrutement v1.1 promu (22 juin 2026) ;
+  code outils/purge-recrutement/purge.py présent ; runbooks de privilège posés le 19 juin 2026
+  (colonne OppositionVivier sur liste Candidats + identité managée id-allia-purge-recrutement
+  Sites.Selected/write + journalisation T-0003 active). RESTE POUR SOLDER : première purge
+  réelle éprouvée sur la vraie donnée (aucun candidat éligible à ce jour ; rapport en
+  Zone-de-proposition à produire au premier passage).
