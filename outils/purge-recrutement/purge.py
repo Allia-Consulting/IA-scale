@@ -1,15 +1,15 @@
 """Mécanisme de purge gouvernée des données de recrutement — Allia Consulting.
 
-Skill : skills/purge-recrutement/SKILL.md (CANDIDAT — non promu à ce jour).
+Skill : skills/purge-recrutement/SKILL.md (promu v1.1 — 22 juin 2026).
 Chantier : backlog/chantiers/T-0013.yaml (T-0013-d).
 Contrat de référence : contrats/socle/rgpd-recrutement-candidats.md §5 (v1.4).
 Exception gouvernée : contrats/socle/table-des-crans.yaml v1.7.
 
-ARTEFACT CANDIDAT — NON EXÉCUTABLE EN PRODUCTION tant que les prérequis §6 du skill
-ne sont pas TOUS soldés. État au jour de l'écriture :
+ARTEFACT OPÉRATIONNEL — skill promu v1.1 (22 juin 2026), privilège posé. Reste la 1re
+exécution réelle (aucun candidat éligible à ce jour). État des prérequis §6 du skill :
   - [fait]   colonne OppositionVivier sur liste Candidats (runbook 19 juin 2026)
   - [fait]   identité id-allia-purge-recrutement créée + Sites.Selected write (runbook 19 juin 2026)
-  - [reste]  PROMOTION du skill purge-recrutement (geste du gardien) — PRÉREQUIS À LA MISE EN SERVICE
+  - [fait]   PROMOTION du skill purge-recrutement v1.1 (gardien, 22 juin 2026)
   - [fait]   journalisation active sur liste Candidats (T-0003)
 
 Ce script applique la règle de rétention DÉJÀ PROMUE au canon :
