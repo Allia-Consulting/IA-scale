@@ -229,6 +229,61 @@
   white-space: nowrap;
 }
 
+/* Suivi par étape (T-0013-b) — trajectoire candidat dans le détail déplié.
+   Une ligne par candidat : on EMPILE (identité, trajectoire, dernier interviewer)
+   plutôt que la disposition « libellé ↔ statut » des autres détails. */
+.suiviRow {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.suiviIdent {
+  font-family: var(--font-structure);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+/* Jalons du pipeline : sobres, séparés par un chevron discret — aucune icône
+   colorée, aucune pastille (une étape franchie n'est pas une décision). */
+.trajectoire {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+}
+
+.jalonSep {
+  color: var(--color-stone-border);
+  user-select: none;
+}
+
+.jalon {
+  white-space: nowrap;
+}
+
+/* Franchi : acquis, posé mais sans emphase. */
+.jalonFranchi {
+  color: var(--color-stone-text);
+}
+
+/* Courant : où en est le candidat — graisse + soulignement, jamais une couleur. */
+.jalonCourant {
+  color: var(--color-ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* À venir : encore hypothétique — atténué. */
+.jalonAVenir {
+  color: var(--color-stone-muted);
+  opacity: 0.6;
+}
+
 /* Action (agir) — geste séparé, inerte en v1 */
 .action {
   display: flex;

@@ -123,3 +123,76 @@ export function compterDecisions(zones: ReadonlyArray<ZoneDemo>): number {
     0
   );
 }
+
+// ── Suivi par étape (T-0013-b) ───────────────────────────────────────────────
+// Enrichissement du cockpit : on suit la trajectoire d'un candidat le long du
+// pipeline canonique du modele-donnees.md. Lecture seule, valeurs FICTIVES.
+
+/** Pipeline canonique figé — ordre du modele-donnees.md (entité Candidat). */
+export const ETAPES_PIPELINE = ['E1', 'E2', 'E3', 'Proposition', 'Acceptée', 'Refusée'] as const;
+export type EtapePipeline = typeof ETAPES_PIPELINE[number];
+
+export interface SuiviCandidat {
+  /** Identifiant stable (ex. 'C-021'). */
+  readonly id: string;
+  /** Grade visé (ex. 'Consultant Senior'). */
+  readonly grade: string;
+  /** Position actuelle dans le pipeline. */
+  readonly etapeCourante: EtapePipeline;
+  /** Dernier interviewer / owner d'action — point d'ancrage de la sous-capacité 1b. */
+  readonly responsableAction: string;
+}
+
+export interface SuiviDemo {
+  readonly candidats: ReadonlyArray<SuiviCandidat>;
+}
+
+/**
+ * Cohérent avec les candidats déjà présents dans `recrutement` (C-021, C-022,
+ * C-019) ; complété pour atteindre les 5 « actifs » annoncés par le compteur
+ * existant. Toutes les valeurs sont FICTIVES. C-020 illustre l'étape terminale.
+ */
+export const suiviCandidats: SuiviDemo = {
+  candidats: [
+    { id: 'C-021', grade: 'Consultant Senior', etapeCourante: 'E2', responsableAction: 'A. Martin' },
+    { id: 'C-022', grade: 'Manager', etapeCourante: 'E1', responsableAction: 'A. Martin' },
+    { id: 'C-019', grade: 'Consultant', etapeCourante: 'Proposition', responsableAction: 'C. Dubois' },
+    { id: 'C-023', grade: 'Consultant Senior', etapeCourante: 'E3', responsableAction: 'C. Dubois' },
+    { id: 'C-020', grade: 'Consultant', etapeCourante: 'Refusée', responsableAction: 'A. Martin' }
+  ]
+};
+
+/** État d'un jalon vis-à-vis de la position courante du candidat. */
+export type AvancementJalon = 'franchi' | 'courant' | 'a_venir';
+
+/**
+ * Trajectoire d'un candidat le long de ETAPES_PIPELINE : pour chaque étape, dit
+ * si elle est franchie, courante ou à venir. Calcul par index, jamais codé en
+ * dur. Cas terminal « Refusée » : c'est l'étape courante (terminale) ; les
+ * étapes E1..Proposition sont marquées selon leur position réelle — on n'invente
+ * aucun jalon franchi au-delà du réel, et « Acceptée » (issue alternative) reste
+ * « à venir » puisqu'elle n'a pas eu lieu.
+ */
+export function avancement(
+  etape: EtapePipeline
+): ReadonlyArray<{ etape: EtapePipeline; etat: AvancementJalon }> {
+  // Issues terminales alternatives : un candidat n'en franchit qu'une seule.
+  const TERMINALES: ReadonlyArray<EtapePipeline> = ['Acceptée', 'Refusée'];
+  const courantIdx = ETAPES_PIPELINE.indexOf(etape);
+  return ETAPES_PIPELINE.map(e => {
+    const idx = ETAPES_PIPELINE.indexOf(e);
+    let etat: AvancementJalon;
+    if (idx === courantIdx) {
+      // L'étape courante (y compris une terminale comme « Refusée »).
+      etat = 'courant';
+    } else if (TERMINALES.indexOf(e) !== -1) {
+      // L'autre issue terminale n'a pas eu lieu — jamais « franchie ».
+      etat = 'a_venir';
+    } else if (idx < courantIdx) {
+      etat = 'franchi';
+    } else {
+      etat = 'a_venir';
+    }
+    return { etape: e, etat };
+  });
+}

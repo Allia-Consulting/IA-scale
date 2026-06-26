@@ -1,8 +1,8 @@
 import * as React from 'react';
 import styles from './TourDeControle.module.scss';
 import type { ITourDeControleProps } from './ITourDeControleProps';
-import type { Compteur, DetailItem } from './demo-data';
-import { pipeCommercial, recrutement, compterDecisions } from './demo-data';
+import type { Compteur, DetailItem, SuiviCandidat, AvancementJalon } from './demo-data';
+import { pipeCommercial, recrutement, compterDecisions, suiviCandidats, avancement } from './demo-data';
 
 const { useState, useCallback } = React;
 
@@ -15,6 +15,30 @@ function statutNode(item: DetailItem): React.ReactElement {
   }
   const variante = item.signal === 'info' ? styles.pillInfo : styles.pillSignal;
   return <span className={`${styles.pill} ${variante}`}>{item.statut}</span>;
+}
+
+// Trajectoire d'un candidat le long du pipeline : jalons rendus SOBREMENT —
+// distinction franchi / courant / à venir par le STYLE seul (graisse, opacité,
+// soulignement du courant). Jamais de pastille, jamais de vert : une étape
+// franchie n'est pas une décision en attente, et l'ambre reste « ta décision ».
+function classeJalon(etat: AvancementJalon): string {
+  if (etat === 'franchi') { return `${styles.jalon} ${styles.jalonFranchi}`; }
+  if (etat === 'courant') { return `${styles.jalon} ${styles.jalonCourant}`; }
+  return `${styles.jalon} ${styles.jalonAVenir}`;
+}
+
+function trajectoireNode(candidat: SuiviCandidat): React.ReactElement {
+  const jalons = avancement(candidat.etapeCourante);
+  return (
+    <span className={styles.trajectoire}>
+      {jalons.map((j, i) => (
+        <React.Fragment key={j.etape}>
+          {i > 0 ? <span className={styles.jalonSep} aria-hidden="true">›</span> : null}
+          <span className={classeJalon(j.etat)}>{j.etape}</span>
+        </React.Fragment>
+      ))}
+    </span>
+  );
 }
 
 export default function TourDeControle(props: ITourDeControleProps): React.ReactElement {
@@ -130,6 +154,31 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
           </div>
         </div>
         {renderCompteurs(recrutement.compteurs)}
+
+        {/* Suivi par étape (T-0013-b) — compteur autonome, même mécanique
+            dépli/repli. Valeur DÉRIVÉE du nombre de candidats suivis ; le détail
+            montre la trajectoire de chacun + le dernier interviewer. Lecture seule. */}
+        <button
+          type="button"
+          className={`${styles.counter} ${styles.counterWide}`}
+          aria-expanded={ouverts.has('rec-suivi')}
+          aria-controls="panneau-rec-suivi"
+          onClick={() => basculer('rec-suivi')}
+        >
+          <span className={styles.counterLabel}>Suivi par étape</span>
+          <span className={styles.counterVal}>{suiviCandidats.candidats.length}</span>
+        </button>
+        {ouverts.has('rec-suivi') && (
+          <div id="panneau-rec-suivi" className={styles.detail}>
+            {suiviCandidats.candidats.map(c => (
+              <div key={c.id} className={`${styles.detailRow} ${styles.suiviRow}`}>
+                <span className={styles.suiviIdent}>{c.id} — {c.grade}</span>
+                {trajectoireNode(c)}
+                <span className={styles.metaText}>tenue par {c.responsableAction}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {actionInerte('Valider les synthèses en attente')}
       </div>
 
