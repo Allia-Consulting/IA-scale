@@ -22,7 +22,28 @@ criteres_acceptation:
 - "Le déploiement du .sppkg et la mise en page de l'accueil sont des runbooks humains, jamais l'agent"
 - "Le rendu suit le design system (on consomme, on ne recopie pas)"
 rayon_impact: large
-statut: en_cours
+statut: promu # cockpit construit + deploye tenant-wide + publie + rendu eprouve sur la page d'accueil le 26 juin 2026 ; branchement aux listes M365 reelles = chantier distinct (substrat encore vide, demo assumee)
+execution: >
+  Eprouve sur le reel le 26 juin 2026 (poste du gardien + Claude in Chrome, identite du gardien).
+  PARTIE AGENT (code, deja mergee #98/#99/#101) : web part SPFx 1.23.1 (rig Heft) / React 17,
+  quatre zones (pipe, recrutement, rentabilite, activite) + bloc 'Demande a ton SI', modele
+  voir->creuser->agir, honnetete des donnees (zones reelles vides affichent '—', pipe & recrutement
+  en donnees de demonstration explicitement etiquetees). La zone Recrutement integre T-0013-b
+  (compteur Suivi par etape) comme decide : cockpit = surface unique du collaborateur.
+  PARTIE RUNBOOK HUMAIN DU GARDIEN (cette session) : build production (npx heft build --production,
+  0 erreur, lint OK) puis package (npx heft package-solution --production) -> sharepoint/solution/
+  tour-de-controle.sppkg. App Catalog du tenant CREE (provision unique, declenchee par navigation
+  sous session admin). .sppkg televerse et solution DEPLOYEE : etat Enabled, 'disponible sur tous
+  les sites de l'organisation' (coherent skipFeatureDeployment: true), aucun message d'erreur de
+  package ; aucune permission API a approuver (web part en contexte SharePoint, pas de Graph).
+  Note : l'ajout a Teams a echoue (sans incidence sur SharePoint). Web part placee sur la page
+  d'accueil du site alliaconsuling et PAGE PUBLIEE (Publiee le 26/06/2026) ; rendu verifie sur la
+  page live hors mode edition : sobriete respectee (aucun vert, aucune pastille), vides assumes.
+  Identifiants : solution tour-de-controle-client-side-solution v1.0.0.0, App Catalog a
+  /sites/appcatalog. RESERVE (chantier distinct) : le cockpit lit aujourd'hui des donnees de
+  demonstration ; le branchement aux vraies listes M365 (critere 'lit les listes en consommateur')
+  sera eprouve quand les missions tourneront et que le substrat sera peuple.
+
 note: >
   Construction du cockpit dont la POLITIQUE est figée dans contrats/socle/tour-de-controle.md
   (promu v1.0). Répond au chantier nommé en doctrine §10 (« le cockpit du collaborateur reste
