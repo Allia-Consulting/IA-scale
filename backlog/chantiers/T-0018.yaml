@@ -1,0 +1,51 @@
+id: T-0018
+titre: "Durcissement du compte break-glass — non-expiry du mot de passe + alerte sur connexion"
+capacite: "Capacités habilitantes / Corporate & conformité — Sécurité & données"
+phase: 1
+type_action: securite_infra
+cran: valide
+produit:
+  - "Compte d'accès d'urgence brise-glace01 (UPN brise-glace@AlliaConsuling.onmicrosoft.com, object id d4e2e47f-ef54-400f-9b1e-97b4b4b5011f) durci selon les bonnes pratiques Microsoft pour les comptes d'accès d'urgence : mot de passe non-expirant + alerte de sécurité sur toute connexion."
+  - "VOLET 1 — Mot de passe non-expirant : passwordPolicies = DisablePasswordExpiration sur le compte (un compte break-glass ne doit jamais être verrouillé par une expiration de mot de passe au pire moment)."
+  - "VOLET 2 — Alerte sur connexion : tout sign-in du compte déclenche une alerte critique par email. Chaîne complète : routage des logs Entra vers Log Analytics, puis règle d'alerte Azure Monitor sur la table SigninLogs filtrée sur l'object id."
+  - "DOCTRINE DE TRACE : les gestes d'infrastructure (diagnostic setting, action group, règle d'alerte) sont des FAITS D'EXÉCUTION dont le for est Azure, JAMAIS dupliqués dans le dépôt. Cette fiche enregistre l'état du chantier et ses PREUVES (identifiants réels), pas une copie de l'infra."
+depend_de: []
+contrats_concernes: []
+criteres_acceptation:
+  - "VOLET 1 : passwordPolicies du compte = DisablePasswordExpiration, vérifié par lecture Graph"
+  - "VOLET 2 : les logs SignInLogs + AuditLogs d'Entra sont routés vers le workspace Log Analytics (diagnostic setting actif)"
+  - "VOLET 2 : une règle d'alerte Azure Monitor de type log search existe, ciblée sur l'object id du compte, seuil > 0, sévérité 0 (critique), rattachée à un action group qui notifie le gardien par email"
+  - "ÉPREUVE SUR LE RÉEL (reste à faire) : une connexion réelle du compte break-glass déclenche effectivement l'alerte et l'email est reçu — condition de passage en statut promu"
+rayon_impact: local
+statut: en_cours # volets construits et vérifiés sur le portail le 26 juin 2026 ; reste l'épreuve bout-en-bout (déclenchement réel) avant promu — cohérent avec la définition gardien du SOLDÉ = éprouvé sur le réel
+
+execution: >
+  Travail réalisé le 26 juin 2026 (portail Azure + Graph, identité du gardien, depuis Claude in Chrome).
+  VOLET 1 (non-expiry) : passwordPolicies était null ; PATCH Graph posé DisablePasswordExpiration sur
+  le compte d4e2e47f-ef54-400f-9b1e-97b4b4b5011f, vérifié par relecture (HTTP 204 puis GET). SOLDÉ.
+  VOLET 2 (alerte sign-in), trois pièces, toutes créées et vérifiées sur le réel :
+  (1) Routage logs — diagnostic setting Entra « entra-to-law-securite » (ressource microsoft.aadiam,
+  api-version 2017-04-01) routant SignInLogs + AuditLogs vers le workspace Log Analytics
+  workspace-rgiascaleQW10 (RG rg-ia-scale, francecentral). Création confirmée par la notification
+  « Diagnostics correctement mis à jour » SANS bandeau d'erreur (un premier essai avait échoué en
+  InvalidAuthenticationToken — jeton ARM de session expiré ; corrigé par réauth/refresh du portail).
+  (2) Action group « ag-breakglass-signin » (affichage BreakGlass, RG rg-ia-scale), notification email
+  vers adrien.raque@allia-consulting.com, schéma d'alerte commun activé ; création confirmée.
+  (3) Règle d'alerte log search « alerte-connexion-brise-glace01 » sur le scope workspace-rgiascaleQW10 :
+  requête KQL « SigninLogs | where UserId == \"d4e2e47f-ef54-400f-9b1e-97b4b4b5011f\" | project
+  TimeGenerated, UserPrincipalName, UserId, IPAddress, ResultType, ResultDescription », mesure = nombre
+  de lignes, agrégation Count, granularité/fréquence 5 min, seuil statique > 0, sévérité 0 - Critique,
+  rattachée à l'action group ci-dessus. Règle vérifiée présente dans la liste des règles d'alerte
+  (1/1 résultat, condition « Lignes du tableau > 0 », gravité 0 - Critique).
+  RÉSERVE : l'alerte est muette tant que la table SigninLogs n'est pas peuplée (délai d'ingestion ~15 min
+  après le routage) et ne se déclenchera qu'à la prochaine connexion réelle du compte. Le test
+  bout-en-bout (se connecter une fois avec brise-glace01 et recevoir l'email) reste à faire : c'est la
+  dernière étape avant promu.
+
+note: >
+  Conforme à la doctrine du substrat : les données/faits vivent dans M365/Azure, le dépôt ne porte que
+  les règles versionnées. On n'inscrit donc PAS l'infra elle-même dans Git — seulement l'état du
+  chantier et ses preuves (identifiants réels), pour que le backlog reflète le réel sans en devenir un
+  double éditable. Tous les gestes d'infra ont été faits par le gardien (cran valide) ; aucun droit
+  ni secret manipulé par un agent. Identifiants de référence : tenant a8d48a4e-329b-4302-b83a-5b085cefa944,
+  subscription ba70fdd6-74d4-42c5-adf9-4611be205b9e, RG rg-ia-scale, workspace workspace-rgiascaleQW10.
