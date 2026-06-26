@@ -26,7 +26,7 @@ criteres_acceptation:
   - "Le cran de l'action exposée est auto (table-des-crans.yaml : televerser_brouillon_offre_zone_travail) ; l'émission de l'offre reste proscrite (prendre_engagement_juridique_ou_financier) et humaine"
   - "La mise en service (rebuild image, redéploiement, pose des variables d'env, octroi write sur la bibliothèque) reste RUNBOOK HUMAIN du gardien"
 rayon_impact: local
-statut: à_faire
+statut: promu # T-0017-a (code, PR #95) + T-0017-b (ids posés + écriture réelle prouvée le 26 juin 2026) éprouvés sur le réel
 
 sous_taches:
 
@@ -61,10 +61,11 @@ sous_taches:
     criteres_acceptation:
       - "Les deux ids pointent le dossier 00 - Proposition en cours réel et sont posés sur le service"
       - "La part identité/droits (octroi write sur la bibliothèque) est vérifiée au runbook ; ressources liées aux groupes, jamais aux individus"
+    execution: "runbook exécuté le 26 juin 2026 (Cloud Shell, identité du gardien). IDS RÉSOLUS via le connecteur M365 (sharepoint_folder_search) : drive b!44CicXj16kaqbdbelsTnPUundQ8Qe5JKmBk7kAxljRO8Hx-KrTj1QJbs4Mp6eHK7 (bibliothèque Documents) + folder 01BWFCBZCIIKSDFFWJ5BC3FM5X3PUQXMD7 (00 - Proposition en cours), cibles confirmées par web_url sous AlliaConsulting-Contratsetadministratif. POSÉS sur ca-allia-mcp-graph (RG rg-ia-scale) via az containerapp update --set-env-vars ; révision active ca-allia-mcp-graph--0000007 RunningAtMaxScale/Healthy/100, image 0.4.0. FAIT DURCI : « b! » du drive id corrompu en « bpwd… » par l'expansion d'historique bash lors d'un collage nu ; corrigé en posant la valeur en SIMPLES QUOTES, valeur réelle re-vérifiée par az containerapp show. OCTROI WRITE PROUVÉ (≠ hypothèse) : test d'écriture réel via televerser_brouillon_offre (flux humain délégué Claude Code) → succès, TEST-T0017b-20260626.docx déposé dans 00 - Proposition en cours, item_id 01BWFCBZHER3XU2KLEBJBIORQQ6UEB4QC6. Fichier de test à retirer manuellement (suppression = geste humain, proscrite à l'agent ; collision=fail). Reste hors périmètre T-0017 : la mise en service du skill T-0016-b (génération du brouillon)."
     note: >
-      Runbook humain du gardien. La part identité/droits : l'octroi Sites.Selected + write couvre déjà
-      le site AlliaConsulting-Contratsetadministratif, donc la bibliothèque Documents a priori — à
-      VÉRIFIER au runbook avant la première écriture réelle. Aucune modification de droits à la main par
+      Runbook humain du gardien. La part identité/droits : l'octroi Sites.Selected + write couvre
+      le site AlliaConsulting-Contratsetadministratif et sa bibliothèque Documents — VÉRIFIÉ par
+      écriture réelle le 26 juin 2026 (voir execution). Aucune modification de droits à la main par
       un agent (table-des-crans : proscrite) ; geste du gardien (organisation.md §5).
 
 note: >
