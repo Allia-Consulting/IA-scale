@@ -30,3 +30,15 @@ note: >
   CA actives, break-glass opérationnel. Runbook humain restant : ABM (rattachement matériel),
   Intune (profils, apps, conformité), test bout en bout sur poste de test. La réconciliation
   automatique politique→Intune (T-0008) est non construite ici.
+
+avancement:
+  journal:
+    - date: 2026-06-19
+      fait: "Prérequis Entra (bloc sécurité) soldé — security defaults désactivés, CA actives, break-glass opérationnel."
+    - date: 2026-06-25
+      fait: "MacBook Pro de Sarah Shaiek reçu ; enrôlement initié par Sarah ; appareil visible dans Apple Business Manager (rattachement matériel firme)."
+    - date: 2026-06-26
+      fait: "Constat direct portail Intune (lecture gardien) : MacBook Pro de Sarah ENRÔLÉ et géré par Intune — propriété Entreprise, conformité CONFORME, macOS 26.5 (25F71), UPN sarah.shaiek@allia-consulting.com, dernier check-in 2026-06-25 20:17. Le maillon Intune (enrôlement + conformité) est prouvé côté management."
+  reste_pour_solder:
+    - "Confirmation fonctionnelle de Sarah via message M365 : configuration complète, apps et accès opérationnels pour elle au quotidien. PREUVE À INSÉRER ICI une fois reçue (date + teneur du message)."
+    - "Test bout en bout sur le poste (apps déployées via Intune réellement présentes et fonctionnelles côté utilisateur)."
