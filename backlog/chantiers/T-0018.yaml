@@ -17,7 +17,7 @@ criteres_acceptation:
   - "VOLET 2 : une règle d'alerte Azure Monitor de type log search existe, ciblée sur l'object id du compte, seuil > 0, sévérité 0 (critique), rattachée à un action group qui notifie le gardien par email"
   - "ÉPREUVE SUR LE RÉEL (reste à faire) : une connexion réelle du compte break-glass déclenche effectivement l'alerte et l'email est reçu — condition de passage en statut promu"
 rayon_impact: local
-statut: promu # promu le 2026-06-27 sur ATTESTATION DU GARDIEN (email d'alerte reçu le 2026-06-26 ~22h04 Paris). RÉSERVE : preuve (email/SigninLogs) NON revérifiée par lecture à la source.
+statut: promu # promu le 2026-06-27, clos sur ENGAGEMENT DU GARDIEN (cran valide ; attestation : email d'alerte reçu le 2026-06-26 ~22h04 Paris). La contre-vérification SigninLogs/email à la source n'est PAS attendue : l'engagement gardien tient lieu d'épreuve. Pas une dette ouverte.
 
 execution: >
   Travail réalisé le 26 juin 2026 (portail Azure + Graph, identité du gardien, depuis Claude in Chrome).
@@ -46,7 +46,7 @@ promotion:
   date: 2026-06-27
   par: "gardien (Adrien Raque)"
   base: "ATTESTATION DU GARDIEN — l'email d'alerte de connexion du compte break-glass a été reçu le 2026-06-26 vers 22h04 (heure locale Paris), confirmant le déclenchement de la chaîne alerte (diagnostic setting -> Log Analytics -> règle Azure Monitor -> action group -> email)."
-  reserve: "Preuve NON revérifiée par lecture à la source par le copilote (ni email retrouvé dans Outlook lors de la recherche du 2026-06-27, ni ligne SigninLogs relue sur Azure). Promotion assumée par le gardien sur son attestation, conformément à son autorité (cran valide). Au sens strict de la définition gardien du SOLDÉ = éprouvé sur le réel, l'épreuve est attestée mais non contre-vérifiée."
+  reserve: "Clos sur ENGAGEMENT DU GARDIEN. La preuve à la source (email/SigninLogs) n'existe pas et n'est PAS attendue : le gardien (cran valide) porte l'attestation (email d'alerte reçu le 2026-06-26 ~22h04 Paris) comme épreuve. Décision du 2026-06-27 : la contre-vérification SigninLogs n'est pas une étape en attente ; ce n'est pas une dette ouverte. Critères_acceptation et journal d'origine restent inchangés (historique immuable) ; leur INTENTION (compte break-glass durci, chaîne d'alerte en place) est satisfaite, l'épreuve étant portée par l'engagement gardien."
 
 note: >
   Conforme à la doctrine du substrat : les données/faits vivent dans M365/Azure, le dépôt ne porte que
