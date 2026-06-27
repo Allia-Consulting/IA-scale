@@ -1,7 +1,7 @@
 id: T-0007
 titre: "Onboarding & intégration : capacité chapeau (3 réconciliations d'une décision promue)"
 capacite: "Capacités habilitantes / Onboarding & intégration"
-phase: 4
+phase: 1
 type_action: infrastructure_mcp
 cran: valide
 produit:
@@ -10,7 +10,7 @@ produit:
   - "  - droits : Entra/SSO — via le réconciliateur de droits (organisation.md §5 ; plan §9 T-4.3)"
   - "  - connaissance : Claude/Git — accès au canon et à la mémoire d'organisation"
   - "déclencheur : passage candidat → collaborateur (création de l'identité Entra)"
-depend_de: ["T-0008"]
+depend_de: ["T-0008", "T-0019"]  # parc (T-0008) ET droits (T-0019) désormais éclatés en chantiers actifs — 27 juin 2026
 # Onboarding compose des réconciliateurs qui doivent exister d'abord :
 #   - matériel : réconciliateur politique→Intune = T-0008 (Phase 3/4) ;
 #   - droits   : réconciliateur de droits = plan §9 T-4.3 (Phase 4) — pas encore éclaté en chantier.
@@ -26,7 +26,7 @@ criteres_acceptation:
   - "Chaque réconciliation est au moindre privilège et tracée ; retour arrière par repointage"
   - "CONTRAINTE D'ORDONNANCEMENT RGPD : l'information préalable « mémoire d'organisation » est délivrée AVANT l'activation de l'écoute Teams/Claude du collaborateur — étape qui PRÉCÈDE l'écoute dans la séquence, pas une case de fin de parcours (cadre rgpd-ecoute-teams.md §5)"
 rayon_impact: large
-statut: à_faire
+statut: en_cours
 note: >
   Capacité ajoutée à la carte (organisation.md §2, v1.2). C'est une capacité CHAPEAU : elle
   n'invente pas de nouveau pouvoir, elle ORCHESTRE trois réconciliations d'une même décision
@@ -40,3 +40,13 @@ note: >
   D'ORDONNANCEMENT : l'information PRÉCÈDE l'activation de l'écoute (pas d'écoute d'un collaborateur
   non informé), ce n'est pas une case de fin de parcours. Cadre : contrats/socle/rgpd-ecoute-teams.md
   (§5 transparence). Firme solo aujourd'hui : rien à exécuter, obligation posée comme déclencheur.
+
+# --- ORDONNANCEMENT (gardien, 27 juin 2026) ---
+# Remis en PHASE ACTIVE (phase 1, statut en_cours) dans le mouvement de réordonnancement du Bloc A.
+# Les DEUX réconciliateurs dont dépend l'onboarding chapeau sont désormais des chantiers actifs :
+#   - matériel/parc : T-0008 (réordonnancé en phase active) ;
+#   - droits        : T-0019 (éclaté du plan §9 T-4.3 en chantier réel).
+# La dépendance droits, jusqu'ici nommée en prose seulement, est maintenant ordonnancée :
+# T-0007 n'est plus bloqué sur une jambe manquante. Reste la construction effective des deux
+# réconciliateurs avant que l'onboarding chapeau puisse être bâti puis éprouvé de bout en bout.
+# Rappel RGPD inchangé : information « mémoire d'organisation » AVANT activation de l'écoute (rgpd-ecoute-teams.md §5).

@@ -1,0 +1,44 @@
+id: T-0019
+titre: "Réconciliateur de droits : décision promue → groupes Entra (le guide → Claude → M365)"
+capacite: "Socle d'exploitation / Adoption multi-utilisateurs (RBAC)"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "réconciliateur au moindre privilège qui projette la DÉCISION de délégation promue (organisation.md §3, §5) sur les groupes Entra de périmètre, en idempotent (n'applique que le delta)"
+  - "parallèle au réconciliateur de PARC (T-0008) : même chaîne le guide → Claude → M365, appliquée aux DROITS d'accès au lieu des appareils"
+  - "ressources SharePoint/Teams liées au GROUPE de périmètre (ex. anim-communication), jamais aux individus"
+depend_de: []  # prérequis normatif (organisation.md promu v1.7, §5 chaîne d'autorité des droits) satisfait — vérifié 27 juin 2026
+# Éclaté en chantier réel le 27 juin 2026 (était plan §9 T-4.3, Phase 4, non éclaté). Jumeau de T-0008
+# pour les DROITS. La mise en place du privilège du réconciliateur (app registration au moindre
+# privilège — ne sait gérer QUE ces groupes —, consentement admin, secret) reste un RUNBOOK HUMAIN
+# (organisation.md §5, plan §2), jamais un agent ni Claude.
+contrats_concernes:
+  - "contrats/socle/organisation.md"
+criteres_acceptation:
+  - "Le réconciliateur lit la décision de délégation promue (le canon) et fait correspondre l'appartenance au groupe Entra du périmètre, en idempotent (delta seul)"
+  - "Au moindre privilège : l'app registration ne sait gérer QUE les groupes de périmètre, rien d'autre ; tout changement tracé"
+  - "Les ressources SharePoint/Teams sont liées au groupe, jamais aux individus ; attribuer = ajouter au groupe, révoquer = retirer (retour arrière en une action)"
+  - "La porte humaine reste à la PROMOTION du contrat ; aucun droit ne change hors de la chaîne le guide → Claude → M365"
+  - "Aucun droit n'est saisi à la main : tout est dérivé d'une décision promue (le dérivé n'est jamais le saisi)"
+rayon_impact: large
+statut: en_cours
+note: >
+  Réconciliateur de DROITS — jumeau de T-0008 (parc) pour la chaîne d'autorité des accès.
+  Éclaté en chantier réel le 27 juin 2026, dans le même mouvement que le réordonnancement de T-0008
+  et la remise en phase active de T-0007 (onboarding chapeau). Auparavant nommé en prose seulement
+  (plan §9 T-4.3, organisation.md §5), sans fichier de chantier. Concrétise le §5 d'organisation.md :
+  la décision de délégation (le guide, Git) est la source ; les droits M365 en sont la projection
+  réconciliée au moindre privilège, en idempotent, jamais éditée à la main. C'est la JAMBE DROITS
+  dont dépend l'onboarding chapeau (T-0007) ; sans elle, T-0007 reste une demi-fondation.
+  Runbook humain (ni Claude ni agent) : créer l'app registration, donner le consentement admin,
+  stocker le secret (organisation.md §5).
+
+avancement:
+  journal:
+    - date: 2026-06-27
+      fait: "Chantier éclaté du plan §9 T-4.3 vers un fichier réel, phase active, dans le mouvement de réordonnancement du Bloc A (firme plus solo, T-0006 soldé le 26 juin)."
+  reste_pour_solder:
+    - "Construire le réconciliateur de droits au moindre privilège (lecture canon → delta groupes Entra, idempotent)"
+    - "Runbook humain : app registration au moindre privilège, consentement admin, secret"
+    - "Éprouver sur le réel : projeter une décision de délégation promue sur le groupe de périmètre et vérifier le delta appliqué sans saisie manuelle"
