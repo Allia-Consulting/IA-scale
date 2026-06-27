@@ -3,11 +3,12 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose TROIS opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose QUATRE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
     - televerser_brouillon_offre  : DÉPOSE un brouillon .docx UNIQUEMENT dans « 00 - Proposition en cours ».
+    - reconcilier_groupe_perimetre : RÉCONCILIE l'appartenance d'un groupe de périmètre (delta idempotent), cible bornée par liste blanche.
 
 Transport & santé :
 
@@ -77,6 +78,7 @@ ENV_SITE_ID = "GRAPH_SITE_ID"
 ENV_PROPOSITION_LIST_ID = "GRAPH_PROPOSITION_LIST_ID"
 ENV_BROUILLON_DRIVE_ID = "GRAPH_BROUILLON_DRIVE_ID"      # bibliothèque Documents (cible figée du dépôt de brouillon)
 ENV_BROUILLON_FOLDER_ID = "GRAPH_BROUILLON_FOLDER_ID"    # dossier « 00 - Proposition en cours » (seule cible de dépôt)
+ENV_GROUPES_PERIMETRE_AUTORISES = "GRAPH_GROUPES_PERIMETRE_AUTORISES"  # CSV d'objectId des groupes de périmètre gérables (liste blanche figée côté serveur)
 
 # stateless_http=True : pas de session persistante côté serveur (exigence Container Apps).
 # host/port portés ICI (le SDK résolu n'accepte host/port NI via l'env FASTMCP_HOST, NI dans run() —
@@ -428,6 +430,128 @@ def televerser_brouillon_offre(
         "item_id": corps.get("id"),
         "nom": corps.get("name"),
         "web_url": corps.get("webUrl"),
+    }
+
+
+@mcp.tool()
+def reconcilier_groupe_perimetre(
+    ctx: Context, group_id: str, membres_attendus: list[str]
+) -> dict[str, Any]:
+    """Réconcilie l'appartenance d'un GROUPE DE PÉRIMÈTRE Entra sur un état désiré (idempotent).
+
+    Projette une DÉCISION DE DÉLÉGATION promue (organisation.md §3, §5 — « le guide ») sur le
+    groupe Entra du périmètre, en n'appliquant QUE le delta. « Le dérivé n'est jamais le saisi » :
+    l'état désiré (membres_attendus) dérive d'une décision promue, résolue EN AMONT par Claude Code
+    à partir du canon ; cet outil ne DÉCIDE rien — il réconcilie l'état réel sur l'état désiré.
+
+    Chaîne d'autorité (organisation.md §5) : le guide (Git) -> Claude (réconciliation au moindre
+    privilège) -> M365 (appartenance au groupe ouvre l'accès). Attribuer = ajouter au groupe ;
+    révoquer = retirer (retour arrière en une action).
+
+    Garde-fous inscrits dans le code :
+    - LISTE BLANCHE figée côté serveur (GRAPH_GROUPES_PERIMETRE_AUTORISES) : group_id hors liste
+      => PermissionError, aucun appel d'écriture. Défense en profondeur EN PLUS de la borne
+      Administrative Unit côté Entra (runbook T-0019-b) : le code ne peut toucher QUE des groupes
+      de périmètre déclarés.
+    - IDEMPOTENT : seul le delta est appliqué (POST $ref pour ajouter, DELETE $ref pour retirer) ;
+      delta vide => aucun appel d'écriture.
+    - membres_attendus = [] est autorisé et signifie « vider le groupe » (révocation totale,
+      réversible) : geste légitime de la chaîne, jamais une suppression de données.
+
+    Le pouvoir de gérer l'appartenance est conféré HORS code : rôle Entra Groups Administrator
+    assigné au service principal de l'identité managée, SCOPÉ à une Administrative Unit ne contenant
+    que les groupes de périmètre (runbook T-0019-b). Le scope Graph reste .default ; aucun secret.
+
+    Args:
+        group_id: objectId du groupe de périmètre à réconcilier (doit être dans la liste blanche).
+        membres_attendus: liste d'objectId Entra (GUID) des membres attendus (état désiré).
+
+    Returns:
+        dict {"group_id", "ajoutes", "retires", "inchanges", "etat_final"} décrivant le delta.
+
+    Raises:
+        PermissionError: group_id hors liste blanche (cible non autorisée), ou appelant non validé.
+        ValueError: membres_attendus mal formé.
+        ConfigManquante: GRAPH_GROUPES_PERIMETRE_AUTORISES absente.
+    """
+    _verifier_appelant(ctx)
+
+    # --- Liste blanche figée côté serveur (défense en profondeur) ---
+    csv_autorises = os.environ.get(ENV_GROUPES_PERIMETRE_AUTORISES, "").strip()
+    if not csv_autorises:
+        raise ConfigManquante(
+            "Configuration incomplète : variable d'environnement manquante "
+            f"{ENV_GROUPES_PERIMETRE_AUTORISES}. Voir outils/mcp-graph/README.md."
+        )
+    autorises = {g.strip() for g in csv_autorises.split(",") if g.strip()}
+    if group_id not in autorises:
+        logger.warning("réconciliation refusée — group_id=%s hors liste blanche", group_id)
+        raise PermissionError(
+            "Cible non autorisée : ce group_id n'est pas un groupe de périmètre déclaré "
+            f"({ENV_GROUPES_PERIMETRE_AUTORISES}). Aucune écriture effectuée."
+        )
+
+    # --- Validation de l'état désiré ---
+    if not isinstance(membres_attendus, list) or any(
+        (not isinstance(m, str)) or len(m.strip()) < 30 or " " in m.strip()
+        for m in membres_attendus
+    ):
+        raise ValueError(
+            "`membres_attendus` doit être une liste d'objectId Entra (GUID). "
+            "Liste vide autorisée (= vider le groupe)."
+        )
+    attendus = {m.strip() for m in membres_attendus}
+
+    # --- Lecture des membres actuels (pagination @odata.nextLink) ---
+    actuels: set[str] = set()
+    url = f"{GRAPH_BASE}/groups/{group_id}/members"
+    params = {"$select": "id", "$top": "999"}
+    with httpx.Client(timeout=30) as client:
+        page = client.get(url, headers=_entetes(), params=params)
+        page.raise_for_status()
+        corps = page.json()
+        for membre in corps.get("value", []):
+            mid = membre.get("id")
+            if mid:
+                actuels.add(mid)
+        suivant = corps.get("@odata.nextLink")
+        while suivant:
+            page = client.get(suivant, headers=_entetes())
+            page.raise_for_status()
+            corps = page.json()
+            for membre in corps.get("value", []):
+                mid = membre.get("id")
+                if mid:
+                    actuels.add(mid)
+            suivant = corps.get("@odata.nextLink")
+
+        a_ajouter = sorted(attendus - actuels)
+        a_retirer = sorted(actuels - attendus)
+        inchanges = sorted(attendus & actuels)
+
+        # --- Application du delta SEUL (idempotent) ---
+        for oid in a_ajouter:
+            ajout = client.post(
+                f"{GRAPH_BASE}/groups/{group_id}/members/$ref",
+                headers={**_entetes(), "Content-Type": "application/json"},
+                json={"@odata.id": f"{GRAPH_BASE}/directoryObjects/{oid}"},
+            )
+            ajout.raise_for_status()
+            logger.info("réconciliation — group_id=%s AJOUT membre=%s", group_id, oid)
+        for oid in a_retirer:
+            retrait = client.delete(
+                f"{GRAPH_BASE}/groups/{group_id}/members/{oid}/$ref",
+                headers=_entetes(),
+            )
+            retrait.raise_for_status()
+            logger.info("réconciliation — group_id=%s RETRAIT membre=%s", group_id, oid)
+
+    return {
+        "group_id": group_id,
+        "ajoutes": a_ajouter,
+        "retires": a_retirer,
+        "inchanges": inchanges,
+        "etat_final": sorted(attendus),
     }
 
 
