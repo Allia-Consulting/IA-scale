@@ -22,7 +22,7 @@ criteres_acceptation:
   - "La porte humaine reste à la PROMOTION du contrat ; aucun droit ne change hors de la chaîne le guide → Claude → M365"
   - "Aucun droit n'est saisi à la main : tout est dérivé d'une décision promue (le dérivé n'est jamais le saisi)"
 rayon_impact: large
-statut: en_cours
+statut: soldé # éprouvé sur le réel le 2026-06-27 (épreuve B.5) ; vérifié à la source par le gardien
 note: >
   Réconciliateur de DROITS — jumeau de T-0008 (parc) pour la chaîne d'autorité des accès.
   Éclaté en chantier réel le 27 juin 2026, dans le même mouvement que le réordonnancement de T-0008
@@ -38,7 +38,23 @@ avancement:
   journal:
     - date: 2026-06-27
       fait: "Chantier éclaté du plan §9 T-4.3 vers un fichier réel, phase active, dans le mouvement de réordonnancement du Bloc A (firme plus solo, T-0006 soldé le 26 juin)."
-  reste_pour_solder:
-    - "Construire le réconciliateur de droits au moindre privilège (lecture canon → delta groupes Entra, idempotent)"
-    - "Runbook humain : app registration au moindre privilège, consentement admin, secret"
-    - "Éprouver sur le réel : projeter une décision de délégation promue sur le groupe de périmètre et vérifier le delta appliqué sans saisie manuelle"
+    - date: 2026-06-27
+      fait: >
+        ÉPROUVÉ SUR LE RÉEL — T-0019 soldé. Réconciliateur construit comme 4e outil MCP
+        reconcilier_groupe_perimetre (PR #111, image 0.5.0, révision ca-allia-mcp-graph--0000008).
+        Épreuve B.5 : ajout réel de Sarah Shaiek (9eeb5c81-…) sur le groupe de périmètre
+        anim-communication (8c7e9602-…) par projection de la décision promue (organisation.md §3),
+        SANS saisie manuelle ; idempotence (rejeu = delta vide) ; borne liste blanche
+        (group_id hors périmètre refusé, PermissionError) ; retour arrière (état désiré vide = retrait) ;
+        état final conforme au canon. Vérifié À LA SOURCE (Entra) par le gardien : Sarah membre.
+      decision_gardien: >
+        PRIVILÈGE = OPTION 1, IDENTITÉ MANAGÉE ZÉRO-SECRET (divergence assumée vs lettre §5
+        « app registration + secret »). Le moindre privilège est atteint AUTREMENT : rôle Entra
+        « Administrateur de groupes » assigné au service principal de l'identité managée id-allia-mcp-graph,
+        SCOPÉ à l'Administrative Unit au-perimetres-droits (b2fe4a22-…) qui ne contient que les groupes
+        de périmètre ; PLUS une liste blanche figée côté serveur (GRAPH_GROUPES_PERIMETRE_AUTORISES) en
+        défense en profondeur. Cohérent avec la doctrine zéro-token-store du MCP (T-0015) : aucun secret
+        créé, distribué ni stocké. Les critères_acceptation d'origine mentionnant « app registration / secret »
+        restent inchangés (historique immuable) ; ils sont satisfaits dans leur INTENTION (moindre privilège,
+        traçabilité, porte humaine à la promotion) par ce moyen décidé par le gardien.
+  reste_pour_solder: [] # soldé le 2026-06-27 — rien ne reste. (Runbook réel : MI zéro-secret + rôle scopé AU, PAS app+secret — voir journal/decision_gardien.)
