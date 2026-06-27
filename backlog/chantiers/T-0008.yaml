@@ -1,13 +1,13 @@
 id: T-0008
-titre: "Réconciliateur politique de parc → Intune (Phase 3/4 — inscrit au backlog, non construit)"
+titre: "Réconciliateur politique de parc → Intune (réordonnancé en phase active — firme plus solo)"
 capacite: "Socle d'exploitation / Parc & gestion de poste"
-phase: 3
+phase: 1
 type_action: infrastructure_mcp
 cran: valide
 produit:
   - "réconciliateur au moindre privilège qui projette la POLITIQUE de parc promue (parc-collaborateur.md) sur Intune, en idempotent (n'applique que le delta)"
   - "parallèle au réconciliateur de DROITS (organisation.md §5 ; plan §9 T-4.3) : même chaîne guide → Claude → M365, appliquée aux APPAREILS"
-depend_de: []
+depend_de: []  # prérequis normatif (parc-collaborateur.md promu v1.2) satisfait — vérifié 27 juin 2026
 # Inscrit au BACKLOG, PAS à construire maintenant (Phase 3/4). Aucune dépendance dure tant
 # qu'il n'est pas ordonnancé. PRÉREQUIS NORMATIF : promotion de parc-collaborateur.md (la
 # politique à projeter). La mise en place du privilège du réconciliateur (app/identité, octrois)
@@ -21,7 +21,7 @@ criteres_acceptation:
   - "La porte humaine reste à la PROMOTION de la politique ; le déploiement reste sous contrôle du gardien"
   - "Aucun paramètre de poste n'est saisi à la main : tout est dérivé d'une décision promue"
 rayon_impact: large
-statut: à_faire
+statut: en_cours
 note: >
   Chantier de PHASE 3/4 (parallèle au réconciliateur de droits, plan §9 T-4.3, et à la couche de
   résolution automatique de Phase 3). INSCRIT AU BACKLOG, À NE PAS CONSTRUIRE EN PHASE 1 — c'est
@@ -29,3 +29,12 @@ note: >
   (parc-collaborateur.md, candidat) et on exécute par RUNBOOK HUMAIN (T-0006) ; l'automatisation
   politique→Intune vient plus tard. C'est l'application aux APPAREILS de la chaîne d'autorité
   guide → Claude → M365 (doctrine §8, ligne candidate v1.4).
+
+# --- RÉORDONNANCEMENT (gardien, 27 juin 2026) ---
+# Passé de Phase 3/backlog à PHASE ACTIVE (phase 1, statut en_cours).
+# Justification : la firme n'est plus solo — T-0006 soldé le 26 juin 2026 (Sarah opérationnelle).
+# L'hypothèse « firme solo + runbook humain suffit » (décision du 8 juin) est LEVÉE.
+# Couplé au même mouvement : éclatement du réconciliateur de DROITS en chantier réel T-0019,
+# et remise en phase active de T-0007 (onboarding chapeau) avec ses deux dépendances ordonnancées.
+# La mise en place du privilège (app registration, consentement, secret) demeure un RUNBOOK HUMAIN
+# (organisation.md §5, plan §2) — ni Claude ni agent.
