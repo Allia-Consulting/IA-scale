@@ -6,13 +6,14 @@
 
 ## Ce que c'est
 
-Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **trois** opérations sur Microsoft Graph, et trois seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **quatre** opérations sur Microsoft Graph, et quatre seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
 | `list_items(list_id, top=50)` | **lecture** | `GET /sites/{site}/lists/{list}/items?$expand=fields` — lit les éléments d'une liste SharePoint du site AlliaConsuling. |
 | `create_list_item(fields)` | **écriture** | `POST /sites/{site}/lists/{PROPOSITION}/items` — crée un élément **uniquement** dans la liste « Zone-de-proposition ». |
 | `televerser_brouillon_offre(nom_fichier, contenu_base64, candidat_id)` | **écriture fichier** | `PUT .../drives/{BROUILLON_DRIVE}/.../{nom}.docx:/content` — dépose un **brouillon .docx** dans le dossier **« 00 - Proposition en cours » FIGÉ**, jamais ailleurs ; collision = **fail**. **Code en PR B (`T-0017-a`).** |
+| `reconcilier_groupe_perimetre(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance d'un groupe de périmètre sur un **état désiré** (delta idempotent : ajoute/retire le seul delta) ; cible bornée par **liste blanche figée** + **AU** (`T-0019-a`). |
 
 ## Transport HTTP streamable et endpoint de santé
 
@@ -38,6 +39,17 @@ Il est donc *structurellement* impossible d'écrire dans une source : l'écritur
 
 Cran de l'action : **auto** (`table-des-crans.yaml` : `televerser_brouillon_offre_zone_travail`) — brouillon non émis, réversible, interne, local. L'émission de l'offre reste **proscrite et humaine**. **Le code de cet outil arrive en PR B (chantier `T-0017-a`)** ; la présente PR fige l'architecture dans le canon.
 
+## Le garde-fou structurel (ter) : le réconciliateur ne gère que des groupes de périmètre déclarés
+
+`reconcilier_groupe_perimetre` projette une **décision de délégation déjà promue** (`organisation.md` §3, §5) sur le groupe Entra du périmètre. « Le dérivé n'est jamais le saisi » : l'**état désiré** (`membres_attendus`) est résolu **en amont** par Claude Code à partir du canon promu ; l'outil ne **décide** rien — il réconcilie l'état réel sur l'état désiré. La chaîne d'autorité reste **le guide (Git) → Claude (réconciliation au moindre privilège) → M365** (`organisation.md` §5).
+
+Deux bornes **indépendantes** encadrent ce pouvoir, en défense en profondeur :
+
+- **Liste blanche figée côté serveur** (`GRAPH_GROUPES_PERIMETRE_AUTORISES`, CSV d'objectId) : un `group_id` hors liste lève `PermissionError` **avant tout appel d'écriture**. Même esprit que la liste/dossier figés des autres outils — le code ne peut toucher **que** des groupes de périmètre explicitement déclarés.
+- **Administrative Unit côté Entra** (runbook `T-0019-b`) : le rôle Groups Administrator du service principal de l'identité managée est **scopé à une AU** ne contenant que les groupes de périmètre. Le scope Graph reste `.default` ; **aucun secret**.
+
+L'opération est **idempotente** : seul le **delta** est appliqué (`POST $ref` pour ajouter, `DELETE $ref` pour retirer) ; un delta vide ne touche rien. `membres_attendus = []` est **autorisé** et signifie « vider le groupe » (révocation totale, **réversible** — jamais une suppression de données). Chaque retrait est **journalisé** par objectId (traçabilité par personne). Le pouvoir réel d'écriture sur l'appartenance est conféré **hors code**, au runbook humain `T-0019-b` ; le présent code reste **inerte** tant que la variable et l'AU ne sont pas posées.
+
 ## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
 L'authentification vers Microsoft Graph passe par une **identité managée** (managed identity), **jamais** par un secret applicatif. Le credential est choisi à l'exécution selon `AZURE_ENV` :
@@ -61,6 +73,7 @@ Le serveur lit sa configuration **dans l'environnement**, au moment d'un appel d
 | `GRAPH_PROPOSITION_LIST_ID` | Identifiant de la liste « Zone-de-proposition » — **seule cible d'écriture** de liste. |
 | `GRAPH_BROUILLON_DRIVE_ID` | Identifiant de la bibliothèque `Documents` (drive) — **cible figée** du dépôt de brouillon (`televerser_brouillon_offre`). Consommée par le code de `T-0017-a` (PR B). |
 | `GRAPH_BROUILLON_FOLDER_ID` | Identifiant du dossier « 00 - Proposition en cours » — **seule cible de dépôt** du brouillon, jamais le niveau « 01 ». Consommée par le code de `T-0017-a` (PR B). |
+| `GRAPH_GROUPES_PERIMETRE_AUTORISES` | **Liste blanche** (CSV d'objectId **publics**) des groupes de périmètre que `reconcilier_groupe_perimetre` peut gérer — défense en profondeur **en plus** de la borne AU (`T-0019-b`). Renseignée au runbook B ; absente = outil fermé (`ConfigManquante`). **Pas un secret.** |
 
 Le code échoue avec un message clair (`ConfigManquante`) si `GRAPH_SITE_ID` ou `GRAPH_PROPOSITION_LIST_ID` manque — il ne devine ni ne stocke rien. **Aucun secret n'apparaît dans cette liste** : l'auth Graph est portée par l'identité managée.
 
