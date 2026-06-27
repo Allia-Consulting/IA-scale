@@ -17,7 +17,7 @@ criteres_acceptation:
   - "VOLET 2 : une règle d'alerte Azure Monitor de type log search existe, ciblée sur l'object id du compte, seuil > 0, sévérité 0 (critique), rattachée à un action group qui notifie le gardien par email"
   - "ÉPREUVE SUR LE RÉEL (reste à faire) : une connexion réelle du compte break-glass déclenche effectivement l'alerte et l'email est reçu — condition de passage en statut promu"
 rayon_impact: local
-statut: en_cours # volets construits et vérifiés sur le portail le 26 juin 2026 ; reste l'épreuve bout-en-bout (déclenchement réel) avant promu — cohérent avec la définition gardien du SOLDÉ = éprouvé sur le réel
+statut: promu # promu le 2026-06-27 sur ATTESTATION DU GARDIEN (email d'alerte reçu le 2026-06-26 ~22h04 Paris). RÉSERVE : preuve (email/SigninLogs) NON revérifiée par lecture à la source.
 
 execution: >
   Travail réalisé le 26 juin 2026 (portail Azure + Graph, identité du gardien, depuis Claude in Chrome).
@@ -41,6 +41,12 @@ execution: >
   après le routage) et ne se déclenchera qu'à la prochaine connexion réelle du compte. Le test
   bout-en-bout (se connecter une fois avec brise-glace01 et recevoir l'email) reste à faire : c'est la
   dernière étape avant promu.
+
+promotion:
+  date: 2026-06-27
+  par: "gardien (Adrien Raque)"
+  base: "ATTESTATION DU GARDIEN — l'email d'alerte de connexion du compte break-glass a été reçu le 2026-06-26 vers 22h04 (heure locale Paris), confirmant le déclenchement de la chaîne alerte (diagnostic setting -> Log Analytics -> règle Azure Monitor -> action group -> email)."
+  reserve: "Preuve NON revérifiée par lecture à la source par le copilote (ni email retrouvé dans Outlook lors de la recherche du 2026-06-27, ni ligne SigninLogs relue sur Azure). Promotion assumée par le gardien sur son attestation, conformément à son autorité (cran valide). Au sens strict de la définition gardien du SOLDÉ = éprouvé sur le réel, l'épreuve est attestée mais non contre-vérifiée."
 
 note: >
   Conforme à la doctrine du substrat : les données/faits vivent dans M365/Azure, le dépôt ne porte que
