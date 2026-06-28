@@ -3,13 +3,14 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose CINQ opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose SIX opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
     - televerser_brouillon_offre  : DÉPOSE un brouillon .docx UNIQUEMENT dans « 00 - Proposition en cours ».
     - reconcilier_groupe_perimetre : RÉCONCILIE l'appartenance d'un groupe de périmètre (delta idempotent), cible bornée par liste blanche.
     - reconcilier_groupe_parc      : RÉCONCILIE l'appartenance du groupe de PARC d'enrôlement (delta idempotent), cible bornée par liste blanche DÉDIÉE.
+    - lire_annuaire               : LIT l'annuaire Entra (lecture seule) — résout un UPN en objectId et/ou liste les membres d'un groupe borné aux listes blanches.
 
 Transport & santé :
 
@@ -288,6 +289,34 @@ def _entetes() -> dict[str, str]:
     """En-têtes Graph avec un jeton frais (identité managée). Construit le credential au call-time."""
     token = _credential().get_token(GRAPH_SCOPE).token
     return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+
+def _lire_membres_groupe(client: httpx.Client, group_id: str) -> set[str]:
+    """Lit l'ensemble des objectId des membres d'un groupe (pagination @odata.nextLink).
+
+    Lecture seule. Ne décide rien, n'écrit rien.
+    """
+    actuels: set[str] = set()
+    url = f"{GRAPH_BASE}/groups/{group_id}/members"
+    params = {"$select": "id", "$top": "999"}
+    page = client.get(url, headers=_entetes(), params=params)
+    page.raise_for_status()
+    corps = page.json()
+    for membre in corps.get("value", []):
+        mid = membre.get("id")
+        if mid:
+            actuels.add(mid)
+    suivant = corps.get("@odata.nextLink")
+    while suivant:
+        page = client.get(suivant, headers=_entetes())
+        page.raise_for_status()
+        corps = page.json()
+        for membre in corps.get("value", []):
+            mid = membre.get("id")
+            if mid:
+                actuels.add(mid)
+        suivant = corps.get("@odata.nextLink")
+    return actuels
 
 
 @mcp.tool()
@@ -683,6 +712,85 @@ def reconcilier_groupe_parc(
         "inchanges": inchanges,
         "etat_final": sorted(attendus),
     }
+
+
+def _groupes_lisibles() -> set[str]:
+    """Union des listes blanches périmètre + parc (les seuls groupes que ce serveur connaît)."""
+    perim = os.environ.get(ENV_GROUPES_PERIMETRE_AUTORISES, "").strip()
+    parc = os.environ.get(ENV_GROUPES_PARC_AUTORISES, "").strip()
+    lisibles: set[str] = set()
+    for csv in (perim, parc):
+        lisibles |= {g.strip() for g in csv.split(",") if g.strip()}
+    return lisibles
+
+
+@mcp.tool()
+def lire_annuaire(
+    ctx: Context, upn: str = "", group_id: str = ""
+) -> dict[str, Any]:
+    """Lit l'annuaire Entra en LECTURE SEULE : résout un utilisateur par UPN et/ou liste les membres d'un groupe.
+
+    Outil de RÉSOLUTION pour l'onboarding (T-0007) et l'épreuve : Claude Code résout les objectId
+    et l'appartenance réelle AVANT tout appel mutant, au lieu de figer des GUID de mémoire (interdit
+    par la doctrine §2) ou de subir l'absence de dry-run des réconciliateurs.
+
+    LECTURE SEULE STRICTE : n'écrit jamais, ne réconcilie rien.
+
+    Bornage (moindre privilège, cohérent avec les réconciliateurs) :
+    - `upn` : résolu sur les utilisateurs du tenant (GET /users/{upn}).
+    - `group_id` : DOIT être dans l'union des listes blanches périmètre ∪ parc, sinon PermissionError.
+
+    Au moins l'un des deux paramètres doit être fourni.
+
+    Args:
+        upn: userPrincipalName (email) à résoudre en objectId. Optionnel.
+        group_id: objectId d'un groupe autorisé dont lister les membres. Optionnel, borné liste blanche.
+
+    Returns:
+        dict avec, selon les paramètres :
+          - "utilisateur": {"id", "displayName", "userPrincipalName"} si upn fourni et trouvé ;
+          - "membres": [objectId, ...] si group_id fourni (et autorisé).
+
+    Raises:
+        PermissionError: group_id hors liste blanche, ou appelant non validé.
+        ValueError: aucun paramètre fourni.
+    """
+    _verifier_appelant(ctx)
+
+    if not upn and not group_id:
+        raise ValueError("Fournir au moins `upn` (résolution utilisateur) ou `group_id` (membres).")
+
+    resultat: dict[str, Any] = {}
+
+    with httpx.Client(timeout=30) as client:
+        if upn:
+            url = f"{GRAPH_BASE}/users/{upn}"
+            params = {"$select": "id,displayName,userPrincipalName"}
+            reponse = client.get(url, headers=_entetes(), params=params)
+            reponse.raise_for_status()
+            corps = reponse.json()
+            resultat["utilisateur"] = {
+                "id": corps.get("id"),
+                "displayName": corps.get("displayName"),
+                "userPrincipalName": corps.get("userPrincipalName"),
+            }
+
+        if group_id:
+            lisibles = _groupes_lisibles()
+            if not lisibles:
+                raise ConfigManquante(
+                    "Aucune liste blanche configurée : "
+                    f"{ENV_GROUPES_PERIMETRE_AUTORISES} et {ENV_GROUPES_PARC_AUTORISES} absentes."
+                )
+            if group_id not in lisibles:
+                logger.warning("lecture refusée — group_id=%s hors liste blanche lecture", group_id)
+                raise PermissionError(
+                    "Cible non autorisée : ce group_id n'est ni un groupe de périmètre ni un "
+                    "groupe de parc déclaré. Aucune lecture effectuée."
+                )
+            resultat["membres"] = sorted(_lire_membres_groupe(client, group_id))
+
+    return resultat
 
 
 if __name__ == "__main__":
