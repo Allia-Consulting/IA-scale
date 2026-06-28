@@ -126,8 +126,10 @@ criteres_acceptation:                           # Definition of Done, vérifiabl
   - "Le skill produit un brief structuré à partir d'une proposition gagnée"
   - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien)"
 rayon_impact: "local"                           # rempli/contrôlé par l'agent-gardien
-statut: "à_faire"                               # à_faire | candidat | promu | abandonné
+statut: "à_faire"                               # à_faire | candidat | en_cours | promu | soldé | abandonné
 ```
+
+Cycle de vie : à_faire → candidat → en_cours → promu → soldé. **SOLDÉ = promu ET ÉPROUVÉ SUR LE RÉEL** (exécution réelle sur vraie donnée tenant), distinct de « construit / promu au canon ».
 
 Règle : un agent ne traite **que** des tâches dont les dépendances sont `promu`, et n'écrit jamais directement le pointeur canonique — il ouvre une PR.
 
@@ -164,6 +166,7 @@ But unique de la phase : atteindre le **niveau agentique**, défini par le test 
 - **Produit** : `pull_request_template.md` (candidat = PR, rattaché à un SHA) ; `CODEOWNERS` plaçant le gardien sur `/doctrine` et `/contrats/socle` ; protection de branche imposant revue + statut CI vert avant merge.
 - **Runbook humain** : réglages de protection de branche et droits dépôt (= toi).
 - **Done** : aucune écriture sur `main` sans PR approuvée ; un revert ramène l'état précédent en une action.
+- **État réel (vérifié 28 juin 2026, ruleset `main-protection` id 17366850, enforcement actif)** : PR obligatoire, suppression et force-push bloqués. Le **statut CI agent-gardien est CONSULTATIF en v0** (aucune règle `required_status_checks` dans le ruleset), par décision du gardien — à rendre requis quand l'agent-gardien mûrit (Phase 2).
 
 ### A0.5 — Premier squelette d'agent-gardien (contrôle de conformité v0)
 - **Objectif** : la « tête-agent » du gardien, version minimale, qui s'exécute sur chaque PR.
@@ -268,6 +271,6 @@ Ce `plan.md` et les `chantiers/*.yaml` sont du **socle**. Toute évolution — r
 3. Périmètre v1 = squelette + tranche verticale « gain d'affaire ». Le reste suit en Phase 4.
 4. Couche de résolution automatique **différée** (Phase 3) ; pull réel côté Claude Code/MCP, refresh manuel des surfaces utilisateur en v1.
 5. Le backlog agent-consommable dans le dépôt est le format de sortie retenu, avec ce document comme couche prose par-dessus.
-6. « Nouveau document » = la présentation cabinet « Talents & recrutement ». La doctrine est adossée en **v1.1 (candidat)**, avec une section d'articulation rôles / grades / trajectoire (§10 bis) ; à promouvoir.
+6. « Nouveau document » = la présentation cabinet « Talents & recrutement ». La doctrine est adossée en **v1.1 (candidat)**, avec une section d'articulation rôles / grades / trajectoire (§10 bis) ; à promouvoir. **Caduc** : le « qui répond de quoi » vit désormais dans le contrat socle SÉPARÉ `contrats/socle/organisation.md` (v1.8), pas dans un §10 bis de la doctrine.
 
 > Pour corriger une hypothèse, ne modifie pas ce fichier directement : ouvre un candidat. Le plan se gouverne comme il prêche.
