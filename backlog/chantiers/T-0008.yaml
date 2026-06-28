@@ -38,3 +38,23 @@ note: >
 # et remise en phase active de T-0007 (onboarding chapeau) avec ses deux dépendances ordonnancées.
 # La mise en place du privilège (app registration, consentement, secret) demeure un RUNBOOK HUMAIN
 # (organisation.md §5, plan §2) — ni Claude ni agent.
+
+avancement:
+  journal:
+    - date: 2026-06-28
+      fait: >
+        5e outil MCP reconcilier_groupe_parc construit (miroir de T-0019), liste blanche dédiée
+        GRAPH_GROUPES_PARC_AUTORISES, privilège posé par runbook (AU au-groupes-socle, rôle Groups
+        Administrator scopé au SP de l'identité managée id-allia-mcp-graph, vérifié à la source).
+        Reste : image 0.6.0 + redéploiement + épreuve réelle.
+  # Portée v1 (décision gardien 28/06) — AJOUT, ne réécrit pas les criteres_acceptation d'origine.
+  portee_v1: >
+    Portée v1 MINIMAL (décision gardien 28/06) = réconcilier l'appartenance du groupe d'enrôlement
+    grp-parc-collaborateur (objectId 20a3885d-baf6-46be-96b5-1e9b59012d43, Assigned/Sécurité/Cloud).
+    La projection complète politique→Intune (profils de configuration / conformité) — formulée dans
+    produit/criteres_acceptation d'origine — est un INCRÉMENT ULTÉRIEUR différé. Les critères d'origine
+    restent inchangés (historique immuable) ; ils sont satisfaits dans leur INTENTION par la v1
+    (chaîne guide → Claude → M365, moindre privilège, idempotence, porte humaine à la promotion).
+  reste_pour_solder:
+    - "Image 0.6.0 + redéploiement de la révision Container App (runbook gardien)"
+    - "Épreuve réelle sur grp-parc-collaborateur (ajout/retrait/idempotence/borne liste blanche), puis passage statut soldé"
