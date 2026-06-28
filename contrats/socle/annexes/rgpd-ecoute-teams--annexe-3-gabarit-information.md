@@ -1,6 +1,7 @@
 # Annexe 3 — Gabarit d'information préalable RGPD (pack d'embauche) — écoute Teams/Claude — Allia Consulting
 
-> **Version** : 1.0 — **CANDIDAT** (pas encore promu). **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-ecoute-teams.md` §5 — transparence) — *en attente de promotion par le gardien*.
+> **Version** : 1.0 — *promu*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-ecoute-teams.md` §5 — transparence) — fait foi.
+> **Changelog** : v1.0 — promu via boucle de promotion, 28 juin 2026 ; corps byte-identique au candidat. Lève le dernier verrou normatif de la transparence (`rgpd-ecoute-teams.md` §5, §12). v1.0 — candidat, 16 juin 2026 : création (gabarit d'information préalable, arbitrage gardien-DPO).
 > **Domicile** : `contrats/socle/annexes/rgpd-ecoute-teams--annexe-3-gabarit-information.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-ecoute-teams.md` (§1 finalité, §2 base légale, §5 transparence, §6 droits), `contrats/socle/annexes/rgpd-ecoute-teams--annexe-1-mise-en-balance.md` (§3 périmètre exact, §4 attentes), `contrats/socle/memoire-organisation.md` (mécanisme).
 > **Nature** : consigne un **arbitrage du gardien-DPO** (16 juin 2026) ; **pas un avis juridique**.
