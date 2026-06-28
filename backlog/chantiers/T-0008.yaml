@@ -21,7 +21,7 @@ criteres_acceptation:
   - "La porte humaine reste à la PROMOTION de la politique ; le déploiement reste sous contrôle du gardien"
   - "Aucun paramètre de poste n'est saisi à la main : tout est dérivé d'une décision promue"
 rayon_impact: large
-statut: en_cours
+statut: soldé # éprouvé sur le réel le 2026-06-28 (épreuve 4 étapes, vérifiée à la source Entra par le gardien)
 note: >
   Chantier de PHASE 3/4 (parallèle au réconciliateur de droits, plan §9 T-4.3, et à la couche de
   résolution automatique de Phase 3). INSCRIT AU BACKLOG, À NE PAS CONSTRUIRE EN PHASE 1 — c'est
@@ -47,6 +47,18 @@ avancement:
         GRAPH_GROUPES_PARC_AUTORISES, privilège posé par runbook (AU au-groupes-socle, rôle Groups
         Administrator scopé au SP de l'identité managée id-allia-mcp-graph, vérifié à la source).
         Reste : image 0.6.0 + redéploiement + épreuve réelle.
+    - date: 2026-06-28
+      fait: >
+        ÉPROUVÉ SUR LE RÉEL — T-0008 soldé. Épreuve 4 étapes via reconcilier_groupe_parc (MCP, identité
+        du gardien, image 0.6.0 / révision 0000009) sur grp-parc-collaborateur (20a3885d-...) :
+        (1) ajout réel d'adrien.raque (100c8502-...) par projection de l'état désiré, SANS saisie manuelle ;
+        (2) idempotence (rejeu = delta vide) ; (3) borne liste blanche dédiée GRAPH_GROUPES_PARC_AUTORISES
+        (group_id de périmètre anim-communication 8c7e9602-... REFUSÉ, PermissionError, zéro écriture vérifiée
+        à la source) ; (4) retour arrière (retrait d'adrien, état final = [Sarah] = état initial).
+        Vérifié À LA SOURCE (Entra) par le gardien : grp-parc-collaborateur = [Sarah], anim-communication inchangé.
+        Privilège : rôle Groups Administrator scopé à l'AU au-groupes-socle (6a023ed8-...) sur le SP de
+        l'identité managée — zéro secret. Portée v1 minimale (appartenance groupe d'enrôlement) confirmée suffisante :
+        Intune applique la politique via le groupe (CA ca-parc-collaborateur-conforme cible ce groupe).
   # Portée v1 (décision gardien 28/06) — AJOUT, ne réécrit pas les criteres_acceptation d'origine.
   portee_v1: >
     Portée v1 MINIMAL (décision gardien 28/06) = réconcilier l'appartenance du groupe d'enrôlement
