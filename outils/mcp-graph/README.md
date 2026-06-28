@@ -6,7 +6,7 @@
 
 ## Ce que c'est
 
-Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **quatre** opérations sur Microsoft Graph, et quatre seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **cinq** opérations sur Microsoft Graph, et cinq seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
@@ -14,6 +14,7 @@ Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en
 | `create_list_item(fields)` | **écriture** | `POST /sites/{site}/lists/{PROPOSITION}/items` — crée un élément **uniquement** dans la liste « Zone-de-proposition ». |
 | `televerser_brouillon_offre(nom_fichier, contenu_base64, candidat_id)` | **écriture fichier** | `PUT .../drives/{BROUILLON_DRIVE}/.../{nom}.docx:/content` — dépose un **brouillon .docx** dans le dossier **« 00 - Proposition en cours » FIGÉ**, jamais ailleurs ; collision = **fail**. **Code en PR B (`T-0017-a`).** |
 | `reconcilier_groupe_perimetre(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance d'un groupe de périmètre sur un **état désiré** (delta idempotent : ajoute/retire le seul delta) ; cible bornée par **liste blanche figée** + **AU** (`T-0019-a`). |
+| `reconcilier_groupe_parc(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance du groupe de **parc** d'enrôlement (`grp-parc-collaborateur`) sur un **état désiré** (delta idempotent) ; cible bornée par **liste blanche DÉDIÉE** `GRAPH_GROUPES_PARC_AUTORISES` + **AU** `au-groupes-socle` (`T-0008`). |
 
 ## Transport HTTP streamable et endpoint de santé
 
@@ -50,6 +51,15 @@ Deux bornes **indépendantes** encadrent ce pouvoir, en défense en profondeur :
 
 L'opération est **idempotente** : seul le **delta** est appliqué (`POST $ref` pour ajouter, `DELETE $ref` pour retirer) ; un delta vide ne touche rien. `membres_attendus = []` est **autorisé** et signifie « vider le groupe » (révocation totale, **réversible** — jamais une suppression de données). Chaque retrait est **journalisé** par objectId (traçabilité par personne). Le pouvoir réel d'écriture sur l'appartenance est conféré **hors code**, au runbook humain `T-0019-b` ; le présent code reste **inerte** tant que la variable et l'AU ne sont pas posées.
 
+## Le garde-fou structurel (quater) : socle et périmètre sont strictement séparés
+
+`reconcilier_groupe_parc` est le **miroir exact** de `reconcilier_groupe_perimetre` (même structure idempotente, mêmes bornes en défense en profondeur), appliqué au **groupe de parc d'enrôlement** `grp-parc-collaborateur`. La différence tient à une **séparation stricte socle/périmètre** (décision gardien du 28/06) :
+
+- **Liste blanche DÉDIÉE** : `GRAPH_GROUPES_PARC_AUTORISES` est une variable **séparée** de `GRAPH_GROUPES_PERIMETRE_AUTORISES`. Un `group_id` de périmètre n'est **pas** gérable par cet outil, et réciproquement — chaque outil ne touche que **sa** classe de groupes déclarés.
+- **AU dédiée** : le rôle Groups Administrator du service principal de l'identité managée est **scopé à l'Administrative Unit `au-groupes-socle`** (qui ne contient que ce groupe), runbook gardien. Le scope Graph reste `.default` ; **aucun secret**.
+
+Même contrat que le réconciliateur de périmètre pour le reste : `membres_attendus = []` vide le groupe (révocation totale, **réversible**), chaque mutation est **journalisée** par objectId, et le code reste **inerte** tant que la variable et l'AU ne sont pas posées. **Portée v1 minimale** (décision gardien 28/06) : seule l'**appartenance du groupe d'enrôlement** est réconciliée ; la projection complète des politiques (profils de configuration / conformité) vers Intune est un **incrément ultérieur différé**.
+
 ## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
 L'authentification vers Microsoft Graph passe par une **identité managée** (managed identity), **jamais** par un secret applicatif. Le credential est choisi à l'exécution selon `AZURE_ENV` :
@@ -74,6 +84,7 @@ Le serveur lit sa configuration **dans l'environnement**, au moment d'un appel d
 | `GRAPH_BROUILLON_DRIVE_ID` | Identifiant de la bibliothèque `Documents` (drive) — **cible figée** du dépôt de brouillon (`televerser_brouillon_offre`). Consommée par le code de `T-0017-a` (PR B). |
 | `GRAPH_BROUILLON_FOLDER_ID` | Identifiant du dossier « 00 - Proposition en cours » — **seule cible de dépôt** du brouillon, jamais le niveau « 01 ». Consommée par le code de `T-0017-a` (PR B). |
 | `GRAPH_GROUPES_PERIMETRE_AUTORISES` | **Liste blanche** (CSV d'objectId **publics**) des groupes de périmètre que `reconcilier_groupe_perimetre` peut gérer — défense en profondeur **en plus** de la borne AU (`T-0019-b`). Renseignée au runbook B ; absente = outil fermé (`ConfigManquante`). **Pas un secret.** |
+| `GRAPH_GROUPES_PARC_AUTORISES` | **Liste blanche DÉDIÉE** (CSV d'objectId **publics**) des groupes de **parc** que `reconcilier_groupe_parc` peut gérer — séparée du périmètre, défense en profondeur **en plus** de la borne AU `au-groupes-socle` (`T-0008`). Renseignée au runbook gardien ; absente = outil fermé (`ConfigManquante`). **Pas un secret.** |
 
 Le code échoue avec un message clair (`ConfigManquante`) si `GRAPH_SITE_ID` ou `GRAPH_PROPOSITION_LIST_ID` manque — il ne devine ni ne stocke rien. **Aucun secret n'apparaît dans cette liste** : l'auth Graph est portée par l'identité managée.
 
