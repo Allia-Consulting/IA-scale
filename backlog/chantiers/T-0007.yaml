@@ -26,7 +26,7 @@ criteres_acceptation:
   - "Chaque réconciliation est au moindre privilège et tracée ; retour arrière par repointage"
   - "CONTRAINTE D'ORDONNANCEMENT RGPD : l'information préalable « mémoire d'organisation » est délivrée AVANT l'activation de l'écoute Teams/Claude du collaborateur — étape qui PRÉCÈDE l'écoute dans la séquence, pas une case de fin de parcours (cadre rgpd-ecoute-teams.md §5)"
 rayon_impact: large
-statut: en_cours
+statut: candidat
 note: >
   Capacité ajoutée à la carte (organisation.md §2, v1.2). C'est une capacité CHAPEAU : elle
   n'invente pas de nouveau pouvoir, elle ORCHESTRE trois réconciliations d'une même décision
