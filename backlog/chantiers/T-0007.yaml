@@ -26,7 +26,7 @@ criteres_acceptation:
   - "Chaque réconciliation est au moindre privilège et tracée ; retour arrière par repointage"
   - "CONTRAINTE D'ORDONNANCEMENT RGPD : l'information préalable « mémoire d'organisation » est délivrée AVANT l'activation de l'écoute Teams/Claude du collaborateur — étape qui PRÉCÈDE l'écoute dans la séquence, pas une case de fin de parcours (cadre rgpd-ecoute-teams.md §5)"
 rayon_impact: large
-statut: candidat
+statut: soldé # éprouvé sur le réel le 2026-06-28 (épreuve 4 étapes + enrôlement gardien, vérifié à la source Entra par le gardien)
 note: >
   Capacité ajoutée à la carte (organisation.md §2, v1.2). C'est une capacité CHAPEAU : elle
   n'invente pas de nouveau pouvoir, elle ORCHESTRE trois réconciliations d'une même décision
@@ -50,3 +50,30 @@ note: >
 # T-0007 n'est plus bloqué sur une jambe manquante. Reste la construction effective des deux
 # réconciliateurs avant que l'onboarding chapeau puisse être bâti puis éprouvé de bout en bout.
 # Rappel RGPD inchangé : information « mémoire d'organisation » AVANT activation de l'écoute (rgpd-ecoute-teams.md §5).
+
+avancement:
+  journal:
+    - date: 2026-06-28
+      fait: >
+        SOLDÉ — éprouvé sur le réel. Skill chapeau skills/onboarding/SKILL.md (candidat promu, PR #122)
+        orchestrant les réconciliateurs existants : matériel via reconcilier_groupe_parc (T-0008, soldé),
+        droits via reconcilier_groupe_perimetre (T-0019, soldé). Outil de lecture lire_annuaire ajouté
+        (PR #123, image 0.7.0 / révision ca-allia-mcp-graph--0000010) pour résoudre les objectId et lire
+        l'appartenance réelle SANS muter (les réconciliateurs n'ont pas de dry-run). Prérequis runbook
+        posés : rôle Entra « Directory Readers » sur l'identité managée (lecture annuaire) ; annexe 3 RGPD
+        promue (PR #121, gabarit d'information préalable). Épreuve 4 étapes sur cas réel Sarah +
+        enrôlement réel du poste du gardien Adrien :
+        (1) enrôlement gardien — reconcilier_groupe_parc → ajoutes=[Adrien], état final {Sarah, Adrien} ;
+        (2) idempotence composée — rejeu parc ET périmètre = delta vide ;
+        (3) ajout/retrait borné — périmètre vidé puis Sarah remise (retour arrière en une action) ;
+        (4) borne liste blanche — group_id non déclaré → PermissionError, zéro écriture.
+        Jambes connaissance (org GitHub) + licence M365 (grp-collaborateurs-m365) signalées en runbook
+        humain, NON exécutées par l'agent. Vérifié À LA SOURCE (Entra) par le gardien :
+        grp-parc-collaborateur = {Sarah, Adrien}, anim-communication = {Sarah}.
+    - date: 2026-06-28
+      note_balayage_post_solde: >
+        Balayage post-solde (plan §4) : les références à T-0007 dans organisation.md §2 (description de
+        la capacité chapeau) et rgpd-ecoute-teams.md §5 (vecteur d'information, contrainte d'ordonnancement)
+        sont des descriptions de capacité et des liens de dépendance, NON des lignes de statut affirmant
+        « onboarding reste à construire ». Aucune n'est rendue fausse par le solde. Balayage minimal,
+        limité à ce fichier. (Décision tracée, non un oubli.)
