@@ -6,7 +6,7 @@
 
 ## Ce que c'est
 
-Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **cinq** opérations sur Microsoft Graph, et cinq seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **six** opérations sur Microsoft Graph, et six seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
@@ -15,6 +15,7 @@ Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en
 | `televerser_brouillon_offre(nom_fichier, contenu_base64, candidat_id)` | **écriture fichier** | `PUT .../drives/{BROUILLON_DRIVE}/.../{nom}.docx:/content` — dépose un **brouillon .docx** dans le dossier **« 00 - Proposition en cours » FIGÉ**, jamais ailleurs ; collision = **fail**. **Code en PR B (`T-0017-a`).** |
 | `reconcilier_groupe_perimetre(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance d'un groupe de périmètre sur un **état désiré** (delta idempotent : ajoute/retire le seul delta) ; cible bornée par **liste blanche figée** + **AU** (`T-0019-a`). |
 | `reconcilier_groupe_parc(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance du groupe de **parc** d'enrôlement (`grp-parc-collaborateur`) sur un **état désiré** (delta idempotent) ; cible bornée par **liste blanche DÉDIÉE** `GRAPH_GROUPES_PARC_AUTORISES` + **AU** `au-groupes-socle` (`T-0008`). |
+| `lire_annuaire(upn="", group_id="")` | **lecture** | `GET /users/{upn}` et/ou `GET /groups/{id}/members` — **résout** un UPN en objectId et/ou **liste** les membres d'un groupe ; **lecture seule stricte**, `group_id` borné à l'**union** des listes blanches périmètre ∪ parc (`T-0007`). |
 
 ## Transport HTTP streamable et endpoint de santé
 
@@ -59,6 +60,19 @@ L'opération est **idempotente** : seul le **delta** est appliqué (`POST $ref` 
 - **AU dédiée** : le rôle Groups Administrator du service principal de l'identité managée est **scopé à l'Administrative Unit `au-groupes-socle`** (qui ne contient que ce groupe), runbook gardien. Le scope Graph reste `.default` ; **aucun secret**.
 
 Même contrat que le réconciliateur de périmètre pour le reste : `membres_attendus = []` vide le groupe (révocation totale, **réversible**), chaque mutation est **journalisée** par objectId, et le code reste **inerte** tant que la variable et l'AU ne sont pas posées. **Portée v1 minimale** (décision gardien 28/06) : seule l'**appartenance du groupe d'enrôlement** est réconciliée ; la projection complète des politiques (profils de configuration / conformité) vers Intune est un **incrément ultérieur différé**.
+
+## Lecture d'annuaire bornée : résoudre avant de muter (`lire_annuaire`)
+
+`lire_annuaire` est un outil de **LECTURE SEULE STRICTE** : il n'écrit **jamais**, ne réconcilie rien. Il existe pour que Claude Code **résolve** l'état réel de l'annuaire **avant** tout appel mutant — au lieu de figer des GUID **de mémoire** (interdit par la doctrine §2) ou de subir l'**absence de dry-run** des réconciliateurs. C'est le préalable de résolution d'identifiants requis par l'onboarding `T-0007` et son épreuve.
+
+Deux résolutions, au moins une obligatoire :
+
+- **`upn`** : résout un `userPrincipalName` (email) en `objectId` — `GET /users/{upn}` (`$select=id,displayName,userPrincipalName`). Retourne `{"utilisateur": {...}}`.
+- **`group_id`** : liste les **objectId des membres** d'un groupe (pagination `@odata.nextLink`, via le helper partagé `_lire_membres_groupe`). Retourne `{"membres": [...]}`.
+
+**Bornage (moindre privilège, cohérent avec les réconciliateurs)** : `group_id` doit appartenir à l'**union** des listes blanches périmètre ∪ parc (`GRAPH_GROUPES_PERIMETRE_AUTORISES` ∪ `GRAPH_GROUPES_PARC_AUTORISES`) — un `group_id` hors de cette union lève `PermissionError` **sans aucune lecture**. Aucune liste blanche configurée = outil fermé (`ConfigManquante`). La résolution d'`upn` porte sur les utilisateurs du tenant. **Aucune nouvelle variable d'environnement** : l'outil réutilise les deux listes blanches existantes.
+
+**Prérequis (runbook gardien, DÉJÀ posé le 28/06)** : le rôle Entra **`Directory Readers`** est assigné à l'identité managée `id-allia-mcp-graph` (lecture d'annuaire — utilisateurs et appartenance de groupes). Le scope Graph reste `.default` ; **aucun secret**.
 
 ## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
