@@ -1,15 +1,11 @@
----
-name: memoire-organisation
-description: >
-  Produit la synthèse HEBDOMADAIRE CANDIDATE de la mémoire d'organisation d'Allia,
-  à partir des conversations Claude et Teams de la semaine écoulée. À déclencher par
-  la tâche Cowork planifiée du vendredi, ou sur demande « synthèse de mémoire
-  d'organisation », « mémoire hebdo », « batch mémoire du vendredi ». Écrit une seule
-  synthèse candidate en zone de proposition (Origine = « mémoire hebdo ») ; ne promeut
-  jamais ; ne produit jamais d'appréciation individuelle.
----
+# Mémoire d'organisation — Skill
 
-# Skill — Mémoire d'organisation (synthèse hebdomadaire candidate)
+> **id** : `memoire-organisation`
+> **Version** : 1.0 — *candidat*. **Nature** : skill.
+> **Changelog** : v1.0 — candidat, 30 juin 2026 : mécanisme initial (T-0005) — synthèse hebdomadaire candidate de la mémoire d'organisation (batch Cowork jeudi→vendredi, écrite en Zone-de-proposition, validée ligne à ligne le vendredi). Périmètre d'écoute borné au gardien (annexe 1 §3).
+> **Domicile** : `skills/memoire-organisation/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
+> **Adossé à** : `contrats/socle/memoire-organisation.md`, `contrats/socle/rgpd-ecoute-teams.md` (+ annexes 1/2/3), `contrats/socle/modele-donnees.md` (§2 bis/§3), `contrats/socle/anonymisation.md` (§1), `doctrine/doctrine.md` (§2, §6, §7, §9), `outils/mcp-graph/server.py` (`create_list_item`), `CLAUDE.md`.
+> **Rattachement** : capacité *Connaissance, contenu & IP / Mémoire d'organisation* ; chantier `backlog/chantiers/T-0005.yaml`.
 
 ## Ce que fait ce skill
 
