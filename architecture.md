@@ -127,7 +127,7 @@ Les arbitrages tranchés, avec la raison (ce qui se perdrait si on l'oubliait). 
 | Écrans de saisie (SharePoint puis Power Apps) | **À FAIRE** (décision Partie B.1 ; non construits) | tenant M365 |
 | Mémoire d'organisation — synthèse hebdo candidate (champ d'origine « mémoire hebdo ») | **PARTIEL** — **simulée en local** (`zone-proposition/memoire/`) ; l'infrastructure d'écriture est **prête** (chapeau `T-0002b` promue, liste réelle prouvée) ; la bascule des synthèses et le batch Cowork nocturne = **À FAIRE** (`T-0005`) | `contrats/socle/memoire-organisation.md` (candidat) + `modele-donnees.md` §2 bis/§3 |
 
-> **Écart constaté le 10 juin 2026 (non corrigé)** : le site porte une liste **« Ressource-Profil »** (singulier) là où le canon dit **« Ressources-Profil »** (`modele-donnees.md` §2 bis). Micro-ajustement à arbitrer par le gardien (renommer la liste au tenant, ou aligner le canon).
+> **Écart de nommage — RÉSOLU le 30 juin 2026.** Constaté le 10 juin : le site portait une liste **« Ressource-Profil »** (singulier) là où le canon dit **« Ressources-Profil »** (`modele-donnees.md` §2 bis). Arbitrage du gardien : aligner le **tenant** sur le canon (le canon gouverne, M365 suit). Liste **renommée au tenant en « Ressources-Profil »** le 30 juin 2026 (liste vide, 0 élément — renommage sans impact donnée ; constaté à la source). Plus d'écart.
 
 ### Couche parc / poste de travail (ABM · Intune · Entra)
 | Composant | État | Source de vérité |
