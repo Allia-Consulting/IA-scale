@@ -1,14 +1,14 @@
 # Annexe 2 — Analyse d'impact (AIPD, art. 35) — écoute Teams/Claude — Allia Consulting
 
-> **Version** : 1.1 — *promu*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-ecoute-teams.md` §7) — fait foi.
-> **Changelog** : v1.1 — alignement en-tête candidat → promu, 16 juin 2026 : le gardien-DPO acte le fond de cette annexe (risque résiduel maîtrisé et non élevé au sens de l'art. 36 — pas de consultation préalable CNIL ; mesures du §3 ; revue bimestrielle). Contenu de fond byte-inchangé hors en-tête et note de clôture. v1.0 — candidat, 12 juin 2026.
+> **Version** : 1.2 — *candidat*. **Statut** : contrat socle (annexe normative de `contrats/socle/rgpd-ecoute-teams.md` §7) — fait foi.
+> **Changelog** : v1.2 — candidat, 30 juin 2026 : **alignement sur le changement de domicile d'exécution** (`memoire-organisation.md` v1.4) — le mécanisme s'exécute désormais en **session claude.ai de l'espace Allia** (et non plus en batch Cowork local). §1 (description) et §3(b) (mesures) actualisés ; **Anthropic** ajouté comme **sous-traitant** du traitement (le modèle traitait déjà les conversations sous Cowork — la bascule l'explicite). Le risque résiduel reste **maîtrisé et non élevé** : la bascule n'accroît pas l'exposition réelle (mêmes données, même éditeur de modèle), les exclusions structurelles du §3(c)/(d) et la finalité collective du §3(a) sont inchangées ; conclusion §4 et fondement (annexe 1) **inchangés sur le fond**. v1.1 — alignement en-tête candidat → promu, 16 juin 2026 : le gardien-DPO acte le fond de cette annexe (risque résiduel maîtrisé et non élevé au sens de l'art. 36 — pas de consultation préalable CNIL ; mesures du §3 ; revue bimestrielle). Contenu de fond byte-inchangé hors en-tête et note de clôture. v1.0 — candidat, 12 juin 2026.
 > **Domicile** : `contrats/socle/annexes/rgpd-ecoute-teams--annexe-2-aipd.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `contrats/socle/rgpd-ecoute-teams.md` (§7 — formalités, art. 35), `contrats/socle/annexes/rgpd-ecoute-teams--annexe-1-mise-en-balance.md` (nécessité et proportionnalité), `contrats/socle/identites-et-secrets.md` (§2 — identités appelantes), `contrats/socle/memoire-organisation.md` (mécanisme).
 > **Nature** : consigne les **arbitrages du gardien-DPO** (12 juin 2026) ; **pas un avis juridique**.
 
 ## 1. Description systématique du traitement
 
-- **Mécanisme** : un **batch hebdomadaire Cowork local**, exécuté **sur le poste du gardien**, sous l'**identité Entra du gardien** — **zéro secret** (`identites-et-secrets.md` §2, cas 3).
+- **Mécanisme** : un **rendez-vous hebdomadaire en session claude.ai** de l'espace Allia, sous l'**identité Entra du gardien** (OAuth délégué, `scp=access_as_user`) — **zéro secret** (`identites-et-secrets.md` §2, cas 3). **Sous-traitant** : Anthropic (éditeur du modèle traitant les conversations) ; l'écriture en M365 reste sous l'identité managée du tenant.
 - **Sources écoutées** : **Teams** — canaux d'équipe et conversations de mission, **HORS conversations privées 1-à-1** ; **Claude** — conversations de l'**espace Allia Consulting uniquement**.
 - **Production** : **UNE synthèse candidate** par semaine, écrite en **Zone-de-proposition** (champ d'origine **« mémoire hebdo »**, `modele-donnees.md` §2 bis/§3).
 - **Validation** : **ligne à ligne, le vendredi**, par le gardien (non-validé = oublié).
@@ -24,7 +24,7 @@
 | Risque | Mesures |
 |---|---|
 | **(a) Détournement de finalité** vers la surveillance ou l'évaluation individuelle | **Interdits en dur** (contrat parent §1) ; validation par le **seul gardien** ; **traçabilité** des promotions (historique Git / promotion tracée) |
-| **(b) Accès illégitime** à la synthèse ou au brut | **Zéro secret** applicatif ; **identité Entra** ; exécution **sur le poste du gardien** ; substrat **M365** (droits du tenant) |
+| **(b) Accès illégitime** à la synthèse ou au brut | **Zéro secret** applicatif ; **identité Entra** (OAuth délégué) ; **périmètre gardien seul** (utilisateur courant) ; **écriture MCP restreinte à la seule liste Zone-de-proposition** (cible figée côté serveur) ; substrat **M365** (droits du tenant) ; traitement par le sous-traitant **Anthropic** sous ses engagements contractuels en vigueur |
 | **(c) Captation de contenus personnels** | **Exclusions structurelles** : 1-à-1 Teams exclus ; conversations Claude **hors espace Allia Consulting** exclues (annexe 1 §3) |
 | **(d) Conservation excessive** | Brut supprimé à **J+7** après la validation du vendredi ; **non-validé = oublié** |
 | **(e) Ré-identification à la sortie externe** | **Porte d'anonymisation** (`anonymisation.md` §1), **orthogonale** au présent cadre |
