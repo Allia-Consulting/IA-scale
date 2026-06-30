@@ -1,8 +1,8 @@
 # Mémoire d'organisation — Skill
 
 > **id** : `memoire-organisation`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.0 — candidat, 30 juin 2026 : mécanisme initial (T-0005) — synthèse hebdomadaire candidate de la mémoire d'organisation (batch Cowork jeudi→vendredi, écrite en Zone-de-proposition, validée ligne à ligne le vendredi). Périmètre d'écoute borné au gardien (annexe 1 §3).
+> **Version** : 1.1 — *candidat*. **Nature** : skill.
+> **Changelog** : v1.1 — candidat, 30 juin 2026 : **domicile d'exécution = session claude.ai de l'espace Allia** (rendez-vous hebdomadaire le vendredi), alignement sur `memoire-organisation.md` v1.4. La mention « batch Cowork jeudi→vendredi » de v1.0 est **corrigée** : l'écoute des conversations Claude n'est accessible qu'en session claude.ai (Cowork et Claude Code n'exposent pas l'historique de chat). Corps de procédure inchangé (déjà fondé sur la recherche d'historique de chat). v1.0 — candidat, 30 juin 2026 : mécanisme initial (T-0005) — synthèse hebdomadaire candidate de la mémoire d'organisation (batch Cowork jeudi→vendredi, écrite en Zone-de-proposition, validée ligne à ligne le vendredi). Périmètre d'écoute borné au gardien (annexe 1 §3).
 > **Domicile** : `skills/memoire-organisation/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/memoire-organisation.md`, `contrats/socle/rgpd-ecoute-teams.md` (+ annexes 1/2/3), `contrats/socle/modele-donnees.md` (§2 bis/§3), `contrats/socle/anonymisation.md` (§1), `doctrine/doctrine.md` (§2, §6, §7, §9), `outils/mcp-graph/server.py` (`create_list_item`), `CLAUDE.md`.
 > **Rattachement** : capacité *Connaissance, contenu & IP / Mémoire d'organisation* ; chantier `backlog/chantiers/T-0005.yaml`.
