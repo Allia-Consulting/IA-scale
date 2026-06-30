@@ -77,3 +77,22 @@ avancement:
         sont des descriptions de capacité et des liens de dépendance, NON des lignes de statut affirmant
         « onboarding reste à construire ». Aucune n'est rendue fausse par le solde. Balayage minimal,
         limité à ce fichier. (Décision tracée, non un oubli.)
+    - date: 2026-06-30
+      fait: >
+        Jambe LICENCE M365 refermée — runbook humain du gardien exécuté le 2026-06-30. Au solde du
+        2026-06-28, la jambe licence (grp-collaborateurs-m365) restait explicitement « signalée en
+        runbook humain, NON exécutée par l'agent ». Ce runbook est désormais fait, à la main par le
+        gardien dans Entra + Centre d'administration M365 (aucun agent, aucune écriture Claude).
+        Constat à la source AVANT correction : grp-collaborateurs-m365 = {Sarah} seule ; Adrien et
+        Guillaume portaient M365 Business Premium en affectation DIRECTE (hors canal canonique), donc
+        fonctionnels mais non gouvernés par le groupe. Décision d'architecture : canoniser le
+        group-based licensing — le groupe grp-collaborateurs-m365 (porteur de M365 Business Premium,
+        53/53) est l'unique canal d'attribution ; l'affectation directe est une dette qui ne passe pas
+        à l'échelle 1→200 et contredit « ressources liées aux groupes, jamais aux individus »
+        (organisation.md §5). Manœuvre sans coupure : (1) ajout d'Adrien et Guillaume au groupe →
+        (2) vérification de l'héritage « Direct, Hérité (grp-collaborateurs-m365) » sur les deux fiches →
+        (3) retrait des affectations directes au Centre d'administration M365. État final VÉRIFIÉ À LA
+        SOURCE (Entra) : les trois (Adrien, Guillaume, Sarah) portent M365 Business Premium, Active 53/53,
+        chemin « Hérité (grp-collaborateurs-m365) » seul, zéro affectation directe résiduelle, zéro coupure.
+        Lève la friction d'intégrité « jambe licence onboarding ». N'altère pas le statut soldé de T-0007 :
+        referme une dette de runbook qui y était nommée.
