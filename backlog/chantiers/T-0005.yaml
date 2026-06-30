@@ -1,14 +1,14 @@
 id: T-0005
-titre: "Mémoire d'organisation : batch Cowork nocturne → synthèse hebdo candidate"
+titre: "Mémoire d'organisation : rendez-vous hebdo en session claude.ai → synthèse hebdo candidate"
 capacite: "Connaissance, contenu & IP / Mémoire d'organisation"
 phase: 1
 type_action: infrastructure_mcp
 cran: valide
 produit:
-  - "batch Cowork nocturne (jeudi→vendredi) qui écoute les conversations Claude + Teams de la semaine et produit UNE synthèse candidate"
-  - "écriture de la synthèse en zone de proposition avec champ d'origine « mémoire hebdo » (simulée en local zone-proposition/memoire/ tant que T-0002b n'est pas déployé)"
+  - "rendez-vous hebdomadaire en session claude.ai (le vendredi) qui écoute les conversations Claude + Teams de la semaine et produit UNE synthèse candidate"
+  - "écriture de la synthèse en zone de proposition avec champ d'origine « mémoire hebdo » (liste réelle via create_list_item ; T-0002b promu — simulation locale abandonnée)"
   - "rituel de validation ligne à ligne le vendredi (non-validé = oublié)"
-  - "exécution en COWORK LOCAL sur le poste du gardien, sous l'identité Entra DU GARDIEN — zéro secret (identites-et-secrets.md §2, cas 3 ; décision du 10 juin 2026)"
+  - "exécution en SESSION CLAUDE.AI de l'espace Allia, sous l'identité du gardien — zéro secret (identites-et-secrets.md §2, cas 3 ; décision du 30 juin 2026, supersède le 10 juin)"
 depend_de: []
 # Aucune dépendance dure de chantier. PRÉREQUIS NORMATIFS (non bloquants pour la sélection,
 #   mais à respecter avant toute écoute réelle) :
@@ -19,7 +19,7 @@ depend_de: []
 #      COLLECTIFS, base légale d'intérêt légitime, minimisation/rétention (suppression du verbatim
 #      brut et du non-validé après la décision du vendredi), information préalable AVANT écoute,
 #      droits des personnes, AIPD. (Remplace toute mention vague de « cadrage RGPD ».)
-#   L'écriture RÉELLE en M365 attend T-0002b ; en attendant, écriture SIMULÉE EN LOCAL
+#   L'écriture RÉELLE en M365 via create_list_item est en service (T-0002b promu) ; simulation
 #   (zone-proposition/memoire/). L'écriture continue est abandonnée (décision 8 juin 2026) au
 #   profit d'une synthèse hebdomadaire candidate.
 contrats_concernes:
@@ -28,14 +28,14 @@ contrats_concernes:
   - "contrats/socle/modele-donnees.md"
   - "contrats/socle/anonymisation.md"
 criteres_acceptation:
-  - "Le batch s'exécute la nuit du jeudi au vendredi et produit UNE synthèse candidate de la semaine"
-  - "La synthèse est écrite en zone de proposition, champ d'origine « mémoire hebdo » (locale tant que T-0002b non déployé)"
+  - "Le mécanisme s'exécute en session claude.ai, en rendez-vous hebdomadaire le vendredi, et produit UNE synthèse candidate de la semaine"
+  - "La synthèse est écrite en zone de proposition, champ d'origine « mémoire hebdo » (liste réelle via create_list_item)"
   - "La synthèse reste INTERNE et NOMINATIVE ; toute sortie externe d'un fragment passe la porte d'anonymisation (anonymisation.md §1)"
   - "Le vendredi, une validation ligne à ligne est possible ; le non-validé est oublié (pas de rétention par défaut)"
-  - "RGPD : cadre rgpd-ecoute-teams.md v1.1 et ses deux annexes promus ; périmètre d'écoute conforme à l'annexe 1 §3 (exclusion des 1-à-1 Teams ; Claude : espace Allia Consulting uniquement) ; information préalable du collaborateur AVANT écoute ; verbatim brut supprimé à J+7 après la validation du vendredi ; synthèse non validée supprimée."
+  - "RGPD : cadre rgpd-ecoute-teams.md v1.2 et ses trois annexes promus ; périmètre d'écoute conforme à l'annexe 1 §3 (exclusion des 1-à-1 Teams ; Claude : espace Allia Consulting uniquement) ; information préalable du collaborateur AVANT écoute ; verbatim brut supprimé à J+7 après la validation du vendredi ; synthèse non validée supprimée."
   - "L'agent n'écrit jamais la mémoire comme une source et ne promeut jamais"
 rayon_impact: local
-statut: en_cours # skill candidat posé (skills/memoire-organisation/SKILL.md) ; reste l'épreuve réelle Cowork (tâche planifiée vendredi + relecture list_items)
+statut: en_cours # skill candidat posé (skills/memoire-organisation/SKILL.md) ; reste l'épreuve réelle en session claude.ai (exécution du skill le vendredi + relecture list_items)
 note: >
   Matérialise la capacité « mémoire d'organisation » (organisation.md §2 ; contrat
   contrats/socle/memoire-organisation.md, candidat). Mécanisme retenu (session doctrine
@@ -52,3 +52,9 @@ note: >
   MISE À JOUR 12 juin 2026 : balance et AIPD produites (annexes 1 et 2 du cadre RGPD) — le
   verrou normatif de l'écoute réelle est levé à leur promotion ; le périmètre d'écoute est
   borné par l'annexe 1 §3.
+  MISE À JOUR 30 juin 2026 : domicile d'exécution corrigé — SESSION CLAUDE.AI de l'espace Allia
+  (rendez-vous hebdo le vendredi) au lieu de Cowork local. Motif (confronté au réel, T-0005) : seule
+  une session claude.ai expose l'écoute des conversations Claude (recherche d'historique de chat) ;
+  Cowork et Claude Code ne l'exposent pas. Supersède la décision du 10 juin sur le DOMICILE et le
+  DÉCLENCHEMENT ; le principe demeure (acte de gouvernance, identité du gardien, zéro secret).
+  Voir contrats/socle/memoire-organisation.md v1.4.
