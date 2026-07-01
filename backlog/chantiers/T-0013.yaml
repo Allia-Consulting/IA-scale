@@ -89,22 +89,8 @@ sous_taches:
       branche) ; promotion du skill = porte du gardien (procédure allégée).
 
   - id: T-0013-d
-    titre: "Purge automatique comme mécanisme gouverné (refusé > 2 ans depuis l'inscription)"
-    type_action: infrastructure_mcp
-    cran: valide
-    produit:
-      - "mécanisme de purge AUTOMATIQUE, au MOINDRE PRIVILÈGE : il ne sait QUE purger selon les durées promues, applique une décision déjà inscrite au canon (cadre §5), jamais une suppression libre"
-      - "règle unique : purge des fiches « refusé » dont « Créé le » > 2 ans (horloge fixe depuis l'inscription, non glissante ; sauf opposition) — durée promue (cadre §5)"
-      - "(runbook humain) mise en place du privilège du mécanisme (identité/droits) — jamais un agent"
+    # SOURCE DE VÉRITÉ : fichier autonome backlog/chantiers/T-0013-d.yaml (plus complet et à jour :
+    # exception table-des-crans, privilège posé, statut réel). Ne pas dupliquer le détail ici —
+    # ce renvoi évite deux sources divergentes. Voir T-0013-d.yaml.
+    titre: "Purge automatique des données de recrutement — voir fichier autonome T-0013-d.yaml"
     depend_de: ["T-0013-a", "T-0013-c"]
-    criteres_acceptation:
-      - "La purge est un MÉCANISME outillé, pas un geste manuel (cadre §5 : « la purge est un mécanisme, pas une intention »)"
-      - "Au moindre privilège : il ne purge que selon la durée promue (refusé > 2 ans depuis l'inscription), rien d'autre ; tout passage tracé"
-      - "Aucune suppression libre par un agent : le garde-fou supprimer_definitivement_des_donnees (table-des-crans, proscrites) est respecté — la purge applique une règle promue, sous privilège posé en runbook"
-      - "PRÉREQUIS BLOQUANT du volet vivier : promotion de l'annexe 1 (mise en balance) avant mise en service"
-    note: >
-      Point le plus sensible RGPD. RÉSOLUTION DE LA TENSION avec le garde-fou « suppression
-      définitive » : la purge est un mécanisme GOUVERNÉ au moindre privilège (même logique que les
-      réconciliateurs T-0008 / plan §9 T-4.3) — il applique une décision de durée DÉJÀ PROMUE au
-      canon (cadre §5), il ne supprime jamais librement. La mise en place de son privilège reste un
-      runbook humain. Le volet vivier attend la promotion de l'annexe 1.

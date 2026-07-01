@@ -24,7 +24,7 @@ criteres_acceptation:
   - "La décision de recrutement reste HUMAINE (rgpd-recrutement-candidats.md §1, art. 22) ; le document est imprimé, signé et envoyé par le gestionnaire de la proposition"
   - "Le document d'offre SIGNÉ revient dans le SI (liste Propositions), rattaché à la fiche Candidat ; droits = runbook humain"
 rayon_impact: large
-statut: à_faire
+statut: en_cours # rollup : a (gabarit) et b (skill generation-offre, execution prouvée PR #96) faits ; c bloqué par T-0013-b reportée
 
 sous_taches:
 
