@@ -35,7 +35,14 @@ criteres_acceptation:
   - "RGPD : cadre rgpd-ecoute-teams.md v1.2 et ses trois annexes promus ; périmètre d'écoute conforme à l'annexe 1 §3 (exclusion des 1-à-1 Teams ; Claude : espace Allia Consulting uniquement) ; information préalable du collaborateur AVANT écoute ; verbatim brut supprimé à J+7 après la validation du vendredi ; synthèse non validée supprimée."
   - "L'agent n'écrit jamais la mémoire comme une source et ne promeut jamais"
 rayon_impact: local
-statut: en_cours # skill candidat posé (skills/memoire-organisation/SKILL.md) ; reste l'épreuve réelle en session claude.ai (exécution du skill le vendredi + relecture list_items)
+statut: soldé # épreuve réelle faite le 1er juillet 2026 en session claude.ai (voir execution:)
+execution:
+- "2026-07-01 — Épreuve réelle du mécanisme en session claude.ai (espace Allia), semaine ISO 2026-S27."
+- "Collecte conforme au périmètre annexe 1 §3 : conversations Claude bornées à l'espace Allia (gardien) ; Teams via chat_message_search borné à la semaine, 1-à-1 explicitement exclus. Aucun canal d'équipe ni conversation de mission éligible au tenant cette semaine."
+- "Résultat : UNE synthèse candidate à zéro ligne d'apprentissage (résultat valide, skill §4 — pas de remplissage artificiel), car la semaine fut 100% gouvernance déjà tracée au canon (PR #131/#132/#133)."
+- "Écriture RÉELLE en zone de proposition prouvée à la source : élément Title=MEM-2026-S27, Origine=« mémoire hebdo », Contenu=synthèse — vérifié dans la liste SharePoint Zone-de-proposition (relecture visuelle à la source le 1er juillet 2026)."
+- "RÉSERVE (honnête) : écriture faite via l'UI SharePoint sous l'identité du gardien, PAS via le connecteur MCP create_list_item (allia-graph-proposition NON exposé dans les sessions claude.ai). La chaîne canon→M365 est éprouvée sur vraie donnée tenant ; l'exercice littéral de create_list_item reste à rejouer une session où le connecteur est exposé. Non maquillé en « éprouvé via connecteur »."
+- "Validation du vendredi : triviale ici (zéro puce) — rien à promouvoir en mémoire ; la synthèse candidate est oubliée à la décision, conforme au régime de rétention (skill §rétention ; rgpd-ecoute-teams.md §4)."
 note: >
   Matérialise la capacité « mémoire d'organisation » (organisation.md §2 ; contrat
   contrats/socle/memoire-organisation.md, candidat). Mécanisme retenu (session doctrine
