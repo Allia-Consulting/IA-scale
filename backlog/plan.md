@@ -271,6 +271,6 @@ Ce `plan.md` et les `chantiers/*.yaml` sont du **socle**. Toute évolution — r
 3. Périmètre v1 = squelette + tranche verticale « gain d'affaire ». Le reste suit en Phase 4.
 4. Couche de résolution automatique **différée** (Phase 3) ; pull réel côté Claude Code/MCP, refresh manuel des surfaces utilisateur en v1.
 5. Le backlog agent-consommable dans le dépôt est le format de sortie retenu, avec ce document comme couche prose par-dessus.
-6. « Nouveau document » = la présentation cabinet « Talents & recrutement ». La doctrine est adossée en **v1.1 (candidat)**, avec une section d'articulation rôles / grades / trajectoire (§10 bis) ; à promouvoir. **Caduc** : le « qui répond de quoi » vit désormais dans le contrat socle SÉPARÉ `contrats/socle/organisation.md` (v1.8), pas dans un §10 bis de la doctrine.
+6. « Nouveau document » = la présentation cabinet « Talents & recrutement ». La doctrine (v1.7 promu) porte le **§10 bis promu** : articulation rôles / grades / trajectoire (sans importer le détail RH volatil). Le « qui répond de quoi » — délégations et titulaires — vit dans le contrat socle SÉPARÉ `contrats/socle/organisation.md` (v1.9) : les deux sont complémentaires, pas redondants (§10 bis articule ; organisation.md enregistre qui tient quel périmètre).
 
 > Pour corriger une hypothèse, ne modifie pas ce fichier directement : ouvre un candidat. Le plan se gouverne comme il prêche.

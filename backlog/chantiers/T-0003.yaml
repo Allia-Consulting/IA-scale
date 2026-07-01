@@ -15,8 +15,9 @@ depend_de: ["RUNBOOK-HUMAIN"]
 #   cette tâche devient mécaniquement NON sélectionnable en autonomie par un agent — ce qui est
 #   l'intention, puisqu'« activer la journalisation d'audit M365 » est une action proscrite
 #   (table-des-crans.yaml : parametrer_tenant_m365_securite_residence_donnees). Voir T-0002a pour
-#   la convention de sentinelle (tâche runbook). statut reste « à_faire » (la tâche est à faire,
-#   mais par le gardien, pas par un agent).
+#   la convention de sentinelle (tâche runbook). La sentinelle rend la tâche non
+#   sélectionnable par un agent (à faire par le gardien) ; le statut réel est « promu » depuis
+#   l'exécution du runbook le 19 juin 2026 (journalisation activée + captation prouvée — voir execution:).
 contrats_concernes:
   - "contrats/socle/modele-donnees.md"
   - "contrats/socle/anonymisation.md"
