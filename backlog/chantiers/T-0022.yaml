@@ -18,7 +18,7 @@ criteres_acceptation:
   - "La notification de l'équipe est au cran notifié ; les brouillons restent internes (zone de travail / Zone-de-proposition)"
   - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
 rayon_impact: local
-statut: candidat
+statut: promu
 note: >
   Deuxième marche de la tranche verticale métier (plan §6 T-1.2), instanciée le 2 juillet 2026.
   Enchaîne sur le brief produit par cadrage-mission (T-0021). SOLDÉ = épreuve réelle
@@ -28,3 +28,5 @@ avancement:
   journal:
     - date: 2026-07-02
       fait: "SKILL.md rédigé et proposé en PR (skills/kick-off/SKILL.md, v1.0 candidat) : entrée = brief validé de cadrage-mission, génération proposition + support au design system (par référence, version à portée), journal en Zone-de-proposition, notification équipe = notifié, envoi client = porte humaine validé, porte anonymisation sur matière client tiers. Statut à_faire → candidat."
+    - date: 2026-07-02
+      fait: "PROMU par le gardien : skill kick-off v1.0 promu (PR #140 mergée, en-tête candidat → promu, corps byte-identique). Reste pour SOLDER : épreuve réelle de bout en bout (dépend de l'outillage T-0024)."
