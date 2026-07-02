@@ -2,8 +2,8 @@
 # Kick-off de mission — Skill
 
 > **id** : `kick-off`
-> **Version** : 1.0 — *promu*. **Nature** : skill.
-> **Changelog** : v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0022`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0022`, deuxième marche de la tranche verticale métier, plan §6 T-1.2). Décrit le skill qui, du BRIEF VALIDÉ (produit par `cadrage-mission`), génère la PROPOSITION et le SUPPORT DE KICK-OFF en consommant le design system par référence, journalise en Zone-de-proposition, notifie l'équipe (notifié) ; l'ENVOI au client reste une porte humaine (validé).
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — promu, 2 juillet 2026 : corps aligné post-promotion (§8.3 prérequis promotion marqué levé, §9 statut candidat → promu). v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0022`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0022`, deuxième marche de la tranche verticale métier, plan §6 T-1.2). Décrit le skill qui, du BRIEF VALIDÉ (produit par `cadrage-mission`), génère la PROPOSITION et le SUPPORT DE KICK-OFF en consommant le design system par référence, journalise en Zone-de-proposition, notifie l'équipe (notifié) ; l'ENVOI au client reste une porte humaine (validé).
 > **Domicile** : `skills/kick-off/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `skills/cadrage-mission/SKILL.md` (v1.1 promu — produit le brief d'entrée), `contrats/socle/design-system.md` (tokens, composants, voix §7 — consommé par référence), `contrats/socle/anonymisation.md` (§1 — matière d'un client tiers dans un livrable client = porte automatique), `contrats/socle/table-des-crans.yaml` (`ecrire_fait_derive_zone_proposition` = **auto** ; `notifier_equipe` = **notifié** ; `envoyer_livrable_client` = **validé**, grade habilité — organisation.md §4 bis ; `reutiliser_matiere_interne` = **auto**), `contrats/socle/modele-donnees.md` (§2 bis — Bibliothèques Propositions/Livrables/Capitalisation ; §3 — Zone-de-proposition), `backlog/chantiers/T-0022.yaml`, `backlog/chantiers/T-0024.yaml` (outillage de dépôt à cible figée), `CLAUDE.md`.
 
@@ -81,9 +81,9 @@ Les binaires générés sont des **brouillons internes** : ils vivent en zone de
 
 1. **`cadrage-mission` promu** — *levé : v1.1 promu le 2 juillet 2026*.
 2. **`T-0024`** : outillage de dépôt interne à cible figée (extension du connecteur, modèle `televerser_brouillon_offre`).
-3. **Promotion de ce skill** par le gardien (procédure allégée).
+3. **Promotion de ce skill** par le gardien (procédure allégée) — *levé : promu le 2 juillet 2026*.
 4. **Épreuve réelle** (SOLDÉ de `T-0022`) : proposition + support générés sur une affaire — réelle ou de démonstration explicitement étiquetée — crans et porte d'anonymisation respectés.
 
 ## 9. Évolution
 
-Ce skill est un **candidat** (v1.0). Sa promotion suit la boucle (`doctrine.md` §7) : candidat → avis d'impact → promotion gardien (procédure allégée), montée de version en en-tête, corps byte-identique à la promotion. Retour arrière = repointage.
+Ce skill est **promu** (procédure allégée, portée locale — `doctrine.md` §5). Son évolution suit la boucle (`doctrine.md` §7) : candidat → avis d'impact → promotion gardien (procédure allégée), montée de version en en-tête, corps byte-identique à la promotion. Retour arrière = repointage.
