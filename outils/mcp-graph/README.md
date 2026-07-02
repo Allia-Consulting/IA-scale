@@ -6,7 +6,7 @@
 
 ## Ce que c'est
 
-Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **six** opérations sur Microsoft Graph, et six seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **huit** opérations sur Microsoft Graph, et huit seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
@@ -16,6 +16,8 @@ Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en
 | `reconcilier_groupe_perimetre(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance d'un groupe de périmètre sur un **état désiré** (delta idempotent : ajoute/retire le seul delta) ; cible bornée par **liste blanche figée** + **AU** (`T-0019-a`). |
 | `reconcilier_groupe_parc(group_id, membres_attendus)` | **gestion d'appartenance** | `GET/POST/DELETE .../groups/{id}/members` — **réconcilie** l'appartenance du groupe de **parc** d'enrôlement (`grp-parc-collaborateur`) sur un **état désiré** (delta idempotent) ; cible bornée par **liste blanche DÉDIÉE** `GRAPH_GROUPES_PARC_AUTORISES` + **AU** `au-groupes-socle` (`T-0008`). |
 | `lire_annuaire(upn="", group_id="")` | **lecture** | `GET /users/{upn}` et/ou `GET /groups/{id}/members` — **résout** un UPN en objectId et/ou **liste** les membres d'un groupe ; **lecture seule stricte**, `group_id` borné à l'**union** des listes blanches périmètre ∪ parc (`T-0007`). |
+| `creer_espace_mission(code_mission)` | **écriture dossier** | `POST .../drives/{MISSION_DRIVE}/items/{MISSION_FOLDER}/children` — crée l'**espace de mission** (dossier `<code>` + arbre **FIGÉ** `01-Cadrage / 02-Kick-off / 03-Livrables / 04-Pilotage`) **uniquement** sous la racine **« Missions » FIGÉE**, jamais ailleurs ; collision = **fail** (`T-0024-a`). |
+| `deposer_document_mission(code_mission, sous_dossier, nom_fichier, contenu_base64)` | **écriture fichier** | `PUT .../drives/{MISSION_DRIVE}/items/{MISSION_FOLDER}:/{code}/{sous_dossier}/{nom}:/content` — dépose un **brouillon interne** dans un sous-dossier **whitelisté** d'un espace de mission ; extension dans `{.docx .pptx .xlsx .pdf .md}` ; collision = **fail** (`T-0024-a`). |
 
 ## Transport HTTP streamable et endpoint de santé
 
@@ -74,6 +76,15 @@ Deux résolutions, au moins une obligatoire :
 
 **Prérequis (runbook gardien, DÉJÀ posé le 28/06)** : le rôle Entra **`Directory Readers`** est assigné à l'identité managée `id-allia-mcp-graph` (lecture d'annuaire — utilisateurs et appartenance de groupes). Le scope Graph reste `.default` ; **aucun secret**.
 
+## Le garde-fou structurel (quinquies) : l'espace de mission ne se crée que sous la racine « Missions »
+
+`creer_espace_mission` et `deposer_document_mission` suivent le **même** principe que `create_list_item` et `televerser_brouillon_offre` : la cible n'est **jamais** choisie par l'appelant, elle est **figée côté serveur** par deux variables d'environnement — `GRAPH_MISSION_DRIVE_ID` (la bibliothèque hôte) et `GRAPH_MISSION_FOLDER_ID` (le dossier racine « Missions »). Ces deux outils sont **dédiés** : ils lisent leur propre configuration (`_config_mission()`), les outils existants n'en dépendent pas.
+
+- **`creer_espace_mission(code_mission)`** crée, **uniquement** sous la racine « Missions », un dossier `<code_mission>` puis l'**arbre FIGÉ dans le code** (`SOUS_DOSSIERS_MISSION` = `01-Cadrage`, `02-Kick-off`, `03-Livrables`, `04-Pilotage`) — l'appelant ne choisit ni la cible ni l'arborescence. `code_mission` est **assaini** (refus de `/`, `\`, `..`, des caractères hors `[A-Za-z0-9._-]` et de plus de 64 caractères). **Collision = fail** sur chaque création : un espace de même nom n'est **jamais** écrasé ni fusionné.
+- **`deposer_document_mission(code_mission, sous_dossier, nom_fichier, contenu_base64)`** dépose un **brouillon interne** dans `<racine>/<code>/<sous_dossier>/<nom>`. Le `sous_dossier` est restreint à la **liste blanche figée** `SOUS_DOSSIERS_MISSION` (`PermissionError` sinon) ; le `nom_fichier` est **assaini** et son extension **forcée** dans `EXTENSIONS_MISSION` (`.docx`, `.pptx`, `.xlsx`, `.pdf`, `.md`) ; **collision = fail** (jamais d'écrasement). Le dépôt ne vise **jamais** un espace exposé au client — l'envoi au client reste un acte **humain** (`envoyer_livrable_client`, cran validé, grade habilité).
+
+Cran des deux actions : **auto** — espace/brouillon internes, réversibles, locaux (`table-des-crans.yaml` : `creer_espace_mission` ; `deposer_document_mission_zone_travail`, ajouté en `T-0024-b`). La **mise en service** (création de la racine « Missions », résolution des ids, pose des variables sur le service, octroi `write` prouvé) est un **runbook humain** — `T-0024-c`. Le code reste **inerte** tant que les deux variables ne sont pas posées.
+
 ## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
 L'authentification vers Microsoft Graph passe par une **identité managée** (managed identity), **jamais** par un secret applicatif. Le credential est choisi à l'exécution selon `AZURE_ENV` :
@@ -99,6 +110,8 @@ Le serveur lit sa configuration **dans l'environnement**, au moment d'un appel d
 | `GRAPH_BROUILLON_FOLDER_ID` | Identifiant du dossier « 00 - Proposition en cours » — **seule cible de dépôt** du brouillon, jamais le niveau « 01 ». Consommée par le code de `T-0017-a` (PR B). |
 | `GRAPH_GROUPES_PERIMETRE_AUTORISES` | **Liste blanche** (CSV d'objectId **publics**) des groupes de périmètre que `reconcilier_groupe_perimetre` peut gérer — défense en profondeur **en plus** de la borne AU (`T-0019-b`). Renseignée au runbook B ; absente = outil fermé (`ConfigManquante`). **Pas un secret.** |
 | `GRAPH_GROUPES_PARC_AUTORISES` | **Liste blanche DÉDIÉE** (CSV d'objectId **publics**) des groupes de **parc** que `reconcilier_groupe_parc` peut gérer — séparée du périmètre, défense en profondeur **en plus** de la borne AU `au-groupes-socle` (`T-0008`). Renseignée au runbook gardien ; absente = outil fermé (`ConfigManquante`). **Pas un secret.** |
+| `GRAPH_MISSION_DRIVE_ID` | Identifiant de la bibliothèque (drive) hôte de la racine **« Missions »** — **cible figée** de `creer_espace_mission` / `deposer_document_mission`. Identifiant **public**. Posé au runbook `T-0024-c` ; absent = outils mission fermés (`ConfigManquante`). **Pas un secret.** |
+| `GRAPH_MISSION_FOLDER_ID` | Identifiant du dossier racine **« Missions »** — **seul parent** des espaces de mission créés, jamais choisi par l'appelant. Identifiant **public**. Posé au runbook `T-0024-c` ; absent = outils mission fermés (`ConfigManquante`). **Pas un secret.** |
 
 Le code échoue avec un message clair (`ConfigManquante`) si `GRAPH_SITE_ID` ou `GRAPH_PROPOSITION_LIST_ID` manque — il ne devine ni ne stocke rien. **Aucun secret n'apparaît dans cette liste** : l'auth Graph est portée par l'identité managée.
 

@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose SIX opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose HUIT opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -11,6 +11,8 @@ Ce serveur expose SIX opérations à un agent, via le Model Context Protocol (tr
     - reconcilier_groupe_perimetre : RÉCONCILIE l'appartenance d'un groupe de périmètre (delta idempotent), cible bornée par liste blanche.
     - reconcilier_groupe_parc      : RÉCONCILIE l'appartenance du groupe de PARC d'enrôlement (delta idempotent), cible bornée par liste blanche DÉDIÉE.
     - lire_annuaire               : LIT l'annuaire Entra (lecture seule) — résout un UPN en objectId et/ou liste les membres d'un groupe borné aux listes blanches.
+    - creer_espace_mission        : CRÉE l'espace de mission (arbre de dossiers FIGÉ) UNIQUEMENT sous la racine « Missions ».
+    - deposer_document_mission    : DÉPOSE un brouillon interne UNIQUEMENT dans un sous-dossier FIGÉ d'un espace de mission.
 
 Transport & santé :
 
@@ -82,6 +84,13 @@ ENV_BROUILLON_DRIVE_ID = "GRAPH_BROUILLON_DRIVE_ID"      # bibliothèque Documen
 ENV_BROUILLON_FOLDER_ID = "GRAPH_BROUILLON_FOLDER_ID"    # dossier « 00 - Proposition en cours » (seule cible de dépôt)
 ENV_GROUPES_PERIMETRE_AUTORISES = "GRAPH_GROUPES_PERIMETRE_AUTORISES"  # CSV d'objectId des groupes de périmètre gérables (liste blanche figée côté serveur)
 ENV_GROUPES_PARC_AUTORISES = "GRAPH_GROUPES_PARC_AUTORISES"  # CSV d'objectId des groupes de PARC gérables (liste blanche figée côté serveur, dédiée — séparée du périmètre)
+ENV_MISSION_DRIVE_ID = "GRAPH_MISSION_DRIVE_ID"    # bibliothèque hôte de la racine « Missions » (cible figée de l'espace de mission)
+ENV_MISSION_FOLDER_ID = "GRAPH_MISSION_FOLDER_ID"  # dossier racine « Missions » (seul parent des espaces de mission créés)
+
+# Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — quatre sous-dossiers, dans cet ordre.
+SOUS_DOSSIERS_MISSION = ("01-Cadrage", "02-Kick-off", "03-Livrables", "04-Pilotage")
+# Whitelist d'extensions déposables dans un espace de mission (brouillons internes). Toute autre = refus.
+EXTENSIONS_MISSION = (".docx", ".pptx", ".xlsx", ".pdf", ".md")
 
 # stateless_http=True : pas de session persistante côté serveur (exigence Container Apps).
 # host/port portés ICI (le SDK résolu n'accepte host/port NI via l'env FASTMCP_HOST, NI dans run() —
@@ -266,6 +275,56 @@ def _config() -> dict[str, str]:
             f"{absentes}. Voir outils/mcp-graph/README.md (aucun secret n'est stocké dans le dépôt)."
         )
     return valeurs
+
+
+def _config_mission() -> dict[str, str]:
+    """Lit la configuration de la racine « Missions » (cible figée des espaces de mission).
+
+    Config DÉDIÉE, séparée de `_config()` : les outils existants ne dépendent PAS de ces
+    variables (aucune régression de leur contrat). Sur le modèle des listes blanches des
+    réconciliateurs, les outils de mission lisent leur propre configuration et échouent
+    clairement (ConfigManquante) si elle est absente. Aucun secret (identité managée).
+    """
+    valeurs = {
+        "mission_drive_id": os.environ.get(ENV_MISSION_DRIVE_ID, ""),
+        "mission_folder_id": os.environ.get(ENV_MISSION_FOLDER_ID, ""),
+    }
+    manquantes = [k for k, v in valeurs.items() if not v]
+    if manquantes:
+        noms_env = {
+            "mission_drive_id": ENV_MISSION_DRIVE_ID,
+            "mission_folder_id": ENV_MISSION_FOLDER_ID,
+        }
+        absentes = ", ".join(noms_env[k] for k in manquantes)
+        raise ConfigManquante(
+            "Configuration « Missions » incomplète. Variables d'environnement manquantes : "
+            f"{absentes}. Racine « Missions » posée au runbook T-0024-c. Voir outils/mcp-graph/README.md."
+        )
+    return valeurs
+
+
+def _assainir_code_mission(code_mission: str) -> str:
+    """Valide et normalise un code de mission (segment de chemin sûr, jamais d'évasion).
+
+    Refus (ValueError explicite) si : vide, > 64 caractères, contient « / », « \\ » ou « .. »,
+    ou porte un caractère hors de la classe autorisée [A-Za-z0-9._-]. Renvoie le code nettoyé.
+    """
+    if not isinstance(code_mission, str) or not code_mission.strip():
+        raise ValueError("`code_mission` doit être une chaîne non vide.")
+    code = code_mission.strip()
+    if len(code) > 64:
+        raise ValueError("`code_mission` invalide : 64 caractères maximum.")
+    if any(motif in code for motif in ("/", "\\", "..")):
+        raise ValueError(
+            "`code_mission` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. » "
+            "(la cible est figée sous la racine « Missions »)."
+        )
+    autorises = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+    if any(c not in autorises for c in code):
+        raise ValueError(
+            "`code_mission` invalide : seuls les caractères [A-Za-z0-9._-] sont autorisés."
+        )
+    return code
 
 
 def _credential():
@@ -461,6 +520,189 @@ def televerser_brouillon_offre(
         "item_id": corps.get("id"),
         "nom": corps.get("name"),
         "web_url": corps.get("webUrl"),
+    }
+
+
+@mcp.tool()
+def creer_espace_mission(ctx: Context, code_mission: str) -> dict[str, Any]:
+    """Crée l'ESPACE DE MISSION (arbre de dossiers figé) sous la racine « Missions », et nulle part ailleurs.
+
+    POST /drives/{MISSION_DRIVE_ID}/items/{MISSION_FOLDER_ID}/children
+         body {"name": <code_mission>, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"}
+    puis, sous le dossier de mission ainsi créé, un POST children par sous-dossier FIGÉ.
+
+    Cible FIGÉE côté serveur par GRAPH_MISSION_DRIVE_ID + GRAPH_MISSION_FOLDER_ID : comme
+    `create_list_item` fige sa liste et `televerser_brouillon_offre` son dossier, cette fonction
+    n'accepte AUCUN identifiant de cible de l'appelant. `code_mission` NOMME l'espace (segment de
+    chemin), il ne CHOISIT pas la cible — la racine « Missions » est la seule cible possible.
+
+    Garde-fous inscrits dans le code (table-des-crans.yaml : creer_espace_mission, cran auto) :
+        - `code_mission` ASSAINI : refus de « / », « \\ », « .. », des caractères hors [A-Za-z0-9._-]
+          et de > 64 caractères (pas d'évasion hors de la racine figée) ;
+        - arbre de sous-dossiers FIGÉ DANS LE CODE (SOUS_DOSSIERS_MISSION), jamais choisi par l'appelant ;
+        - COLLISION = FAIL (`@microsoft.graph.conflictBehavior: fail`) sur CHAQUE création : un espace
+          de mission de même nom n'est JAMAIS écrasé ni fusionné ; sa reprise est un geste humain.
+
+    Un espace de mission est une zone de travail INTERNE ; sa création est réversible (cran auto).
+
+    Args:
+        code_mission: code de la mission (nomme le dossier racine de l'espace ; jamais la cible).
+
+    Returns:
+        dict {"code_mission", "web_url", "sous_dossiers"} décrivant l'espace créé.
+
+    Raises:
+        ValueError: code_mission invalide.
+        FileExistsError: un espace de même nom existe déjà (collision=fail, aucun écrasement).
+        ConfigManquante: GRAPH_MISSION_DRIVE_ID / GRAPH_MISSION_FOLDER_ID absentes.
+    """
+    _verifier_appelant(ctx)
+
+    code = _assainir_code_mission(code_mission)
+
+    cfg = _config_mission()
+    # Cible NON paramétrable par l'appelant : la racine « Missions », et elle seule.
+    drive_id = cfg["mission_drive_id"]
+    racine_id = cfg["mission_folder_id"]
+    enfants_racine = f"{GRAPH_BASE}/drives/{drive_id}/items/{racine_id}/children"
+    with httpx.Client(timeout=30) as client:
+        # --- Dossier racine de la mission (collision = fail) ---
+        reponse = client.post(
+            enfants_racine,
+            headers={**_entetes(), "Content-Type": "application/json"},
+            json={"name": code, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"},
+        )
+        if reponse.status_code == 409:
+            raise FileExistsError(
+                f"Espace de mission déjà existant pour « {code} » : reprise humaine requise "
+                "(collision=fail). Aucun écrasement, aucune fusion."
+            )
+        reponse.raise_for_status()
+        mission = reponse.json()
+        mission_id = mission.get("id")
+        web_url = mission.get("webUrl")
+
+        # --- Sous-dossiers FIGÉS, sous le dossier de mission (collision = fail sur chacun) ---
+        enfants_mission = f"{GRAPH_BASE}/drives/{drive_id}/items/{mission_id}/children"
+        sous_dossiers_crees: list[str] = []
+        for sous_dossier in SOUS_DOSSIERS_MISSION:
+            sous = client.post(
+                enfants_mission,
+                headers={**_entetes(), "Content-Type": "application/json"},
+                json={"name": sous_dossier, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"},
+            )
+            if sous.status_code == 409:
+                raise FileExistsError(
+                    f"Sous-dossier « {sous_dossier} » déjà existant dans l'espace « {code} » : "
+                    "reprise humaine requise (collision=fail). Aucun écrasement."
+                )
+            sous.raise_for_status()
+            sous_dossiers_crees.append(sous_dossier)
+
+    return {
+        "code_mission": code,
+        "web_url": web_url,
+        "sous_dossiers": sous_dossiers_crees,
+    }
+
+
+@mcp.tool()
+def deposer_document_mission(
+    ctx: Context, code_mission: str, sous_dossier: str, nom_fichier: str, contenu_base64: str
+) -> dict[str, Any]:
+    """Dépose un BROUILLON INTERNE dans un sous-dossier FIGÉ d'un espace de mission, et nulle part ailleurs.
+
+    PUT /drives/{MISSION_DRIVE_ID}/items/{MISSION_FOLDER_ID}:/{code}/{sous_dossier}/{nom}:/content
+        ?@microsoft.graph.conflictBehavior=fail
+
+    Même racine FIGÉE côté serveur que `creer_espace_mission` (GRAPH_MISSION_DRIVE_ID +
+    GRAPH_MISSION_FOLDER_ID) : l'appelant ne choisit JAMAIS la cible. Le dépôt vise UNIQUEMENT
+    <racine Missions>/<code_mission>/<sous_dossier>/<nom_fichier> ; jamais un espace exposé au client.
+
+    Garde-fous inscrits dans le code (table-des-crans.yaml : deposer_document_mission_zone_travail,
+    cran auto) :
+        - `code_mission` ASSAINI (comme creer_espace_mission) — pas d'évasion hors de la racine figée ;
+        - `sous_dossier` restreint à la LISTE BLANCHE figée SOUS_DOSSIERS_MISSION (PermissionError sinon) ;
+        - `nom_fichier` ASSAINI (refus de « / », « \\ », « .. », caractères de contrôle) et extension
+          FORCÉE dans EXTENSIONS_MISSION (.docx .pptx .xlsx .pdf .md) — toute autre est refusée ;
+        - COLLISION = FAIL (`@microsoft.graph.conflictBehavior: fail`) : un document de même nom n'est
+          JAMAIS écrasé ; sa régénération est un geste humain de retrait.
+
+    Un brouillon interne n'est PAS un livrable client : l'envoi au client reste un acte HUMAIN
+    (envoyer_livrable_client — cran validé, grade habilité ; jamais l'agent).
+
+    Args:
+        code_mission: code de la mission (désigne l'espace ; jamais la cible racine).
+        sous_dossier: sous-dossier de destination, dans SOUS_DOSSIERS_MISSION (liste blanche).
+        nom_fichier: nom du fichier, extension dans EXTENSIONS_MISSION.
+        contenu_base64: contenu du fichier encodé en base64.
+
+    Returns:
+        dict {"item_id", "web_url", "taille_octets"} décrivant le document déposé.
+
+    Raises:
+        ValueError: code_mission ou nom_fichier invalide, extension hors whitelist, base64 invalide.
+        PermissionError: sous_dossier hors liste blanche.
+        FileExistsError: un document de même nom existe déjà (collision=fail, aucun écrasement).
+        ConfigManquante: GRAPH_MISSION_DRIVE_ID / GRAPH_MISSION_FOLDER_ID absentes.
+    """
+    _verifier_appelant(ctx)
+
+    code = _assainir_code_mission(code_mission)
+
+    # --- sous_dossier : liste blanche figée (exactement l'un des sous-dossiers de mission) ---
+    if sous_dossier not in SOUS_DOSSIERS_MISSION:
+        raise PermissionError(
+            f"Sous-dossier non autorisé : « {sous_dossier} ». Seuls "
+            f"{', '.join(SOUS_DOSSIERS_MISSION)} sont des cibles de dépôt (liste blanche figée)."
+        )
+
+    # --- Nom de fichier : assainissement + extension whitelistée ---
+    if not isinstance(nom_fichier, str) or not nom_fichier.strip():
+        raise ValueError("`nom_fichier` doit être une chaîne non vide.")
+    if any(motif in nom_fichier for motif in ("/", "\\", "..")) or any(ord(c) < 32 for c in nom_fichier):
+        raise ValueError(
+            "`nom_fichier` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. », "
+            "ni caractère de contrôle (le dépôt est figé sous la racine « Missions »)."
+        )
+    if not any(nom_fichier.lower().endswith(ext) for ext in EXTENSIONS_MISSION):
+        raise ValueError(
+            "`nom_fichier` invalide : extension hors whitelist. Extensions autorisées : "
+            f"{', '.join(EXTENSIONS_MISSION)}."
+        )
+
+    # --- Décodage du contenu base64 ---
+    try:
+        contenu = base64.b64decode(contenu_base64, validate=True)
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(f"`contenu_base64` n'est pas un base64 valide : {exc}") from exc
+
+    cfg = _config_mission()
+    # Cible NON paramétrable par l'appelant : sous la racine « Missions » figée, et elle seule.
+    drive_id = cfg["mission_drive_id"]
+    racine_id = cfg["mission_folder_id"]
+    chemin = f"{code}/{sous_dossier}/{nom_fichier}"
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{racine_id}:/{chemin}:/content"
+    params = {"@microsoft.graph.conflictBehavior": "fail"}  # jamais d'écrasement
+    with httpx.Client(timeout=30) as client:
+        reponse = client.put(
+            url,
+            headers={**_entetes(), "Content-Type": "application/octet-stream"},
+            content=contenu,
+            params=params,
+        )
+        # Collision : un document de même nom existe déjà — NE PAS réessayer, NE PAS écraser.
+        if reponse.status_code == 409:
+            raise FileExistsError(
+                f"Document déjà existant pour « {nom_fichier} » dans « {code}/{sous_dossier} » : "
+                "retrait humain requis (collision=fail). Aucun écrasement."
+            )
+        reponse.raise_for_status()
+        corps = reponse.json()
+    return {
+        "item_id": corps.get("id"),
+        "web_url": corps.get("webUrl"),
+        "taille_octets": len(contenu),
     }
 
 
