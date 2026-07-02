@@ -303,28 +303,58 @@ def _config_mission() -> dict[str, str]:
     return valeurs
 
 
-def _assainir_code_mission(code_mission: str) -> str:
-    """Valide et normalise un code de mission (segment de chemin sûr, jamais d'évasion).
+# Caractères interdits dans un composant de nom d'espace (invalides SharePoint / dangereux pour le
+# path Graph). Le « : » est notamment interdit car il délimite l'adressage par chemin (…/items/{id}:/…).
+_CARACTERES_INTERDITS_ESPACE = set('"*:<>?/\\|#%,')
 
-    Refus (ValueError explicite) si : vide, > 64 caractères, contient « / », « \\ » ou « .. »,
-    ou porte un caractère hors de la classe autorisée [A-Za-z0-9._-]. Renvoie le code nettoyé.
+
+def _composer_nom_espace(annee: str, client: str, nom_mission: str) -> str:
+    """Valide (annee, client, nom_mission) et compose « AAAA - Client - Nom de la mission ».
+
+    Composition CÔTÉ SERVEUR (garde-fou structurel, décision gardien 2 juillet 2026) : l'appelant
+    ne fournit JAMAIS le nom d'espace final, seulement ses trois composantes. Helper PARTAGÉ par
+    `creer_espace_mission` et `deposer_document_mission` — zéro dérive possible entre la création de
+    l'espace et le dépôt d'un document (les deux composent le nom exactement de la même façon).
+
+    Règles :
+        - `annee` : exactement 4 chiffres, bornée [2020..2100] ;
+        - `client` / `nom_mission` : après réduction des espaces (multiples → un seul) et strip des
+          extrémités, 1..60 caractères ; refus des caractères " * : < > ? / \\ | # % , (et de tout
+          caractère de contrôle), de la séquence « .. » et d'un point en tête ou en fin ; accents et
+          espaces internes AUTORISÉS.
+
+    Raises:
+        ValueError: toute composante invalide (message explicite).
     """
-    if not isinstance(code_mission, str) or not code_mission.strip():
-        raise ValueError("`code_mission` doit être une chaîne non vide.")
-    code = code_mission.strip()
-    if len(code) > 64:
-        raise ValueError("`code_mission` invalide : 64 caractères maximum.")
-    if any(motif in code for motif in ("/", "\\", "..")):
-        raise ValueError(
-            "`code_mission` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. » "
-            "(la cible est figée sous la racine « Missions »)."
-        )
-    autorises = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
-    if any(c not in autorises for c in code):
-        raise ValueError(
-            "`code_mission` invalide : seuls les caractères [A-Za-z0-9._-] sont autorisés."
-        )
-    return code
+    # --- annee : exactement 4 chiffres, bornée ---
+    if not isinstance(annee, str) or len(annee) != 4 or not all(c in "0123456789" for c in annee):
+        raise ValueError("`annee` doit être exactement 4 chiffres (ex. « 2026 »).")
+    if not (2020 <= int(annee) <= 2100):
+        raise ValueError("`annee` hors bornes : elle doit être comprise entre 2020 et 2100.")
+
+    def _valider(valeur: str, etiquette: str) -> str:
+        if not isinstance(valeur, str):
+            raise ValueError(f"`{etiquette}` doit être une chaîne.")
+        # Espaces multiples réduits à un seul + strip des extrémités (str.split sans argument).
+        v = " ".join(valeur.split())
+        if not v:
+            raise ValueError(f"`{etiquette}` ne doit pas être vide.")
+        if len(v) > 60:
+            raise ValueError(f"`{etiquette}` invalide : 60 caractères maximum.")
+        if any((c in _CARACTERES_INTERDITS_ESPACE) or (ord(c) < 32) for c in v):
+            raise ValueError(
+                f"`{etiquette}` invalide : il ne doit contenir aucun des caractères "
+                '" * : < > ? / \\ | # % , ni de caractère de contrôle.'
+            )
+        if ".." in v:
+            raise ValueError(f"`{etiquette}` invalide : la séquence « .. » est interdite.")
+        if v.startswith(".") or v.endswith("."):
+            raise ValueError(f"`{etiquette}` invalide : pas de point en tête ni en fin.")
+        return v
+
+    client_ok = _valider(client, "client")
+    nom_ok = _valider(nom_mission, "nom_mission")
+    return f"{annee} - {client_ok} - {nom_ok}"
 
 
 def _credential():
@@ -524,21 +554,25 @@ def televerser_brouillon_offre(
 
 
 @mcp.tool()
-def creer_espace_mission(ctx: Context, code_mission: str) -> dict[str, Any]:
+def creer_espace_mission(
+    ctx: Context, annee: str, client: str, nom_mission: str
+) -> dict[str, Any]:
     """Crée l'ESPACE DE MISSION (arbre de dossiers figé) sous la racine « Missions », et nulle part ailleurs.
 
     POST /drives/{MISSION_DRIVE_ID}/items/{MISSION_FOLDER_ID}/children
-         body {"name": <code_mission>, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"}
+         body {"name": <nom_espace>, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"}
     puis, sous le dossier de mission ainsi créé, un POST children par sous-dossier FIGÉ.
 
     Cible FIGÉE côté serveur par GRAPH_MISSION_DRIVE_ID + GRAPH_MISSION_FOLDER_ID : comme
     `create_list_item` fige sa liste et `televerser_brouillon_offre` son dossier, cette fonction
-    n'accepte AUCUN identifiant de cible de l'appelant. `code_mission` NOMME l'espace (segment de
-    chemin), il ne CHOISIT pas la cible — la racine « Missions » est la seule cible possible.
+    n'accepte AUCUN identifiant de cible de l'appelant. Le NOM de l'espace est COMPOSÉ CÔTÉ SERVEUR
+    (décision gardien 2 juillet 2026) : « AAAA - Client - Nom de la mission » (ex.
+    « 2026 - Arabelle Solutions - Siteflow ») via `_composer_nom_espace` — l'appelant fournit les trois
+    composantes, jamais le nom final ; la racine « Missions » reste la seule cible possible.
 
     Garde-fous inscrits dans le code (table-des-crans.yaml : creer_espace_mission, cran auto) :
-        - `code_mission` ASSAINI : refus de « / », « \\ », « .. », des caractères hors [A-Za-z0-9._-]
-          et de > 64 caractères (pas d'évasion hors de la racine figée) ;
+        - `annee` / `client` / `nom_mission` VALIDÉS et le nom COMPOSÉ côté serveur (pas d'évasion :
+          « / », « \\ », « .. », « : » et autres caractères SharePoint-invalides refusés) ;
         - arbre de sous-dossiers FIGÉ DANS LE CODE (SOUS_DOSSIERS_MISSION), jamais choisi par l'appelant ;
         - COLLISION = FAIL (`@microsoft.graph.conflictBehavior: fail`) sur CHAQUE création : un espace
           de mission de même nom n'est JAMAIS écrasé ni fusionné ; sa reprise est un geste humain.
@@ -546,35 +580,37 @@ def creer_espace_mission(ctx: Context, code_mission: str) -> dict[str, Any]:
     Un espace de mission est une zone de travail INTERNE ; sa création est réversible (cran auto).
 
     Args:
-        code_mission: code de la mission (nomme le dossier racine de l'espace ; jamais la cible).
+        annee: année de la mission (exactement 4 chiffres, [2020..2100]).
+        client: nom du client (1..60 car., composante du nom d'espace ; jamais la cible).
+        nom_mission: nom de la mission (1..60 car., composante du nom d'espace ; jamais la cible).
 
     Returns:
-        dict {"code_mission", "web_url", "sous_dossiers"} décrivant l'espace créé.
+        dict {"nom_espace", "web_url", "sous_dossiers"} décrivant l'espace créé.
 
     Raises:
-        ValueError: code_mission invalide.
+        ValueError: annee / client / nom_mission invalide.
         FileExistsError: un espace de même nom existe déjà (collision=fail, aucun écrasement).
         ConfigManquante: GRAPH_MISSION_DRIVE_ID / GRAPH_MISSION_FOLDER_ID absentes.
     """
     _verifier_appelant(ctx)
 
-    code = _assainir_code_mission(code_mission)
+    nom_espace = _composer_nom_espace(annee, client, nom_mission)
 
     cfg = _config_mission()
     # Cible NON paramétrable par l'appelant : la racine « Missions », et elle seule.
     drive_id = cfg["mission_drive_id"]
     racine_id = cfg["mission_folder_id"]
     enfants_racine = f"{GRAPH_BASE}/drives/{drive_id}/items/{racine_id}/children"
-    with httpx.Client(timeout=30) as client:
+    with httpx.Client(timeout=30) as client_http:
         # --- Dossier racine de la mission (collision = fail) ---
-        reponse = client.post(
+        reponse = client_http.post(
             enfants_racine,
             headers={**_entetes(), "Content-Type": "application/json"},
-            json={"name": code, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"},
+            json={"name": nom_espace, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"},
         )
         if reponse.status_code == 409:
             raise FileExistsError(
-                f"Espace de mission déjà existant pour « {code} » : reprise humaine requise "
+                f"Espace de mission déjà existant pour « {nom_espace} » : reprise humaine requise "
                 "(collision=fail). Aucun écrasement, aucune fusion."
             )
         reponse.raise_for_status()
@@ -586,21 +622,21 @@ def creer_espace_mission(ctx: Context, code_mission: str) -> dict[str, Any]:
         enfants_mission = f"{GRAPH_BASE}/drives/{drive_id}/items/{mission_id}/children"
         sous_dossiers_crees: list[str] = []
         for sous_dossier in SOUS_DOSSIERS_MISSION:
-            sous = client.post(
+            sous = client_http.post(
                 enfants_mission,
                 headers={**_entetes(), "Content-Type": "application/json"},
                 json={"name": sous_dossier, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"},
             )
             if sous.status_code == 409:
                 raise FileExistsError(
-                    f"Sous-dossier « {sous_dossier} » déjà existant dans l'espace « {code} » : "
+                    f"Sous-dossier « {sous_dossier} » déjà existant dans l'espace « {nom_espace} » : "
                     "reprise humaine requise (collision=fail). Aucun écrasement."
                 )
             sous.raise_for_status()
             sous_dossiers_crees.append(sous_dossier)
 
     return {
-        "code_mission": code,
+        "nom_espace": nom_espace,
         "web_url": web_url,
         "sous_dossiers": sous_dossiers_crees,
     }
@@ -608,20 +644,24 @@ def creer_espace_mission(ctx: Context, code_mission: str) -> dict[str, Any]:
 
 @mcp.tool()
 def deposer_document_mission(
-    ctx: Context, code_mission: str, sous_dossier: str, nom_fichier: str, contenu_base64: str
+    ctx: Context, annee: str, client: str, nom_mission: str,
+    sous_dossier: str, nom_fichier: str, contenu_base64: str
 ) -> dict[str, Any]:
     """Dépose un BROUILLON INTERNE dans un sous-dossier FIGÉ d'un espace de mission, et nulle part ailleurs.
 
-    PUT /drives/{MISSION_DRIVE_ID}/items/{MISSION_FOLDER_ID}:/{code}/{sous_dossier}/{nom}:/content
+    PUT /drives/{MISSION_DRIVE_ID}/items/{MISSION_FOLDER_ID}:/{nom_espace}/{sous_dossier}/{nom}:/content
         ?@microsoft.graph.conflictBehavior=fail
 
     Même racine FIGÉE côté serveur que `creer_espace_mission` (GRAPH_MISSION_DRIVE_ID +
-    GRAPH_MISSION_FOLDER_ID) : l'appelant ne choisit JAMAIS la cible. Le dépôt vise UNIQUEMENT
-    <racine Missions>/<code_mission>/<sous_dossier>/<nom_fichier> ; jamais un espace exposé au client.
+    GRAPH_MISSION_FOLDER_ID) : l'appelant ne choisit JAMAIS la cible. Le nom d'espace est RECOMPOSÉ
+    côté serveur par le MÊME helper que `creer_espace_mission` (`_composer_nom_espace`) — zéro dérive
+    possible entre la création et le dépôt. Le dépôt vise UNIQUEMENT
+    <racine Missions>/<nom_espace>/<sous_dossier>/<nom_fichier> ; jamais un espace exposé au client.
 
     Garde-fous inscrits dans le code (table-des-crans.yaml : deposer_document_mission_zone_travail,
     cran auto) :
-        - `code_mission` ASSAINI (comme creer_espace_mission) — pas d'évasion hors de la racine figée ;
+        - `annee` / `client` / `nom_mission` VALIDÉS et nom d'espace COMPOSÉ côté serveur (comme
+          creer_espace_mission) — pas d'évasion hors de la racine figée ;
         - `sous_dossier` restreint à la LISTE BLANCHE figée SOUS_DOSSIERS_MISSION (PermissionError sinon) ;
         - `nom_fichier` ASSAINI (refus de « / », « \\ », « .. », caractères de contrôle) et extension
           FORCÉE dans EXTENSIONS_MISSION (.docx .pptx .xlsx .pdf .md) — toute autre est refusée ;
@@ -632,7 +672,9 @@ def deposer_document_mission(
     (envoyer_livrable_client — cran validé, grade habilité ; jamais l'agent).
 
     Args:
-        code_mission: code de la mission (désigne l'espace ; jamais la cible racine).
+        annee: année de la mission (exactement 4 chiffres, [2020..2100]).
+        client: nom du client (composante du nom d'espace ; jamais la cible).
+        nom_mission: nom de la mission (composante du nom d'espace ; jamais la cible).
         sous_dossier: sous-dossier de destination, dans SOUS_DOSSIERS_MISSION (liste blanche).
         nom_fichier: nom du fichier, extension dans EXTENSIONS_MISSION.
         contenu_base64: contenu du fichier encodé en base64.
@@ -641,14 +683,15 @@ def deposer_document_mission(
         dict {"item_id", "web_url", "taille_octets"} décrivant le document déposé.
 
     Raises:
-        ValueError: code_mission ou nom_fichier invalide, extension hors whitelist, base64 invalide.
+        ValueError: annee/client/nom_mission ou nom_fichier invalide, extension hors whitelist, base64 invalide.
         PermissionError: sous_dossier hors liste blanche.
         FileExistsError: un document de même nom existe déjà (collision=fail, aucun écrasement).
         ConfigManquante: GRAPH_MISSION_DRIVE_ID / GRAPH_MISSION_FOLDER_ID absentes.
     """
     _verifier_appelant(ctx)
 
-    code = _assainir_code_mission(code_mission)
+    # Nom d'espace recomposé par le MÊME helper que creer_espace_mission (zéro dérive).
+    nom_espace = _composer_nom_espace(annee, client, nom_mission)
 
     # --- sous_dossier : liste blanche figée (exactement l'un des sous-dossiers de mission) ---
     if sous_dossier not in SOUS_DOSSIERS_MISSION:
@@ -681,11 +724,11 @@ def deposer_document_mission(
     # Cible NON paramétrable par l'appelant : sous la racine « Missions » figée, et elle seule.
     drive_id = cfg["mission_drive_id"]
     racine_id = cfg["mission_folder_id"]
-    chemin = f"{code}/{sous_dossier}/{nom_fichier}"
+    chemin = f"{nom_espace}/{sous_dossier}/{nom_fichier}"
     url = f"{GRAPH_BASE}/drives/{drive_id}/items/{racine_id}:/{chemin}:/content"
     params = {"@microsoft.graph.conflictBehavior": "fail"}  # jamais d'écrasement
-    with httpx.Client(timeout=30) as client:
-        reponse = client.put(
+    with httpx.Client(timeout=30) as client_http:
+        reponse = client_http.put(
             url,
             headers={**_entetes(), "Content-Type": "application/octet-stream"},
             content=contenu,
@@ -694,7 +737,7 @@ def deposer_document_mission(
         # Collision : un document de même nom existe déjà — NE PAS réessayer, NE PAS écraser.
         if reponse.status_code == 409:
             raise FileExistsError(
-                f"Document déjà existant pour « {nom_fichier} » dans « {code}/{sous_dossier} » : "
+                f"Document déjà existant pour « {nom_fichier} » dans « {nom_espace}/{sous_dossier} » : "
                 "retrait humain requis (collision=fail). Aucun écrasement."
             )
         reponse.raise_for_status()
