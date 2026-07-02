@@ -2,8 +2,8 @@
 # Cadrage de mission — Skill
 
 > **id** : `cadrage-mission`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0021`, première marche de la tranche verticale métier, plan §6 T-1.1). Décrit le skill qui, d'une PROPOSITION GAGNÉE, produit un BRIEF DE MISSION structuré, validé par l'utilisateur (« le brief suffit »), écrit en Zone-de-proposition via `create_list_item` ; la création réelle de l'espace de mission (cran auto) s'appuie sur l'outillage du chantier `T-0024`.
+> **Version** : 1.1 — *promu*. **Nature** : skill.
+> **Changelog** : v1.1 — promu, 2 juillet 2026 : corps aligné post-promotion (§9 statut candidat → promu). v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0021`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0021`, première marche de la tranche verticale métier, plan §6 T-1.1). Décrit le skill qui, d'une PROPOSITION GAGNÉE, produit un BRIEF DE MISSION structuré, validé par l'utilisateur (« le brief suffit »), écrit en Zone-de-proposition via `create_list_item` ; la création réelle de l'espace de mission (cran auto) s'appuie sur l'outillage du chantier `T-0024`.
 > **Domicile** : `skills/cadrage-mission/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/modele-donnees.md` (§2 / §2 bis / §3 — entités Mission, Imputation, Compte ; Bibliothèques Propositions et Livrables ; Zone-de-proposition Title/Origine/Contenu), `contrats/socle/design-system.md` (templates consommés par référence), `contrats/socle/table-des-crans.yaml` (`creer_espace_mission` = **auto** ; `ecrire_fait_derive_zone_proposition` = **auto** ; `notifier_equipe` = **notifié** ; `merger_sur_main` / promotion = **gardien**), `contrats/socle/anonymisation.md` (§1 — réutilisation interne nominative), `backlog/chantiers/T-0021.yaml`, `backlog/chantiers/T-0024.yaml` (outillage de création d'espace), `CLAUDE.md`.
 
@@ -90,4 +90,4 @@ create_list_item(fields = {
 
 ## 9. Évolution
 
-Ce skill est un **candidat** (v1.0). Sa promotion suit la boucle (`doctrine.md` §7) : candidat → avis d'impact → promotion gardien (procédure allégée), montée de version en en-tête, corps byte-identique à la promotion. Retour arrière = repointage.
+Ce skill est **promu** (procédure allégée, portée locale — `doctrine.md` §5). Son évolution suit la boucle (`doctrine.md` §7) : candidat → avis d'impact → promotion gardien (procédure allégée), montée de version en en-tête, corps byte-identique à la promotion. Retour arrière = repointage.
