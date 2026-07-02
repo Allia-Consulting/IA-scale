@@ -1,6 +1,6 @@
 # Parc collaborateur — politique de poste de travail — Allia Consulting
 
-> **Version** : 1.3 — *candidat*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.3 — *promu*. **Statut** : contrat socle — fait foi.
 > **Changelog** :
 > - v1.3 (enrichissement candidat) — 2 juillet 2026 : §4 — correction d'une politique fausse : Company Portal n'est pas « implicite à l'enrôlement Intune » ; il devient app LOB requise du socle (bundle com.microsoft.CompanyPortalMac, assignation grp-parc-collaborateur). Découvert lors de l'onboarding du poste de Guillaume Dan (session bloquée par CA faute d'enregistrement Entra). Décision du gardien du 2 juillet 2026.
 > - v1.2 (enrichissement candidat) — 19 juin 2026 : §5 — bloc sécurité Entra soldé : security defaults désactivés, deux stratégies CA actives (`ca-mfa-admins` : MFA sur Administrateur général, brise-glace exclu ; `ca-parc-collaborateur-conforme` : appareil conforme sur `grp-parc-collaborateur`, brise-glace exclu) ; compte break-glass `brise-glace@AlliaConsuling.onmicrosoft.com` opérationnel (cloud-only, Global Admin permanent, YubiKey FIDO2 device-bound). Hygiène break-glass à instruire hors de ce geste (mot de passe non-expiry, alerte de connexion). Prérequis Entra à la bascule CA : entièrement satisfait. Décisions du gardien du 19 juin 2026.
