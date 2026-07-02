@@ -17,7 +17,7 @@ criteres_acceptation:
   - "L'agent écrit tout fait dérivé en Zone-de-proposition et ne merge jamais sur main (il ouvre des PR)"
   - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
 rayon_impact: local
-statut: promu
+statut: soldé
 note: >
   Troisième marche de la tranche verticale métier (plan §6 T-1.3), instanciée le 2 juillet 2026.
   Deuxième agent du référentiel (après agent-redaction) : étoffe /agents/ avec le premier agent
@@ -30,3 +30,5 @@ avancement:
       fait: "profil.yaml rédigé et proposé en PR (agents/agent-mission/profil.yaml, v1.0 candidat) : composition [cadrage-mission, kick-off] (tous deux promus — dépendances propres), crans par action explicites (creer_espace_mission=auto, notifier_equipe=notifie, envoyer_livrable_client=valide, promouvoir=interdit), résolution du canon au pull. Statut à_faire → candidat."
     - date: 2026-07-02
       fait: "PROMU par le gardien : profil agent-mission v1.0 promu (PR #142 mergée, en-tête candidat → promu, contenu inchangé hors en-tête — précédent agent-redaction). Reste pour SOLDER : agent lancé de bout en bout sur une affaire (dépend de l'outillage T-0024)."
+    - date: 2026-07-02
+      fait: "SOLDÉ par épreuve réelle (T-0024-d, 02/07/2026) : agent-mission a résolu son canon au pull (HEAD ae0cd16), composé cadrage-mission puis kick-off sur une affaire réelle en respectant chaque cran (lectures/dérivés/espace=auto, notification=notifié remise au gardien, envoi client=jamais, promotion=jamais), tout dérivé né en Zone-de-proposition, aucun merge, aucune écriture en source. Y compris sous incident : STOP propre sur échec d'intégrité, repli tracé."
