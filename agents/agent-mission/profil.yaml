@@ -1,0 +1,41 @@
+---
+id: agent-mission
+# Changelog : v1.0 — candidat, 2 juillet 2026 : création (chantier T-0023, troisième marche de la
+#   tranche verticale métier, plan §6 T-1.3). Deuxième agent du référentiel (après agent-redaction),
+#   premier agent MÉTIER : compose cadrage-mission (v1.1 promu) et kick-off (v1.1 promu).
+version: "1.0 — candidat"
+nature: "profil d'agent"
+domicile: "agents/agent-mission/profil.yaml"
+role: agent  # opère sur le plan d'exécution
+adosse_a:
+  - "CLAUDE.md"
+  - "contrats/socle/table-des-crans.yaml"
+  - "doctrine/doctrine.md"
+  - "contrats/socle/modele-donnees.md"
+
+# Ce que l'agent sait faire : une composition de skills versionnés (résolus au pull, jamais copiés).
+skills:
+  - cadrage-mission  # skill promu (T-0021) : du brief gagné au brief validé « le brief suffit »
+  - kick-off         # skill promu (T-0022) : du brief validé à la proposition + support, envoi = porte humaine
+
+# Comment il se comporte.
+resolution:
+  - "Résout le canon depuis le dépôt à l'exécution (jamais une copie) — voir CLAUDE.md."
+  - "Avant toute action à effet de bord, résout son cran via table-des-crans.yaml."
+  - "Écrit tout fait dérivé en Zone-de-proposition ; ne merge jamais sur main."
+  - "Respecte les portes des skills composés : « le brief suffit » (cadrage-mission) avant tout effet de bord ; brief requis avant kick-off ; porte anonymisation sur matière d'un client tiers (anonymisation.md §1)."
+  - "Ne traite que des chantiers dont les dépendances sont promues (plan §4)."
+
+# Crans par type d'action (rappel ; la table des crans fait foi).
+crans_par_action:
+  lire_proposition_et_referentiels: auto     # lecture réversible, interne
+  ecrire_fait_derive_zone_proposition: auto  # brief, journaux — le dérivé n'est jamais le saisi
+  creer_espace_mission: auto                 # outillage T-0024 ; réserve tracée tant que non livré
+  generer_documents_internes: auto           # proposition + support = brouillons internes réversibles
+  deposer_brouillon_zone_travail: auto       # cible FIGÉE côté serveur (T-0024) ; collision = fail
+  notifier_equipe: notifie                   # message de nomination / lancement
+  envoyer_livrable_client: valide            # porte humaine — grade habilité (organisation.md §4 bis)
+  ouvrir_pull_request: auto                  # un candidat, pas une vérité
+  promouvoir: interdit                       # jamais l'agent — gardien (canon) / porte humaine tracée (faits)
+
+ecrit_derive_en: "zone de proposition"
