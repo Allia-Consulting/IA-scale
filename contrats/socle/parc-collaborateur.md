@@ -1,7 +1,8 @@
 # Parc collaborateur — politique de poste de travail — Allia Consulting
 
-> **Version** : 1.2 — *promu*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.3 — *promu*. **Statut** : contrat socle — fait foi.
 > **Changelog** :
+> - v1.3 (enrichissement candidat) — 2 juillet 2026 : §4 — correction d'une politique fausse : Company Portal n'est pas « implicite à l'enrôlement Intune » ; il devient app LOB requise du socle (bundle com.microsoft.CompanyPortalMac, assignation grp-parc-collaborateur). Découvert lors de l'onboarding du poste de Guillaume Dan (session bloquée par CA faute d'enregistrement Entra). Décision du gardien du 2 juillet 2026.
 > - v1.2 (enrichissement candidat) — 19 juin 2026 : §5 — bloc sécurité Entra soldé : security defaults désactivés, deux stratégies CA actives (`ca-mfa-admins` : MFA sur Administrateur général, brise-glace exclu ; `ca-parc-collaborateur-conforme` : appareil conforme sur `grp-parc-collaborateur`, brise-glace exclu) ; compte break-glass `brise-glace@AlliaConsuling.onmicrosoft.com` opérationnel (cloud-only, Global Admin permanent, YubiKey FIDO2 device-bound). Hygiène break-glass à instruire hors de ce geste (mot de passe non-expiry, alerte de connexion). Prérequis Entra à la bascule CA : entièrement satisfait. Décisions du gardien du 19 juin 2026.
 > - v1.1 (enrichissement candidat) — 15 juin 2026 : §4 — ajout de la politique de sauvegarde des données utilisateur (OneDrive Folder Backup / KFM) : redirection silencieuse et verrouillée des dossiers Bureau et Documents vers OneDrive ; blocage de la synchronisation de comptes OneDrive personnels sur le poste géré. Décision du gardien du 15 juin 2026. Contenu antérieur inchangé.
 > - v1.1 (enrichissement candidat) — 13 juin 2026 : §5 précisé sur la posture d'accès conditionnel (security defaults, mode Rapport seul avant bascule, pas d'exclusion de plateforme, compte break-glass comme préalable à la bascule) ; §5 alignement macOS min. Décisions du gardien du 13 juin 2026 lors du runbook T-0006. Contenu antérieur inchangé.
@@ -39,7 +40,7 @@ La configuration d'un poste est un **dérivé** d'une décision de parc promue i
 ## 4. Applications déployées
 
 - **Socle** (poussé par défaut via Intune) : suite Microsoft 365 (Word, Excel, PowerPoint, Outlook, Teams, OneDrive) ; Claude desktop ; Claude Code CLI (l'authentification OAuth des serveurs MCP `.mcp.json` projet se fait au CLI — fait durci T-0010) ; Google Chrome (navigateur géré) ; git et gh (la connexion Git vise le dépôt commun de la firme — org GitHub Allia-Consulting ; le geste d'authentification `gh auth login` reste celui de la personne, sous son identité).
-- **Company Portal** : implicite à l'enrôlement Intune.
+- **Company Portal** : app métier (LOB) **requise**, poussée par Intune (bundle unique `com.microsoft.CompanyPortalMac`), assignée à `grp-parc-collaborateur`. Nécessaire à l'enregistrement Entra de la session utilisateur et donc au passage de `ca-parc-collaborateur-conforme`. **Jamais implicite** à l'enrôlement ADE : l'ADE macOS n'installe pas Company Portal (fait durci 02/07/2026). L'installation manuelle du `.pkg` par l'utilisateur est un anti-pattern : elle masque l'absence de l'app au socle et échoue sur un compte Standard.
 - **Apps conditionnées à une fonction ou un périmètre** : aucune à ce stade ; s'ajoutent par candidats ultérieurs.
 
 ### Sauvegarde des données utilisateur (OneDrive)
