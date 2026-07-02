@@ -92,3 +92,5 @@ avancement:
       fait: "T-0024-b : table-des-crans v1.9 proposée en PR — ajout deposer_document_mission_zone_travail (auto, cible figée, liste blanche, collision=fail) + note d'outillage sur creer_espace_mission. Promotion du socle = merge gardien."
     - date: 2026-07-02
       fait: "T-0024-a (amendement avant mise en service, décision gardien) : nommage des espaces imposé structurellement — creer_espace_mission et deposer_document_mission prennent (annee, client, nom_mission), le serveur compose « AAAA - Client - Nom de la mission » via _composer_nom_espace partagé ; racine désignée = General/03 - Livrables de mission (arbitrage gardien, objection de cohérence posée et levée). Image 0.8.0 à bâtir APRÈS ce merge."
+    - date: 2026-07-02
+      fait: "T-0024-a (amendement n°2, décision gardien après test réel 0.8.0) : arbre figé ramené à [01 - Pilotage, 02 - Livrables] (kick-off déposé sous 01 - Pilotage) ; cadrage/kick-off en dossiers séparés jugés sans utilité. Image cible 0.8.1. Test 0.8.0 (2026 - Test - T0024C) : création + collision=fail PROUVÉES au tenant."
