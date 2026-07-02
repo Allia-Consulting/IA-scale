@@ -1,0 +1,29 @@
+---
+id: T-0024
+titre: "Branchement M365 mission : espace réel, imputations en zone puis promotion tracée"
+capacite: "Cœur de métier / Delivery / Cadrage & lancement"
+phase: 1
+type_action: infrastructure_mcp
+cran: valide
+produit:
+  - "création RÉELLE de l'espace SharePoint de mission au tenant (cran auto — creer_espace_mission, table-des-crans)"
+  - "écriture des imputations proposées en Zone-de-proposition (dérivé), puis promotion tracée vers la source (Liste Imputations, modele-donnees.md §2)"
+  - "extension du MCP Graph si nécessaire : outil de création d'espace de mission à CIBLE FIGÉE côté serveur, zéro secret (identité managée), sur le modèle de create_list_item / televerser_brouillon_offre"
+depend_de: ["T-0021", "T-0023"]
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+  - "contrats/socle/identites-et-secrets.md"
+criteres_acceptation:
+  - "Un espace de mission réel existe au tenant, créé par l'agent sous cran auto, conforme au brief validé"
+  - "Aucune imputation n'est écrite directement dans une source : le dérivé naît en Zone-de-proposition, la promotion vers la source est une étape tracée"
+  - "Le garde-fou structurel côté serveur est préservé : la cible d'écriture n'est jamais choisie librement par l'appelant"
+  - "Zéro secret créé, distribué ou stocké (identité managée — doctrine T-0015 / T-0019)"
+  - "Critère de sortie de la tranche (plan §6) : un gain d'affaire déclenche, sous validations du gardien, la création de la mission ; chaque action a respecté son cran ; tout dérivé est passé par la zone"
+rayon_impact: large  # étend le MCP Graph, consommé par toute la chaîne
+statut: à_faire
+note: >
+  Quatrième marche de la tranche verticale métier (plan §6 T-1.4), instanciée le 2 juillet 2026.
+  Si aucune affaire réelle n'est disponible pour l'épreuve, bâtir contre une affaire de
+  démonstration explicitement étiquetée — et lever alors la réserve de T-0014 en branchant
+  le cockpit sur les vraies listes. La mise en place de tout privilège nouveau du MCP reste
+  un RUNBOOK HUMAIN (plan §2).
