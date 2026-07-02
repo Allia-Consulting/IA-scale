@@ -52,6 +52,7 @@ aucun appel réseau (le credential et la configuration ne sont lus qu'au moment 
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -646,7 +647,7 @@ def creer_espace_mission(
 @mcp.tool()
 def deposer_document_mission(
     ctx: Context, annee: str, client: str, nom_mission: str,
-    sous_dossier: str, nom_fichier: str, contenu_base64: str
+    sous_dossier: str, nom_fichier: str, contenu_base64: str, sha256_attendu: str
 ) -> dict[str, Any]:
     """Dépose un BROUILLON INTERNE dans un sous-dossier FIGÉ d'un espace de mission, et nulle part ailleurs.
 
@@ -668,6 +669,9 @@ def deposer_document_mission(
           FORCÉE dans EXTENSIONS_MISSION (.docx .pptx .xlsx .pdf .md) — toute autre est refusée ;
         - COLLISION = FAIL (`@microsoft.graph.conflictBehavior: fail`) : un document de même nom n'est
           JAMAIS écrasé ; sa régénération est un geste humain de retrait.
+        - INTÉGRITÉ FAIL-CLOSED (leçon épreuve T-0024-d) : l'appelant fournit `sha256_attendu` ; le
+          serveur recalcule le sha256 du contenu DÉCODÉ et REFUSE (ValueError) avant tout appel Graph
+          si l'empreinte diffère — un contenu corrompu en transit ne peut PAS être stocké silencieusement.
 
     Un brouillon interne n'est PAS un livrable client : l'envoi au client reste un acte HUMAIN
     (envoyer_livrable_client — cran validé, grade habilité ; jamais l'agent).
@@ -679,12 +683,15 @@ def deposer_document_mission(
         sous_dossier: sous-dossier de destination, dans SOUS_DOSSIERS_MISSION (liste blanche).
         nom_fichier: nom du fichier, extension dans EXTENSIONS_MISSION.
         contenu_base64: contenu du fichier encodé en base64.
+        sha256_attendu: empreinte sha256 (64 hex minuscules) du contenu attendu — garde-fou d'intégrité.
 
     Returns:
-        dict {"item_id", "web_url", "taille_octets"} décrivant le document déposé.
+        dict {"item_id", "web_url", "taille_octets", "sha256"} décrivant le document déposé
+        (sha256 = empreinte du contenu réellement envoyé au PUT).
 
     Raises:
-        ValueError: annee/client/nom_mission ou nom_fichier invalide, extension hors whitelist, base64 invalide.
+        ValueError: annee/client/nom_mission ou nom_fichier invalide, extension hors whitelist,
+            base64 invalide, sha256_attendu mal formé, ou INTÉGRITÉ (sha256 reçu ≠ attendu).
         PermissionError: sous_dossier hors liste blanche.
         FileExistsError: un document de même nom existe déjà (collision=fail, aucun écrasement).
         ConfigManquante: GRAPH_MISSION_DRIVE_ID / GRAPH_MISSION_FOLDER_ID absentes.
@@ -715,11 +722,26 @@ def deposer_document_mission(
             f"{', '.join(EXTENSIONS_MISSION)}."
         )
 
+    # --- sha256_attendu : format strict (64 hex minuscules) ---
+    if (not isinstance(sha256_attendu, str) or len(sha256_attendu) != 64
+            or any(c not in "0123456789abcdef" for c in sha256_attendu)):
+        raise ValueError(
+            "`sha256_attendu` doit être une empreinte sha256 de 64 caractères hexadécimaux minuscules."
+        )
+
     # --- Décodage du contenu base64 ---
     try:
         contenu = base64.b64decode(contenu_base64, validate=True)
     except Exception as exc:  # noqa: BLE001
         raise ValueError(f"`contenu_base64` n'est pas un base64 valide : {exc}") from exc
+
+    # --- INTÉGRITÉ FAIL-CLOSED : sha256 du contenu décodé == attendu, AVANT tout appel Graph ---
+    sha256_recu = hashlib.sha256(contenu).hexdigest()
+    if sha256_recu != sha256_attendu:
+        raise ValueError(
+            f"INTEGRITÉ : sha256 reçu {sha256_recu} ≠ attendu {sha256_attendu} — "
+            "contenu corrompu en transit, RIEN n'a été écrit."
+        )
 
     cfg = _config_mission()
     # Cible NON paramétrable par l'appelant : sous la racine « Missions » figée, et elle seule.
@@ -747,6 +769,7 @@ def deposer_document_mission(
         "item_id": corps.get("id"),
         "web_url": corps.get("webUrl"),
         "taille_octets": len(contenu),
+        "sha256": sha256_recu,
     }
 
 

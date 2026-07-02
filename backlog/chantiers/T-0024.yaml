@@ -121,3 +121,5 @@ avancement:
       fait: "T-0024-a (amendement n°2, décision gardien après test réel 0.8.0) : arbre figé ramené à [01 - Pilotage, 02 - Livrables] (kick-off déposé sous 01 - Pilotage) ; cadrage/kick-off en dossiers séparés jugés sans utilité. Image cible 0.8.1. Test 0.8.0 (2026 - Test - T0024C) : création + collision=fail PROUVÉES au tenant."
     - date: 2026-07-02
       fait: "T-0024-c ÉPROUVÉ : mise en service 0.8.1 complète (racine désignée, ids posés, révision 0000012 saine, write prouvé par 2 écritures réelles + collisions, tests supprimés par le gardien). a/b/c faits — reste T-0024-d, l'épreuve réelle soldante de la tranche (T-0021..T-0024), avec vérification préalable des Listes Missions/Imputations."
+    - date: 2026-07-02
+      fait: "T-0024-a (amendement n°3, leçon épreuve d) : intégrité fail-closed sur deposer_document_mission — sha256_attendu obligatoire, mismatch = refus explicite avant écriture, empreinte stockée retournée. Un dépôt corrompu en transit (17307 o ≠ 16758 o, détecté par taille_octets, fichier retiré par le gardien) devient impossible à stocker. Image cible 0.8.2."
