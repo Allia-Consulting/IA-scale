@@ -19,7 +19,7 @@ criteres_acceptation:
   - "Chaque action du skill résout son cran via table-des-crans.yaml (interne réversible = auto ; notification équipe = notifié)"
   - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
 rayon_impact: local
-statut: promu
+statut: soldé
 note: >
   Première marche de la tranche verticale métier « gain d'affaire » (plan §6 T-1.1) —
   instanciée en chantier réel le 2 juillet 2026 ; c'est le pivot : le SI sait se gouverner
@@ -34,3 +34,5 @@ avancement:
       fait: "SKILL.md rédigé et proposé en PR (skills/cadrage-mission/SKILL.md, v1.0 candidat) : brief en Zone-de-proposition, porte « le brief suffit », templates par référence au design system, espace de mission via outillage T-0024. Statut à_faire → candidat."
     - date: 2026-07-02
       fait: "PROMU par le gardien : skill cadrage-mission v1.0 promu (PR #138 mergée, en-tête candidat → promu, corps byte-identique). Reste pour SOLDER : épreuve réelle de bout en bout (dépend de l'outillage T-0024)."
+    - date: 2026-07-02
+      fait: "SOLDÉ par épreuve réelle (T-0024-d, 02/07/2026) sur l'affaire RÉELLE Projet Siteflow / Arabelle Solutions (CodeMission 1) : agent-mission a lu la fiche source, construit le brief en dialogue, respecté la porte « le brief suffit », écrit BRIEF-1 en Zone-de-proposition (created_id=4, vérifié à la source) et déclenché la création réelle de l'espace « 2026 - Arabelle Solutions - Siteflow ». Imputations dérivées (≈153 j-h) promues vers la Liste Imputations par le gardien (porte humaine tracée)."

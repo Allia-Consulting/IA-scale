@@ -18,7 +18,7 @@ criteres_acceptation:
   - "La notification de l'équipe est au cran notifié ; les brouillons restent internes (zone de travail / Zone-de-proposition)"
   - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
 rayon_impact: local
-statut: promu
+statut: soldé
 note: >
   Deuxième marche de la tranche verticale métier (plan §6 T-1.2), instanciée le 2 juillet 2026.
   Enchaîne sur le brief produit par cadrage-mission (T-0021). SOLDÉ = épreuve réelle
@@ -30,3 +30,5 @@ avancement:
       fait: "SKILL.md rédigé et proposé en PR (skills/kick-off/SKILL.md, v1.0 candidat) : entrée = brief validé de cadrage-mission, génération proposition + support au design system (par référence, version à portée), journal en Zone-de-proposition, notification équipe = notifié, envoi client = porte humaine validé, porte anonymisation sur matière client tiers. Statut à_faire → candidat."
     - date: 2026-07-02
       fait: "PROMU par le gardien : skill kick-off v1.0 promu (PR #140 mergée, en-tête candidat → promu, corps byte-identique). Reste pour SOLDER : épreuve réelle de bout en bout (dépend de l'outillage T-0024)."
+    - date: 2026-07-02
+      fait: "SOLDÉ par épreuve réelle (T-0024-d, 02/07/2026) sur Projet Siteflow : support de kick-off généré au design system v1.2 résolu au pull (6 slides, 16758 octets, sha256 9121af57…), journal KICKOFF-1-20260702 écrit en Zone-de-proposition (created_id=5, vérifié à la source), porte anonymisation non déclenchée (aucune matière tiers), rien envoyé hors firme. RÉSERVES tracées non bloquantes : dépôt du .pptx via UI gardien (transfert base64 inline non fiable — 3 refus d'intégrité 0.8.2, garde-fou prouvé vivant) et notification équipe publiée sur Teams par le gardien (canal non outillé). À rejouer via connecteur quand un canal de transfert binaire fiable existera."
