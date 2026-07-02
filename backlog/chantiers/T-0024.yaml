@@ -44,6 +44,12 @@ sous_taches:
       - "Collision = erreur explicite, aucun écrasement ; extension hors whitelist → refus ; nom ou code contenant / \\ .. → refus"
       - "Aucun secret introduit : auth Graph = identité managée (zéro token store, doctrine T-0015)"
       - "Import réel + sonde /healthz verts en CI"
+    execution: >
+      Code livré en 3 PR mergées le 02/07/2026 : #145 (création des 2 outils), #147 (nommage
+      « AAAA - Client - Nom de la mission » composé côté serveur, _composer_nom_espace partagé),
+      #148 (arbre figé ramené à 01 - Pilotage / 02 - Livrables, décision gardien). Import réel +
+      sonde /healthz verts en CI (docker python:3.12) sur chaque PR. ÉPROUVÉ au tenant le
+      02/07/2026 via les images 0.8.0 puis 0.8.1 (voir T-0024-c).
 
   - id: T-0024-b
     titre: "Table des crans v1.9 — type d'action deposer_document_mission_zone_travail (auto)"
@@ -55,6 +61,10 @@ sous_taches:
     criteres_acceptation:
       - "Le nouveau type est dérivable par la table (réversible, interne, local → auto) et changelogué v1.9"
       - "Aucun cran existant modifié ; historique changelog préservé"
+    execution: >
+      Table-des-crans v1.9 promue le 02/07/2026 (PR #146, merge gardien) : type
+      deposer_document_mission_zone_travail (auto) + note d'outillage sur creer_espace_mission.
+      Crans existants et 6 proscrites intacts (vérifié au diff).
 
   - id: T-0024-c
     titre: "Mise en service (runbook humain) — racine Missions, ids, variables, redéploiement, droits"
@@ -69,6 +79,21 @@ sous_taches:
       - "Les ids pointent la racine Missions réelle et sont posés sur le service ; révision saine, trafic 100%"
       - "Octroi write PROUVÉ par écriture réelle (pas une hypothèse) ; ressources liées aux groupes, jamais aux individus"
       - "Aucun droit posé à la main par un agent (proscrit) ; gestes du gardien uniquement"
+    execution: >
+      Runbook exécuté le 02/07/2026 (Cloud Shell piloté via Claude in Chrome, identité et
+      validations du gardien à chaque effet de bord). Racine désignée = dossier EXISTANT
+      « General/03 - Livrables de mission » (arbitrage gardien ; objection de cohérence posée
+      deux fois et levée). Ids résolus par le connecteur M365 et posés en SIMPLES QUOTES
+      (leçon T-0017-b — préfixe b! vérifié intact à la source) : drive
+      b!tZYcCkb3skypJksq51PmeGcU1gFxR9dGqWotV3wGr_vChScRuaLbTblJozaxk02B, folder
+      01OFZO2MRZDMNUBFY7S5HY3RKN64HD33P2. Images ACR : 0.8.0 (Run dd9, 40 s) puis 0.8.1
+      (Run dda, 39 s). Révision finale ca-allia-mcp-graph--0000012 = latest+ready,
+      RunningAtMaxScale / Healthy / trafic 100 %, image 0.8.1, variables historiques préservées.
+      OCTROI WRITE PROUVÉ par écritures réelles : « 2026 - Test - T0024C » (0.8.0, collision=fail
+      rejouée) puis « 2026 - Test - T0024C-v2 » (0.8.1, arbre EXACT [01 - Pilotage, 02 - Livrables],
+      collision=fail rejouée) ; les deux dossiers de test supprimés à la main par le gardien
+      (suppression = geste humain, proscrite à l'agent). RESTE hors c : vérifier/créer les
+      Listes « Missions » / « Imputations » au tenant avant la promotion tracée de l'épreuve d.
 
   - id: T-0024-d
     titre: "Épreuve réelle — la tranche verticale de bout en bout sur une affaire étiquetée"
@@ -94,3 +119,5 @@ avancement:
       fait: "T-0024-a (amendement avant mise en service, décision gardien) : nommage des espaces imposé structurellement — creer_espace_mission et deposer_document_mission prennent (annee, client, nom_mission), le serveur compose « AAAA - Client - Nom de la mission » via _composer_nom_espace partagé ; racine désignée = General/03 - Livrables de mission (arbitrage gardien, objection de cohérence posée et levée). Image 0.8.0 à bâtir APRÈS ce merge."
     - date: 2026-07-02
       fait: "T-0024-a (amendement n°2, décision gardien après test réel 0.8.0) : arbre figé ramené à [01 - Pilotage, 02 - Livrables] (kick-off déposé sous 01 - Pilotage) ; cadrage/kick-off en dossiers séparés jugés sans utilité. Image cible 0.8.1. Test 0.8.0 (2026 - Test - T0024C) : création + collision=fail PROUVÉES au tenant."
+    - date: 2026-07-02
+      fait: "T-0024-c ÉPROUVÉ : mise en service 0.8.1 complète (racine désignée, ids posés, révision 0000012 saine, write prouvé par 2 écritures réelles + collisions, tests supprimés par le gardien). a/b/c faits — reste T-0024-d, l'épreuve réelle soldante de la tranche (T-0021..T-0024), avec vérification préalable des Listes Missions/Imputations."
