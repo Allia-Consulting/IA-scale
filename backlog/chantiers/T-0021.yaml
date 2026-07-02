@@ -1,0 +1,29 @@
+---
+id: T-0021
+titre: "Skill « cadrage de mission » : d'un brief gagné à l'espace de mission prêt"
+capacite: "Cœur de métier / Delivery / Cadrage & lancement"
+phase: 1
+type_action: edition_contrat_local
+cran: valide
+produit:
+  - "skills/cadrage-mission/SKILL.md — skill versionné, agent-éditable (cran auto en branche), promu par le gardien (procédure allégée)"
+  - "à partir d'une proposition gagnée : brief structuré de mission (périmètre, jalons, équipe, imputations proposées, templates adaptés au design system)"
+depend_de: []  # prérequis normatifs promus (vérifiés 02/07/2026) : design-system.md, modele-donnees.md, table-des-crans.yaml
+contrats_concernes:
+  - "contrats/socle/design-system.md"
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "Le skill produit un brief structuré à partir d'une proposition gagnée ; l'utilisateur clôt par « le brief suffit » (scénario du document de bienvenue)"
+  - "Les templates adaptés CONSOMMENT design-system.md par référence (pull), jamais par copie"
+  - "Tout fait dérivé (imputations proposées incluses) est écrit en Zone-de-proposition (Title / Origine / Contenu — modele-donnees.md §3), jamais dans une source"
+  - "Chaque action du skill résout son cran via table-des-crans.yaml (interne réversible = auto ; notification équipe = notifié)"
+  - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Première marche de la tranche verticale métier « gain d'affaire » (plan §6 T-1.1) —
+  instanciée en chantier réel le 2 juillet 2026 ; c'est le pivot : le SI sait se gouverner
+  (Phase 1 close), il doit maintenant produire de la valeur métier à l'échelle. La thèse à
+  prouver : une amélioration promue du skill profite à TOUTES les missions futures, parce
+  qu'on référence et qu'on ne copie pas. SOLDÉ exigera une épreuve réelle sur une affaire
+  (réelle ou de démonstration explicitement étiquetée).

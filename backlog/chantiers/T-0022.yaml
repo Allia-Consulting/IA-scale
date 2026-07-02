@@ -1,0 +1,25 @@
+---
+id: T-0022
+titre: "Skill « kick-off » : proposition et support de lancement, au design system"
+capacite: "Cœur de métier / Delivery / Cadrage & lancement"
+phase: 1
+type_action: edition_contrat_local
+cran: valide
+produit:
+  - "skills/kick-off/SKILL.md — skill versionné : du brief validé (T-0021) vers la proposition et le support de kick-off, notification de l'équipe"
+depend_de: ["T-0021"]
+contrats_concernes:
+  - "contrats/socle/design-system.md"
+  - "contrats/socle/anonymisation.md"
+criteres_acceptation:
+  - "Le skill génère la proposition et le support de kick-off en consommant design-system.md par référence (pull), jamais par copie"
+  - "Toute sortie vers le client passe le cran validé (envoyer_livrable_client — porte humaine d'un grade habilité, organisation.md §4 bis)"
+  - "La porte d'anonymisation joue si de la matière d'un client tiers est insérée (anonymisation.md §1)"
+  - "La notification de l'équipe est au cran notifié ; les brouillons restent internes (zone de travail / Zone-de-proposition)"
+  - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Deuxième marche de la tranche verticale métier (plan §6 T-1.2), instanciée le 2 juillet 2026.
+  Enchaîne sur le brief produit par cadrage-mission (T-0021). SOLDÉ = épreuve réelle
+  (proposition + support générés sur une affaire, crans respectés, dérivés en zone).
