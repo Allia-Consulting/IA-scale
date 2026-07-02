@@ -87,8 +87,9 @@ ENV_GROUPES_PARC_AUTORISES = "GRAPH_GROUPES_PARC_AUTORISES"  # CSV d'objectId de
 ENV_MISSION_DRIVE_ID = "GRAPH_MISSION_DRIVE_ID"    # bibliothèque hôte de la racine « Missions » (cible figée de l'espace de mission)
 ENV_MISSION_FOLDER_ID = "GRAPH_MISSION_FOLDER_ID"  # dossier racine « Missions » (seul parent des espaces de mission créés)
 
-# Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — quatre sous-dossiers, dans cet ordre.
-SOUS_DOSSIERS_MISSION = ("01-Cadrage", "02-Kick-off", "03-Livrables", "04-Pilotage")
+# Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
+# Le support de kick-off se dépose dans « 01 - Pilotage » (décision gardien, amendement n°2 après test 0.8.0).
+SOUS_DOSSIERS_MISSION = ("01 - Pilotage", "02 - Livrables")
 # Whitelist d'extensions déposables dans un espace de mission (brouillons internes). Toute autre = refus.
 EXTENSIONS_MISSION = (".docx", ".pptx", ".xlsx", ".pdf", ".md")
 
