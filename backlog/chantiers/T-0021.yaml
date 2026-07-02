@@ -19,7 +19,7 @@ criteres_acceptation:
   - "Chaque action du skill résout son cran via table-des-crans.yaml (interne réversible = auto ; notification équipe = notifié)"
   - "Aucun contrat consommateur n'est cassé (avis d'impact de l'agent-gardien sur la PR)"
 rayon_impact: local
-statut: à_faire
+statut: candidat
 note: >
   Première marche de la tranche verticale métier « gain d'affaire » (plan §6 T-1.1) —
   instanciée en chantier réel le 2 juillet 2026 ; c'est le pivot : le SI sait se gouverner
@@ -27,3 +27,8 @@ note: >
   prouver : une amélioration promue du skill profite à TOUTES les missions futures, parce
   qu'on référence et qu'on ne copie pas. SOLDÉ exigera une épreuve réelle sur une affaire
   (réelle ou de démonstration explicitement étiquetée).
+
+avancement:
+  journal:
+    - date: 2026-07-02
+      fait: "SKILL.md rédigé et proposé en PR (skills/cadrage-mission/SKILL.md, v1.0 candidat) : brief en Zone-de-proposition, porte « le brief suffit », templates par référence au design system, espace de mission via outillage T-0024. Statut à_faire → candidat."
