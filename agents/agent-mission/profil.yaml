@@ -1,9 +1,10 @@
 ---
 id: agent-mission
-# Changelog : v1.0 — candidat, 2 juillet 2026 : création (chantier T-0023, troisième marche de la
+# Changelog : v1.0 — promu, 2 juillet 2026 : promotion par le gardien (les deux skills
+#   composés sont promus). Contenu inchangé hors en-tête. v1.0 — candidat, 2 juillet 2026 : création (chantier T-0023, troisième marche de la
 #   tranche verticale métier, plan §6 T-1.3). Deuxième agent du référentiel (après agent-redaction),
 #   premier agent MÉTIER : compose cadrage-mission (v1.1 promu) et kick-off (v1.1 promu).
-version: "1.0 — candidat"
+version: "1.0 — promu"
 nature: "profil d'agent"
 domicile: "agents/agent-mission/profil.yaml"
 role: agent  # opère sur le plan d'exécution
