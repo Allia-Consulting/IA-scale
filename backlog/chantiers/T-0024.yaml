@@ -20,10 +20,69 @@ criteres_acceptation:
   - "Zéro secret créé, distribué ou stocké (identité managée — doctrine T-0015 / T-0019)"
   - "Critère de sortie de la tranche (plan §6) : un gain d'affaire déclenche, sous validations du gardien, la création de la mission ; chaque action a respecté son cran ; tout dérivé est passé par la zone"
 rayon_impact: large  # étend le MCP Graph, consommé par toute la chaîne
-statut: à_faire
+statut: en_cours
 note: >
   Quatrième marche de la tranche verticale métier (plan §6 T-1.4), instanciée le 2 juillet 2026.
   Si aucune affaire réelle n'est disponible pour l'épreuve, bâtir contre une affaire de
   démonstration explicitement étiquetée — et lever alors la réserve de T-0014 en branchant
   le cockpit sur les vraies listes. La mise en place de tout privilège nouveau du MCP reste
   un RUNBOOK HUMAIN (plan §2).
+
+sous_taches:
+
+  - id: T-0024-a
+    titre: "Code server.py — outils creer_espace_mission + deposer_document_mission (cible figée)"
+    type_action: infrastructure_mcp
+    cran: auto  # actions exposées réversibles/internes/locales ; mise en service = runbook gardien (c)
+    produit:
+      - "server.py : creer_espace_mission(code_mission) — crée l'arbre de dossiers de mission (structure FIGÉE dans le code : 01-Cadrage, 02-Kick-off, 03-Livrables, 04-Pilotage) sous la racine lue dans GRAPH_MISSION_DRIVE_ID + GRAPH_MISSION_FOLDER_ID (jamais de l'appelant) ; collision = fail ; code_mission assaini"
+      - "server.py : deposer_document_mission(code_mission, sous_dossier, nom_fichier, contenu_base64) — dépôt d'un brouillon interne dans l'espace de mission ; sous_dossier restreint à la liste blanche figée ; extensions whitelist (.docx .pptx .xlsx .pdf .md) ; nom assaini ; collision = fail"
+      - "variables documentées dans .env.example ; échec clair (ConfigManquante) si absentes ; README mis à jour (8 outils) ; version image bump"
+    depend_de: []
+    criteres_acceptation:
+      - "Les deux outils n'écrivent QUE sous la racine Missions figée côté serveur — jamais ailleurs"
+      - "Collision = erreur explicite, aucun écrasement ; extension hors whitelist → refus ; nom ou code contenant / \\ .. → refus"
+      - "Aucun secret introduit : auth Graph = identité managée (zéro token store, doctrine T-0015)"
+      - "Import réel + sonde /healthz verts en CI"
+
+  - id: T-0024-b
+    titre: "Table des crans v1.9 — type d'action deposer_document_mission_zone_travail (auto)"
+    type_action: edition_contrat_socle
+    cran: valide  # contrat socle — promotion gardien
+    produit:
+      - "contrats/socle/table-des-crans.yaml : ajout du type deposer_document_mission_zone_travail (cran auto — brouillon interne, cible figée côté serveur, collision=fail, jamais d'espace exposé au client), sur le modèle de televerser_brouillon_offre_zone_travail ; note rattachant creer_espace_mission (déjà présent) à son outillage réel"
+    depend_de: ["T-0024-a"]
+    criteres_acceptation:
+      - "Le nouveau type est dérivable par la table (réversible, interne, local → auto) et changelogué v1.9"
+      - "Aucun cran existant modifié ; historique changelog préservé"
+
+  - id: T-0024-c
+    titre: "Mise en service (runbook humain) — racine Missions, ids, variables, redéploiement, droits"
+    type_action: infrastructure_mcp
+    cran: valide  # configuration de service + part droits = porte du gardien
+    produit:
+      - "création/désignation du dossier racine « Missions » (bibliothèque du site AlliaConsuling) ; résolution drive id + folder id via le connecteur M365"
+      - "pose de GRAPH_MISSION_DRIVE_ID + GRAPH_MISSION_FOLDER_ID sur ca-allia-mcp-graph (az containerapp update — valeurs en SIMPLES QUOTES, leçon T-0017-b : « b! » corrompu par l'expansion d'historique bash) ; rebuild image + redéploiement"
+      - "vérification de l'octroi write (Sites.Selected) sur le site AlliaConsuling par écriture réelle ; création des Listes « Missions » / « Imputations » au tenant si absentes (modele-donnees §2 bis — partiellement câblé)"
+    depend_de: ["T-0024-a"]
+    criteres_acceptation:
+      - "Les ids pointent la racine Missions réelle et sont posés sur le service ; révision saine, trafic 100%"
+      - "Octroi write PROUVÉ par écriture réelle (pas une hypothèse) ; ressources liées aux groupes, jamais aux individus"
+      - "Aucun droit posé à la main par un agent (proscrit) ; gestes du gardien uniquement"
+
+  - id: T-0024-d
+    titre: "Épreuve réelle — la tranche verticale de bout en bout sur une affaire étiquetée"
+    type_action: epreuve_reelle
+    cran: valide  # portes des skills respectées, validations gardien aux étapes prévues
+    produit:
+      - "agent-mission déroule cadrage-mission (brief en Zone-de-proposition via create_list_item, porte « le brief suffit ») puis kick-off (documents déposés via deposer_document_mission) sur une affaire réelle ou de démonstration EXPLICITEMENT étiquetée (ex. M-DEMO-001) ; espace créé via creer_espace_mission ; notification équipe"
+      - "SOLDE de T-0021, T-0022, T-0023 et T-0024 (exécution réelle sur donnée tenant) ; imputations dérivées en zone, promotion tracée par le gardien"
+    depend_de: ["T-0024-b", "T-0024-c"]
+    criteres_acceptation:
+      - "Chaque action a respecté son cran ; tout dérivé est passé par la Zone-de-proposition ; rien d'envoyé hors firme"
+      - "Critère de sortie plan §6 satisfait et tracé dans les journaux des quatre chantiers"
+
+avancement:
+  journal:
+    - date: 2026-07-02
+      fait: "Chantier structuré en 4 sous-tâches (a code / b table-des-crans / c runbook mise en service / d épreuve réelle), sur le gabarit T-0017. Décision de conception : espace de mission = ARBRE DE DOSSIERS à cible figée sous une racine « Missions » (GRAPH_MISSION_DRIVE_ID/FOLDER_ID), PAS un site par mission — moindre privilège existant (Sites.Selected), réversible, cran auto conforme à la table (creer_espace_mission). Deux outils : creer_espace_mission + deposer_document_mission (sert aussi le dépôt kick-off). Statut à_faire → en_cours."
