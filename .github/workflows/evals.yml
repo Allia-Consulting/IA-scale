@@ -1,0 +1,23 @@
+# Harnais d'evals des skills — v0 déterministe (chantier T-0020-a, plan §7 T-2.1).
+# Non-régression des prompts/skills sur chaque PR. Zéro clé API, zéro flakiness :
+# ce check a vocation à devenir REQUIS par le ruleset main-protection.
+name: Evals — non-régression des skills
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    name: Harnais skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - run: python evals/harnais.py

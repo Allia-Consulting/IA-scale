@@ -1,0 +1,23 @@
+skill: onboarding
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Jambe matériel : réconciliateur de parc (T-0008)."
+    contient:
+      - "reconcilier_groupe_parc"
+  - id: ancre-02
+    type: invariant
+    description: "Jambe droits : réconciliateur de périmètre (T-0019)."
+    contient:
+      - "reconcilier_groupe_perimetre"
+  - id: ancre-03
+    type: invariant
+    description: "Thèse du skill : trois réconciliations d'une même vérité."
+    contient:
+      - "trois réconciliations d'une même vérité"
+  - id: ancre-04
+    type: invariant
+    description: "Jambe licence M365 : signalée en runbook humain, non projetée."
+    contient:
+      - "grp-collaborateurs-m365"

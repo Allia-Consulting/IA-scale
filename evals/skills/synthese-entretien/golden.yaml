@@ -1,0 +1,23 @@
+skill: synthese-entretien
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "La recommandation est explicitement non décisionnelle."
+    contient:
+      - "recommandation NON DÉCISIONNELLE"
+  - id: ancre-02
+    type: invariant
+    description: "La synthèse apprécie l'adéquation au poste, et rien hors poste."
+    contient:
+      - "adéquation au poste"
+  - id: ancre-03
+    type: invariant
+    description: "Checklist en dur figée par le cadre RGPD recrutement §4."
+    contient:
+      - "Checklist en dur"
+  - id: ancre-04
+    type: invariant
+    description: "La décision de recrutement reste humaine (cadre §1)."
+    contient:
+      - "décision de recrutement reste humaine"

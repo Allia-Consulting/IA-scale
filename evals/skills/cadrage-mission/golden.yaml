@@ -1,0 +1,28 @@
+skill: cadrage-mission
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Le livrable canonique du skill : le brief structuré."
+    contient:
+      - "BRIEF DE MISSION structuré"
+  - id: ancre-02
+    type: invariant
+    description: "Porte utilisateur explicite avant tout effet de bord."
+    contient:
+      - "le brief suffit"
+  - id: ancre-03
+    type: invariant
+    description: "Outil d'écriture du dérivé en Zone-de-proposition."
+    contient:
+      - "create_list_item"
+  - id: ancre-04
+    type: invariant
+    description: "Garde-fou anti-écrasement d'un brief existant."
+    contient:
+      - "Collision = fail"
+  - id: ancre-05
+    type: invariant
+    description: "Le staffing proposé reste une proposition, jamais une décision de l'agent."
+    contient:
+      - "Le staffing proposé n'est pas le staffing décidé"

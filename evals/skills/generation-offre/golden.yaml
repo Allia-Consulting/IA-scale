@@ -1,0 +1,28 @@
+skill: generation-offre
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Outil de dépôt du brouillon (connecteur étendu T-0017)."
+    contient:
+      - "televerser_brouillon_offre"
+  - id: ancre-02
+    type: invariant
+    description: "Borne dure : l'agent n'émet jamais l'offre."
+    contient:
+      - "N'ÉMET JAMAIS"
+  - id: ancre-03
+    type: invariant
+    description: "Montant inséré = plancher du grade, à valider par l'humain."
+    contient:
+      - "PLANCHER du grade"
+  - id: ancre-04
+    type: invariant
+    description: "Cible figée : dépôt en 00 uniquement, jamais en 01."
+    contient:
+      - "00 - Proposition en cours"
+  - id: ancre-05
+    type: invariant
+    description: "Garde-fou anti-écrasement d'un brouillon existant."
+    contient:
+      - "Collision = fail"

@@ -1,0 +1,23 @@
+skill: memoire-organisation
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Écriture de la synthèse candidate en Zone-de-proposition."
+    contient:
+      - "create_list_item"
+  - id: ancre-02
+    type: invariant
+    description: "Collecte Teams bornée via l'outil de recherche de messages."
+    contient:
+      - "chat_message_search"
+  - id: ancre-03
+    type: invariant
+    description: "Périmètre d'écoute non négociable : exclusion des 1-à-1."
+    contient:
+      - "conversations privées 1-à-1 sont EXCLUES"
+  - id: ancre-04
+    type: invariant
+    description: "Semaine sans apprentissage collectif : synthèse à zéro ligne, pas de remplissage."
+    contient:
+      - "synthèse à zéro ligne"

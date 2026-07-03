@@ -1,0 +1,23 @@
+skill: compte-rendu-reunion
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Règle de fidélité : ne rien inventer, marquer les manques."
+    contient:
+      - "Règle de fidélité"
+  - id: ancre-02
+    type: invariant
+    description: "Le CR est un dérivé, écrit en zone de proposition."
+    contient:
+      - "Le dérivé n'est jamais le saisi"
+  - id: ancre-03
+    type: invariant
+    description: "Section canonique du format de sortie du CR."
+    contient:
+      - "Points en suspens"
+  - id: ancre-04
+    type: invariant
+    description: "Domicile du dérivé avant promotion tracée."
+    contient:
+      - "zone de proposition"
