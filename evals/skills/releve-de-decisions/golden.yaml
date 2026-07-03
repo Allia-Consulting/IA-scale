@@ -1,0 +1,23 @@
+skill: releve-de-decisions
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Statut d'une décision : exactement deux valeurs."
+    contient:
+      - "exactement deux valeurs"
+  - id: ancre-02
+    type: invariant
+    description: "Ne pas relever les discussions sans arbitrage."
+    contient:
+      - "Ignorer les simples discussions sans arbitrage"
+  - id: ancre-03
+    type: invariant
+    description: "Entrée canonique : le CR produit par compte-rendu-reunion."
+    contient:
+      - "compte-rendu-reunion"
+  - id: ancre-04
+    type: invariant
+    description: "Le relevé est un dérivé écrit en zone de proposition."
+    contient:
+      - "zone de proposition"

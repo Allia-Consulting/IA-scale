@@ -1,0 +1,54 @@
+id: T-0020
+titre: "Phase 2 — Qualité : evals, observabilité, agent-gardien renforcé, mesure de valeur (chantier-chapeau)"
+capacite: "Socle d'exploitation & gouvernance / Évaluation & observabilité"
+phase: 2
+type_action: gouvernance_qualite
+cran: valide
+produit:
+  - "TÂCHE-CHAPEAU (plan §7) : la barrière qui rend l'autonomie tenable. Décomposée en quatre sous-tâches T-0020-a..d — un seul fichier, pas d'éclatement prématuré."
+depend_de: []
+contrats_concernes:
+  - "doctrine/doctrine-de-gouvernance.md"
+  - "backlog/plan.md"
+criteres_acceptation:
+  - "Critère de sortie du plan §7 : une PR à faible risque et conforme passe sans le gardien ; toute régression d'un skill est bloquée par la CI."
+rayon_impact: "Toute la firme : chaque PR passe par le harnais ; l'agent-gardien filtre chaque promotion ; les KPI alimentent le tour de contrôle."
+statut: en_cours
+sous_taches:
+  - id: T-0020-a
+    titre: "Harnais d'evals des skills — golden set versionné par skill, exécuté en CI sur chaque PR"
+    produit:
+      - "evals/harnais.py : runner déterministe v0 — validation sémantique des golden sets, couverture bidirectionnelle skills↔golden, invariants d'en-tête universels, ancres sémantiques verbatim par skill"
+      - "evals/skills/<id>/golden.yaml pour chacun des 9 skills existants"
+      - ".github/workflows/evals.yml : exécution sur chaque PR — rouge bloque dès que le check est requis par le ruleset (porte item 2 de l'ordre de bataille)"
+      - "Schéma golden extensible : type 'scenario' (scoring LLM) réservé, non implémenté en v0"
+    depend_de: []
+    criteres_acceptation:
+      - "Un skill sans golden set fait échouer la CI ; un golden orphelin aussi"
+      - "Éprouvé rouge-puis-vert sur le réel : une PR de test dégradant une ancre d'un skill est bloquée (check rouge sur son head_sha), puis fermée sans merge"
+    statut: en_cours
+  - id: T-0020-b
+    titre: "Observabilité MCP Graph — journal structuré des appels d'outils"
+    produit:
+      - "Journal structuré par appel : horodatage, outil, cran, résultat (succès/refus/erreur), sans donnée personnelle en clair"
+    depend_de: []
+    criteres_acceptation:
+      - "Chaque appel d'outil MCP Graph laisse une trace consultable ; une journée réelle de production est relue depuis le journal"
+    statut: a_faire
+  - id: T-0020-c
+    titre: "Agent-gardien v1 — rayon d'impact calculé sur les consommateurs réels + auto-approbation du faible risque contre politique"
+    produit:
+      - "Remplacement du grep fruste de conformite.yml par un calcul d'impact sur les consommateurs réels (qui consomme, combien d'artefacts, quelles missions en cours)"
+      - "Auto-approbation du faible risque CONTRE POLITIQUE (doctrine §3) — rend inutile le bypass temporaire de congé"
+    depend_de: ["T-0020-a"]
+    criteres_acceptation:
+      - "Une PR à faible risque conforme est approuvée par l'agent-gardien sans le gardien humain ; une PR à impact large remonte"
+    statut: a_faire
+  - id: T-0020-d
+    titre: "Mesure de valeur organisationnelle — 3 KPI consommés par le tour de contrôle"
+    produit:
+      - "Missions actives · dérivés promus/semaine · délai brief→kick-off, calculés depuis les sources réelles M365 et affichés au cockpit (même surface que T-0014-b)"
+    depend_de: ["T-0020-b"]
+    criteres_acceptation:
+      - "Les 3 KPI s'affichent sur données réelles du tenant — le SI passe de « se gouverne » à « prouve la valeur à l'échelle »"
+    statut: a_faire

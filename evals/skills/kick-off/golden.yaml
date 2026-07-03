@@ -1,0 +1,23 @@
+skill: kick-off
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Livrable canonique : le support de kick-off."
+    contient:
+      - "support de kick-off"
+  - id: ancre-02
+    type: invariant
+    description: "Cran de l'envoi client : validé, grade habilité."
+    contient:
+      - "envoyer_livrable_client"
+  - id: ancre-03
+    type: invariant
+    description: "Design system consommé par référence, jamais copié."
+    contient:
+      - "Design system par référence"
+  - id: ancre-04
+    type: invariant
+    description: "Garde-fou anti-écrasement d'un document existant."
+    contient:
+      - "Collision = fail"

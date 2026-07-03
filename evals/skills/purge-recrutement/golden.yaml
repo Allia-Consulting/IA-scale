@@ -1,0 +1,23 @@
+skill: purge-recrutement
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Cible du filtre : fiches à l'étape Refusée."
+    contient:
+      - "Etape = Refusée"
+  - id: ancre-02
+    type: invariant
+    description: "Garde-fou inviolable : opposition active du candidat."
+    contient:
+      - "OppositionVivier"
+  - id: ancre-03
+    type: invariant
+    description: "Cran de suppression : exception gouvernée au moindre privilège."
+    contient:
+      - "supprimer_definitivement_des_donnees"
+  - id: ancre-04
+    type: invariant
+    description: "Le mécanisme ne supprime que selon la règle promue."
+    contient:
+      - "Jamais de suppression libre"
