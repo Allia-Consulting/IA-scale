@@ -19,7 +19,7 @@ function statutNode(item: DetailItem): React.ReactElement {
 }
 
 export default function TourDeControle(props: ITourDeControleProps): React.ReactElement {
-  const { userDisplayName, spHttpClient, webUrl } = props;
+  const { userDisplayName, spHttpClient, dataSiteUrl } = props;
 
   // Un seul état, l'ensemble des panneaux ouverts (clé = id de compteur).
   // Modèle voir → creuser → agir : un compteur déplie/replie SON détail dans le cockpit.
@@ -30,11 +30,11 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
 
   useEffect(() => {
     let vivant = true;
-    chargerCockpit(spHttpClient, webUrl)
+    chargerCockpit(spHttpClient, dataSiteUrl)
       .then(d => { if (vivant) { setData(d); } })
       .catch(() => { /* fail-visible : data reste null → zones en « lecture indisponible » */ });
     return () => { vivant = false; };
-  }, [spHttpClient, webUrl]);
+  }, [spHttpClient, dataSiteUrl]);
 
   const basculer = useCallback((id: string): void => {
     setOuverts(prev => {
@@ -64,6 +64,11 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
             >
               <span className={styles.counterLabel}>{c.libelle}</span>
               <span className={styles.counterVal}>{c.valeur}</span>
+              {/* Non câblée / indisponible (valeur « — ») : libellé VISIBLE sous
+                  la valeur, jamais confondu avec un vrai zéro. */}
+              {c.valeur === '—' && c.note ? (
+                <span className={styles.counterNote}>{c.note}</span>
+              ) : null}
             </button>
           );
         })}

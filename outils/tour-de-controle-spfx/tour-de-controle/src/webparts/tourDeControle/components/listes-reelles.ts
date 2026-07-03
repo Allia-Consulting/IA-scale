@@ -30,11 +30,11 @@ type Lecture =
 /** Une lecture OData bornée sur une liste par son titre. Ne lève jamais. */
 async function lireListe(
   sp: SPHttpClient,
-  webUrl: string,
+  dataSiteUrl: string,
   titre: string,
   query: string
 ): Promise<Lecture> {
-  const url = `${webUrl}/_api/web/lists/getByTitle('${encodeURIComponent(titre)}')/items?${query}`;
+  const url = `${dataSiteUrl}/_api/web/lists/getByTitle('${encodeURIComponent(titre)}')/items?${query}`;
   try {
     const res: SPHttpClientResponse = await sp.get(url, SPHttpClient.configurations.v1);
     if (res.status === 404) {
@@ -74,10 +74,10 @@ function compteurCompte(
 }
 
 /** Zone 1 — Pipe commercial : Comptes + Propositions (réellement vides aujourd'hui). */
-async function chargerPipeCommercial(sp: SPHttpClient, webUrl: string): Promise<Zone> {
+async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
   const [comptes, propositions] = await Promise.all([
-    lireListe(sp, webUrl, 'Comptes', '$select=Id&$top=1000'),
-    lireListe(sp, webUrl, 'Propositions', '$select=Id&$top=1000')
+    lireListe(sp, dataSiteUrl, 'Comptes', '$select=Id&$top=1000'),
+    lireListe(sp, dataSiteUrl, 'Propositions', '$select=Id&$top=1000')
   ]);
   return {
     compteurs: [
@@ -91,10 +91,10 @@ async function chargerPipeCommercial(sp: SPHttpClient, webUrl: string): Promise<
  * Zone 2 — Recrutement : Candidats-Synthèses AGRÉGÉES PAR STATUT (EtapeSynthese).
  * On ne lit QUE la colonne de statut — aucun Title, nom, ni interviewer (RGPD).
  */
-async function chargerRecrutement(sp: SPHttpClient, webUrl: string): Promise<Zone> {
+async function chargerRecrutement(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
   const lecture = await lireListe(
     sp,
-    webUrl,
+    dataSiteUrl,
     'Candidats-Synthèses',
     '$select=EtapeSynthese&$top=2000'
   );
@@ -128,15 +128,15 @@ async function chargerRecrutement(sp: SPHttpClient, webUrl: string): Promise<Zon
 }
 
 /** Zone 4 — Activité : Zone-de-proposition (dérivés récents) + Imputations. */
-async function chargerActivite(sp: SPHttpClient, webUrl: string): Promise<Zone> {
+async function chargerActivite(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
   const [zone, imputations] = await Promise.all([
     lireListe(
       sp,
-      webUrl,
+      dataSiteUrl,
       'Zone-de-proposition',
       '$select=Title,Origine,Created&$orderby=Created desc&$top=5'
     ),
-    lireListe(sp, webUrl, 'Imputations', '$select=Id&$top=2000')
+    lireListe(sp, dataSiteUrl, 'Imputations', '$select=Id&$top=2000')
   ]);
 
   let compteurZone: Compteur;
@@ -172,11 +172,11 @@ async function chargerActivite(sp: SPHttpClient, webUrl: string): Promise<Zone> 
 }
 
 /** Charge l'ensemble du cockpit. Chaque zone échoue indépendamment (fail-visible). */
-export async function chargerCockpit(sp: SPHttpClient, webUrl: string): Promise<CockpitData> {
+export async function chargerCockpit(sp: SPHttpClient, dataSiteUrl: string): Promise<CockpitData> {
   const [pipeCommercial, recrutement, activite] = await Promise.all([
-    chargerPipeCommercial(sp, webUrl),
-    chargerRecrutement(sp, webUrl),
-    chargerActivite(sp, webUrl)
+    chargerPipeCommercial(sp, dataSiteUrl),
+    chargerRecrutement(sp, dataSiteUrl),
+    chargerActivite(sp, dataSiteUrl)
   ]);
   return { pipeCommercial, recrutement, activite };
 }
