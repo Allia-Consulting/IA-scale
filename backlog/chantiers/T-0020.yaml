@@ -26,7 +26,12 @@ sous_taches:
     criteres_acceptation:
       - "Un skill sans golden set fait échouer la CI ; un golden orphelin aussi"
       - "Éprouvé rouge-puis-vert sur le réel : une PR de test dégradant une ancre d'un skill est bloquée (check rouge sur son head_sha), puis fermée sans merge"
-    statut: en_cours
+    execution: >
+      Livré en PR #153. ÉPROUVÉ sur le réel le 03/07/2026 : PR de test #154 (régression
+      volontaire d'une ancre de cadrage-mission) bloquée ROUGE par le check
+      « Evals — non-régression des skills » sur son head_sha exact, puis fermée sans merge.
+      Le harnais est VERT sur la PR #153.
+    statut: solde
   - id: T-0020-b
     titre: "Observabilité MCP Graph — journal structuré des appels d'outils"
     produit:
