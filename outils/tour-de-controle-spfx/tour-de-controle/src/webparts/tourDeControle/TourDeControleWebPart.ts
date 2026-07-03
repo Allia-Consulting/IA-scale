@@ -14,6 +14,8 @@ import { ITourDeControleProps } from './components/ITourDeControleProps';
 
 export interface ITourDeControleWebPartProps {
   description: string;
+  /** Site SharePoint où vivent les listes (modele-donnees §2 bis). Vide = site courant. */
+  dataSiteUrl: string;
 }
 
 export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDeControleWebPartProps> {
@@ -31,7 +33,11 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
         userDisplayName: this.context.pageContext.user.displayName,
         spHttpClient: this.context.spHttpClient,
-        webUrl: this.context.pageContext.web.absoluteUrl
+        // Domicile des listes ≠ site de la page : les listes vivent sur
+        // /sites/AlliaConsuling (modele-donnees §2 bis), la page cockpit peut être
+        // ailleurs. Propriété configurée par le gardien ; vide = site courant.
+        dataSiteUrl: (this.properties.dataSiteUrl && this.properties.dataSiteUrl.trim())
+          || this.context.pageContext.web.absoluteUrl
       }
     );
 
@@ -112,6 +118,10 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
               groupFields: [
                 PropertyPaneTextField('description', {
                   label: strings.DescriptionFieldLabel
+                }),
+                PropertyPaneTextField('dataSiteUrl', {
+                  label: 'URL du site de données',
+                  description: 'Site SharePoint où vivent les listes (modele-donnees §2 bis). Vide = site courant.'
                 })
               ]
             }

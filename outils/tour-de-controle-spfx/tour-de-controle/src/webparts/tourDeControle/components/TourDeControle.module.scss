@@ -172,6 +172,14 @@
   color: var(--color-ink);
 }
 
+/* État de source visible sous la valeur : distingue « non câblée » / « lecture
+   indisponible » d'un vrai zéro — jamais confondus à l'œil nu (honnêteté §3). */
+.counterNote {
+  font-size: var(--text-label);
+  color: var(--color-stone-text);
+  line-height: 1.4;
+}
+
 /* Détail déplié (creuser) */
 .detail {
   margin-top: 12px;
