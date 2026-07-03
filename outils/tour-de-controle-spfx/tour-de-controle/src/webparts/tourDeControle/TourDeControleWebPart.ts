@@ -29,7 +29,9 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
         isDarkTheme: this._isDarkTheme,
         environmentMessage: this._environmentMessage,
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
-        userDisplayName: this.context.pageContext.user.displayName
+        userDisplayName: this.context.pageContext.user.displayName,
+        spHttpClient: this.context.spHttpClient,
+        webUrl: this.context.pageContext.web.absoluteUrl
       }
     );
 
