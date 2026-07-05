@@ -52,10 +52,13 @@ aucun appel réseau (le credential et la configuration ne sont lus qu'au moment 
 from __future__ import annotations
 
 import base64
+import functools
 import hashlib
 import json
 import logging
 import os
+import time
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -75,6 +78,82 @@ MANAGED_IDENTITY_CLIENT_ID = "f2a3c40a-a447-4295-90da-76d6b0898d61"
 # Logger de traçabilité des appels entrants (identité appelante Easy Auth).
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
+
+# --- Journal structuré d'observabilité (T-0020-b) -------------------------------------------
+# UNE ligne JSON par appel d'outil, émise sur stdout → journaux de la Container App
+# (Log Analytics, table ContainerAppConsoleLogs) — consultable en KQL. AUCUNE donnée
+# personnelle en clair : ni argument, ni identité, ni contenu — seulement le fait de l'appel.
+# Champs : ts (UTC ISO), outil, cran, resultat (succes|refus|erreur), duree_ms, type_erreur.
+# Classification : refus = PermissionError (porte d'identité _verifier_appelant, fail-closed) ;
+# toute autre exception = erreur, avec sa classe (les gardes métier — collision, liste blanche,
+# intégrité — restent distinguables par type_erreur à la relecture).
+journal_mcp = logging.getLogger("journal_mcp")
+_journal_handler = logging.StreamHandler()
+_journal_handler.setFormatter(logging.Formatter("%(message)s"))
+journal_mcp.addHandler(_journal_handler)
+journal_mcp.propagate = False
+journal_mcp.setLevel(logging.INFO)
+
+# Cran par outil — résolu depuis contrats/socle/table-des-crans.yaml (v1.9) :
+# lectures (list_items, lire_annuaire) = auto par nature (réversible, interne) ;
+# ecrire_fait_derive_zone_proposition / televerser_brouillon_offre_zone_travail /
+# creer_espace_mission / deposer_document_mission_zone_travail = auto ;
+# notifier_equipe = notifie. Les réconciliateurs (T-0019/T-0008) exécutent une décision
+# DÉJÀ PROMUE (organisation.md §5) : la porte « validé » vit à la promotion, en amont —
+# le geste d'exécution idempotent et borné (liste blanche + AU) est journalisé « auto ».
+CRAN_PAR_OUTIL = {
+    "list_items": "auto",
+    "create_list_item": "auto",
+    "televerser_brouillon_offre": "auto",
+    "creer_espace_mission": "auto",
+    "deposer_document_mission": "auto",
+    "reconcilier_groupe_perimetre": "auto",
+    "reconcilier_groupe_parc": "auto",
+    "lire_annuaire": "auto",
+    "notifier_canal": "notifie",
+}
+
+
+def _journal_appel(outil: str):
+    """Décorateur d'observabilité : une ligne JSON par appel, quel qu'en soit l'issue.
+
+    Inséré entre @mcp.tool() et la fonction : functools.wraps préserve signature,
+    annotations et docstring, donc le schéma MCP généré est inchangé (éprouvé, T-0020-b).
+    Le journal n'altère JAMAIS le comportement : les exceptions sont re-levées telles quelles.
+    """
+
+    def decorateur(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            debut = time.monotonic()
+            resultat = "succes"
+            type_erreur = None
+            try:
+                return fn(*args, **kwargs)
+            except PermissionError:
+                resultat = "refus"
+                raise
+            except BaseException as exc:
+                resultat = "erreur"
+                type_erreur = type(exc).__name__
+                raise
+            finally:
+                ligne = {
+                    "journal": "mcp-graph",
+                    "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+                    "outil": outil,
+                    "cran": CRAN_PAR_OUTIL.get(outil, "inconnu"),
+                    "resultat": resultat,
+                    "duree_ms": round((time.monotonic() - debut) * 1000),
+                }
+                if type_erreur:
+                    ligne["type_erreur"] = type_erreur
+                journal_mcp.info(json.dumps(ligne, ensure_ascii=False))
+
+        return wrapper
+
+    return decorateur
+# --- fin journal structuré (T-0020-b) --------------------------------------------------------
 
 # Variables d'environnement attendues (injectées à l'exécution — jamais ici, aucun secret).
 ENV_AZURE_ENV = "AZURE_ENV"                # local | prod (défaut prod) — pilote le credential
@@ -430,6 +509,7 @@ def _lire_membres_groupe(client: httpx.Client, group_id: str) -> set[str]:
 
 
 @mcp.tool()
+@_journal_appel("list_items")
 def list_items(ctx: Context, list_id: str, top: int = 50) -> dict[str, Any]:
     """Lit (lecture seule) les éléments d'une liste SharePoint du site AlliaConsuling.
 
@@ -459,6 +539,7 @@ def list_items(ctx: Context, list_id: str, top: int = 50) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_journal_appel("create_list_item")
 def create_list_item(ctx: Context, fields: dict[str, Any]) -> dict[str, Any]:
     """Crée un élément UNIQUEMENT dans la liste « Zone-de-proposition ».
 
@@ -495,6 +576,7 @@ def create_list_item(ctx: Context, fields: dict[str, Any]) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_journal_appel("televerser_brouillon_offre")
 def televerser_brouillon_offre(
     ctx: Context, nom_fichier: str, contenu_base64: str, candidat_id: str
 ) -> dict[str, Any]:
@@ -575,6 +657,7 @@ def televerser_brouillon_offre(
 
 
 @mcp.tool()
+@_journal_appel("creer_espace_mission")
 def creer_espace_mission(
     ctx: Context, annee: str, client: str, nom_mission: str
 ) -> dict[str, Any]:
@@ -664,6 +747,7 @@ def creer_espace_mission(
 
 
 @mcp.tool()
+@_journal_appel("deposer_document_mission")
 def deposer_document_mission(
     ctx: Context, annee: str, client: str, nom_mission: str,
     sous_dossier: str, nom_fichier: str, contenu_base64: str, sha256_attendu: str
@@ -793,6 +877,7 @@ def deposer_document_mission(
 
 
 @mcp.tool()
+@_journal_appel("reconcilier_groupe_perimetre")
 def reconcilier_groupe_perimetre(
     ctx: Context, group_id: str, membres_attendus: list[str]
 ) -> dict[str, Any]:
@@ -915,6 +1000,7 @@ def reconcilier_groupe_perimetre(
 
 
 @mcp.tool()
+@_journal_appel("reconcilier_groupe_parc")
 def reconcilier_groupe_parc(
     ctx: Context, group_id: str, membres_attendus: list[str]
 ) -> dict[str, Any]:
@@ -1053,6 +1139,7 @@ def _groupes_lisibles() -> set[str]:
 
 
 @mcp.tool()
+@_journal_appel("lire_annuaire")
 def lire_annuaire(
     ctx: Context, upn: str = "", group_id: str = ""
 ) -> dict[str, Any]:
@@ -1122,6 +1209,7 @@ def lire_annuaire(
 
 
 @mcp.tool()
+@_journal_appel("notifier_canal")
 def notifier_canal(ctx: Context, titre: str, corps: str, reference: str = "") -> dict[str, Any]:
     """Dépose une notification d'équipe dans la liste « Notifications » (relais vers Teams).
 
