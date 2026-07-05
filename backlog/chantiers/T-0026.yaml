@@ -20,7 +20,7 @@ criteres_acceptation:
   - "Une opportunité réelle a traversé la chaîne zone → promotion → lecture (list_items) et son lien à une mission réelle est démontré"
   - "Aucune donnée personnelle : ni entité Contact ni interlocuteur nominatif — Comptes porte des organisations (décision gardien du 05/07/2026)"
 rayon_impact: local   # nouvelles entités ; aucun consommateur existant cassé (cadrage-mission lit Comptes — colonnes ajoutées rétro-compatibles)
-statut: en_cours   # (canon) porté par cette PR ; câblage tenant puis épreuve réelle à suivre
+statut: soldé   # épreuve réelle du 5 juillet 2026 — trace en note ; réserves non bloquantes tracées
 note: >
   Instancie la brique CRM nommée dans la vision (« infrastructure d'entreprise : gestion,
   finance, RH, CRM » ; carte des capacités : prospection, qualification & pipeline, gestion
@@ -33,3 +33,21 @@ note: >
   AUCUNE à ce stade — lecture par list_items existant, écriture dérivée par create_list_item
   vers la Zone-de-proposition. La promotion zone → Liste « CRM » reste un geste du gardien
   (précédent T-0005) tant qu'aucun outil de promotion tracée n'est nommé.
+
+  ÉPREUVE RÉELLE (5 juillet 2026, session gardien) — chaîne complète constatée maillon
+  par maillon, chaque état relu persisté à la source : runbook tenant exécuté (Comptes
+  aligné au canon — Statut recasé Prospect / Client / Inactif, NomCompte posé, libellés ;
+  Liste « CRM » créée, id b42ed089-e712-46f6-a68b-308fa95d2148, sept colonnes aux noms
+  internes exacts, lookup Compte → Comptes) ; compte réel CPT-001 « Arabelle Solutions »
+  (Énergie, Client) saisi en source ; opportunité réelle O-001 « Leader M365 »
+  (Qualification, 75 000 € HT, échéance 31/07/2026, responsable Adrien Raque) écrite en
+  Zone-de-proposition (id 11, create_list_item LITTÉRAL, identité applicative
+  id-allia-mcp-graph — premier exercice littéral du connecteur dans un flux réel) ;
+  PROMUE en vérité par le gardien (Liste « CRM », item id 1, lookup résolu) ; RELUE par
+  list_items (session de solde). L'élément OPP-O-001 reste en zone : il est la trace.
+  RÉSERVES NON BLOQUANTES : (1) lien CodeMission ↔ mission réelle à démontrer à la
+  première bascule « Gagnée » (O-001 en Qualification — aucune affaire gagnée à date) ;
+  (2) promotion zone → CRM exécutée par REST sous identité gardien, porte donnée
+  explicitement en session — l'outillage d'une promotion tracée reste non nommé ;
+  (3) hygiène : colonne orpheline NomClient (vide) sur Comptes — suppression = clic
+  gardien.
