@@ -31,7 +31,7 @@ criteres_acceptation:
   - "L'outil ne sait QUE notifier : cible figée côté serveur, aucun identifiant de liste ni de canal accepté de l'appelant, bornes de taille (255/4000/255)"
   - "La réserve « notification Teams manuelle » (T-0024-d) est domiciliée ici et levée par l'épreuve — une seule vérité du reste-à-faire"
 rayon_impact: local
-statut: en_cours
+statut: soldé  # épreuve réelle du 05/07/2026 (voir execution:)
 note: >
   Seconde des deux briques reportées du §7 du contrat local newsletter
   (contrats/local/communication/newsletter.md) ; sert AUSSI la notification de mission
@@ -39,7 +39,26 @@ note: >
   (ordre de bataille du 03/07/2026) — phase d'origine 4, avancée par décision gardien.
   Type d'action notifier_equipe : DÉJÀ au cran notifie dans table-des-crans v1.9 —
   aucune promotion de socle requise par cette brique.
+execution: >
+  Épreuve réelle exécutée le 05/07/2026, chaque maillon constaté à la source. Chaîne :
+  appel LITTÉRAL de notifier_canal (Claude Code, connecteur allia-graph-proposition,
+  9 outils exposés après re-handshake — leçon : une session MCP ouverte ne réémet pas
+  ses outils après redéploiement) → created_id=1 → élément relu en liste « Notifications »
+  (REST : id=1, contenu exact, créé 13:24:22Z, auteur applicatif) → run du flux M365
+  « Notification canal vie interne (T-0012) » : Succès en 8 s → message CONSTATÉ dans le
+  canal Teams « Vie Interne » (équipe Allia Consulting), posté par le Flow bot à 15:25,
+  contenu intégral (titre + corps + Réf : T-0012 / PR #160). Mise en service : liste
+  « Notifications » créée (id f2e02471-ffa3-4de4-b209-759f8da6d09b, colonnes Corps/Note,
+  Reference/Text), flux M365 (id e0ac67c8-b009-4909-a7ea-db95f177ec01, connexions
+  SharePoint + Teams du gardien, Post as Flow bot), image 0.9.0 (digest sha256:a54a6df1…)
+  bâtie côté ACR depuis le HEAD 3700081, révision ca-allia-mcp-graph--0000014,
+  GRAPH_NOTIFICATIONS_LIST_ID posée en simples quotes. Preuve négative en amont :
+  session Claude Code pré-déploiement a REFUSÉ de fabriquer un résultat (outil absent
+  du handshake) — anti-faux-vert vécu. La réserve « notification Teams manuelle »
+  (T-0024-d) est LEVÉE par cette épreuve.
 avancement:
   journal:
     - date: 2026-07-05
       fait: "Ordonnancement (Phase 4 → Phase 2, ordre de bataille du 03/07) et DÉCISION D'ARCHITECTURE : hypothèse « ChannelMessage.Send app-only » invalidée à la source (Graph : envoi de canal = délégué uniquement, app-only = migration). Voie liste-relais retenue : notifier_canal (9e outil, cible figée GRAPH_NOTIFICATIONS_LIST_ID, zéro permission nouvelle, zéro secret) + flux M365 « élément créé → Post as Flow bot » (runbook gardien). Bot Azure = évolution nommée. Réserve « notification Teams manuelle » (T-0024-d) domiciliée ici. Code proposé en PR ; reste : runbook (liste + flux + env + image 0.9.0) puis épreuve réelle soldante."
+    - date: 2026-07-05
+      fait: "SOLDÉ sur épreuve réelle : notifier_canal appelé littéralement (created_id=1), élément vérifié en liste à la source, run de flux Succès (8 s), message constaté dans le canal Vie Interne (Flow bot, 15:25). Mise en service complète le même jour : liste Notifications + flux M365 + image 0.9.0 (révision --0000014) + variable posée. Réserve T-0024-d « notification Teams manuelle » levée. architecture.md resynchronisé (0.9.0 courant, 11 tags, révision 14)."
