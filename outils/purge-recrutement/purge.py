@@ -125,14 +125,30 @@ def journaliser(cfg: dict[str, str], id_candidat: str, date_inscription: str, mo
 
 
 def supprimer_syntheses(cfg: dict[str, str], id_candidat_item: str) -> int:
-    """Supprime les synthèses rattachées à un candidat (lookup Candidat → Candidats-Synthèses)."""
+    """Supprime les synthèses rattachées à un candidat (lookup Candidat → Candidats-Synthèses).
+
+    Filtrage CÔTÉ CLIENT (déterministe), même raison que lire_candidats_refuses :
+    le $filter Graph sur colonne non indexée renvoie 400 — second trou du même pattern,
+    découvert à l'épreuve réelle du 05/07/2026 (T-0013-d).
+    """
     url = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{cfg['syntheses_list_id']}/items"
-    params = {"$expand": "fields", "$filter": f"fields/CandidatLookupId eq '{id_candidat_item}'", "$top": "50"}
+    params = {"$expand": "fields", "$top": "500"}
+    tous: list[dict[str, Any]] = []
     supprimees = 0
     with httpx.Client(timeout=30) as client:
-        r = client.get(url, headers=_entetes(cfg["purge_client_id"]), params=params)
-        r.raise_for_status()
-        for s in r.json().get("value", []):
+        page = url
+        while page:
+            r = client.get(page, headers=_entetes(cfg["purge_client_id"]), params=params)
+            r.raise_for_status()
+            corps = r.json()
+            tous.extend(corps.get("value", []))
+            page = corps.get("@odata.nextLink")
+            params = {}
+        rattachees = [
+            s for s in tous
+            if str((s.get("fields") or {}).get("CandidatLookupId", "")) == str(id_candidat_item)
+        ]
+        for s in rattachees:
             del_url = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{cfg['syntheses_list_id']}/items/{s['id']}"
             rd = client.delete(del_url, headers=_entetes(cfg["purge_client_id"]))
             rd.raise_for_status()
@@ -221,8 +237,11 @@ def purger() -> None:
         try:
             nb_syntheses = supprimer_syntheses(cfg, item_id)
         except Exception as e:
-            print(f"[purge] ERREUR suppression syntheses pour {id_candidat} : {e}")
-            nb_syntheses = 0
+            print(
+                f"[purge] ERREUR suppression syntheses pour {id_candidat} : {e} — "
+                "suppression de la fiche ANNULEE (fail-closed : jamais de synthese orpheline)"
+            )
+            continue
 
         try:
             supprimer_candidat(cfg, item_id)
