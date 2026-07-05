@@ -1,0 +1,35 @@
+---
+id: T-0026
+titre: "Brique CRM — Compte / Opportunité : pipeline commercial (Liste « CRM ») et lien opportunité → mission"
+capacite: "Cœur de métier / Développement commercial — Qualification & pipeline"
+phase: 4
+type_action: edition_contrat_socle
+cran: valide   # nature MIXTE : canon (contrat socle, porte gardien) ; câblage tenant (runbook humain) ; épreuve réelle
+produit:
+  - "(canon — cette PR) modele-donnees.md v1.16 : entité Opportunité domiciliée en Liste « CRM » (étapes Qualification / Proposition / Gagnée / Perdue, montant, échéance, responsable, CodeMission), schéma de colonnes sur Comptes, noms internes §2 ter, régime du dérivé opportunité §3 ; plan.md v0.5 : incise §9 T-4.1"
+  - "(runbook humain) câblage tenant : colonnes posées sur la Liste « Comptes » existante ; création de la Liste « CRM » selon §2 ter (nom interne ASCII d'abord, libellé ensuite — leçon v1.12)"
+  - "(épreuve réelle) une opportunité RÉELLE traverse la chaîne : saisie ou dérivée en Zone-de-proposition, promue en vérité (Liste « CRM »), lue par list_items ; lien vers une mission réelle démontré (CodeMission ↔ brief cadrage-mission)"
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+  - "backlog/plan.md"
+  - "skills/cadrage-mission/SKILL.md"
+criteres_acceptation:
+  - "modele-donnees.md dit où vit chaque fait CRM (Comptes / Liste « CRM »), son identifiant stable et ses noms internes Graph (§2 ter)"
+  - "Écriture agent : Zone-de-proposition uniquement (garde-fou structurel inchangé) ; l'opportunité dérivée naît en zone, sa promotion est tracée ; la saisie humaine reste une source"
+  - "Une opportunité réelle a traversé la chaîne zone → promotion → lecture (list_items) et son lien à une mission réelle est démontré"
+  - "Aucune donnée personnelle : ni entité Contact ni interlocuteur nominatif — Comptes porte des organisations (décision gardien du 05/07/2026)"
+rayon_impact: local   # nouvelles entités ; aucun consommateur existant cassé (cadrage-mission lit Comptes — colonnes ajoutées rétro-compatibles)
+statut: en_cours   # (canon) porté par cette PR ; câblage tenant puis épreuve réelle à suivre
+note: >
+  Instancie la brique CRM nommée dans la vision (« infrastructure d'entreprise : gestion,
+  finance, RH, CRM » ; carte des capacités : prospection, qualification & pipeline, gestion
+  de compte) et jusqu'ici absente du canon comme du plan. Périmètre borné par décision
+  gardien (05/07/2026) : pas d'entité Contact, aucune donnée personnelle — le pipeline porte
+  des organisations et des affaires. Le lien opportunité → mission ferme la boucle métier :
+  une affaire gagnée ouvre une mission (tranche verticale plan §6 — cadrage-mission /
+  kick-off), la couture est l'identifiant stable (CodeMission), pas un lookup structurel
+  (le schéma de la Liste « Missions » n'est pas encore canonisé). Extension MCP Graph :
+  AUCUNE à ce stade — lecture par list_items existant, écriture dérivée par create_list_item
+  vers la Zone-de-proposition. La promotion zone → Liste « CRM » reste un geste du gardien
+  (précédent T-0005) tant qu'aucun outil de promotion tracée n'est nommé.
