@@ -29,7 +29,28 @@ criteres_acceptation:
   - "L'exception gouvernée « purge » est inscrite dans table-des-crans.yaml (même PR) — sans elle le mécanisme contredirait les proscrites"
   - "La mise en place du privilège (octrois Graph de suppression) est un runbook humain ; ni Claude ni un agent ne l'exécutent"
 rayon_impact: large
-statut: en_cours # skill promu v1.1 + code + privilège posés ; reste la 1re purge réelle
+statut: soldé # première purge réelle éprouvée le 05/07/2026 (voir execution:)
+execution: >
+  CRITÈRE DE SOLDE TRANCHÉ (session 05/07/2026, sur proposition gardien de l'ordre de
+  bataille) : première purge éprouvée sur le mécanisme réel au tenant, sur fiches
+  SYNTHÉTIQUES explicitement étiquetées test (TEST-PURGE-T0013D-*), Created antidaté
+  > 730 jours par le gardien (ValidateUpdateListItem) — le critère « attendre une fiche
+  réelle échue » était inatteignable avant 2028 et aurait laissé le cœur RGPD non éprouvé ;
+  précédent T-0024-d (donnée de démonstration étiquetée admise). ÉPREUVE (3 runs Cloud
+  Shell, identité gardien) : run 1 = 400 fail-closed à la lecture ($filter Graph sur
+  colonne non indexée) → correctif #162 (filtre Etape côté client) ; run 2 = fiche 8
+  purgée, opposition (9) exclue, journal+rapport écrits, MAIS second 400 sur les synthèses
+  ($filter CandidatLookupId) AVALÉ par le try/except — trou RGPD potentiel (synthèses
+  orphelines) → correctif #163 (filtre lookup côté client + FAIL-CLOSED : échec synthèses
+  = purge de la fiche annulée) ; run 3 = COMPLET : fiche 10 purgée AVEC sa synthèse
+  rattachée (Candidats-Synthèses = 0), opposition (9) intacte (garde-fou vécu 2×), journal
+  PURGE-* AVANT suppression (zone id 7 et 9), rapports (zone id 8 et 10) — chaque constat
+  relu à la source (REST). Valeur de l'épreuve démontrée : deux bugs réels découverts et
+  fermés. RÉSERVES tracées non bloquantes : (1) exécution sous l'identité déléguée du
+  GARDIEN (Cloud Shell) — l'identité dédiée id-allia-purge-recrutement, managée, ne peut
+  être exercée que depuis un hébergement Azure : domicile de croisière du mécanisme
+  (job planifié) = chantier à nommer au toilettage ; (2) fiche test d'opposition (id 9)
+  à retirer par le gardien (suppression = geste humain).
 note: >
   Dernier morceau de la chapeau T-0013. Point le plus sensible RGPD : la SUPPRESSION
   définitive. RÉSOLUTION DE LA TENSION avec le proscrit supprimer_definitivement_des_donnees :
@@ -43,3 +64,7 @@ note: >
   Sites.Selected/write + journalisation T-0003 active). RESTE POUR SOLDER : première purge
   réelle éprouvée sur la vraie donnée (aucun candidat éligible à ce jour ; rapport en
   Zone-de-proposition à produire au premier passage).
+avancement:
+  journal:
+    - date: 2026-07-05
+      fait: "SOLDÉ sur épreuve réelle en 3 runs : critère tranché (fiches synthétiques étiquetées test, antidatées ValidateUpdateListItem), bug 1 ($filter Etape → 400) corrigé #162, bug 2 ($filter synthèses avalé → risque orphelines RGPD) corrigé #163 avec fail-closed, run final complet (fiche+synthèse purgées, opposition exclue 2×, journal avant suppression, rapports) — tout constaté à la source. Réserves : identité gardien (hébergement Azure du mécanisme à nommer), fiche test opposition à retirer (gardien)."
