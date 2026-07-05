@@ -141,3 +141,5 @@ avancement:
       fait: "SOLDÉ : a (code 0.8.0→0.8.2, 5 PR), b (table v1.9), c (mise en service prouvée), d (épreuve réelle Siteflow). La tranche verticale métier T-0021..T-0024 est close : le SI produit de la valeur métier sur une affaire réelle, sous crans, dérivés en zone, propagation par référence. Critère de sortie plan §6 satisfait."
     - date: 2026-07-05
       fait: "Réconciliation de réserve : « notification Teams manuelle » (execution T-0024-d, témoignage historique INTACT) est désormais domiciliée au chantier T-0012 (ordonnancé, en_cours) — une seule vérité du reste-à-faire. La livraison de T-0012 (notifier_canal + flux M365) lèvera cette réserve ; la seconde réserve (dépôt binaire UI) reste portée ici jusqu'au toilettage."
+    - date: 2026-07-05
+      fait: "Toilettage : la réserve « dépôt binaire UI » (execution T-0024-d, témoignage intact) est domiciliée au registre architecture.md (ligne SPFx cockpit / App Catalog) comme FAIT STRUCTUREL assumé — runbook UI gardien tant que le tenant l'exige. Plus aucune réserve vivante portée par ce chantier."

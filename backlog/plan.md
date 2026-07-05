@@ -1,7 +1,7 @@
 # Plan de construction du SI augmenté — Allia
 
 > Statut : promu — contrat socle · fait foi.
-> Changelog : v0.3 → promu, 16 juin 2026 : §9 T-4.1 — incise nommant la capacité Talent & RH / Recrutement comme cible de phase 4 (outil vue candidat T-0013, exécutant le cadre RGPD recrutement promu). Mention légère, aucun autre changement de fond. v0.2 → promu : passage par la boucle de promotion (session fondation 7 juin 2026). *(v0.2 : alignement sur la feuille de route et les grades de la présentation « Talents & recrutement ».)*
+> Changelog : v0.4 → promu, 5 juillet 2026 (toilettage d'entrée en Phase 2) : §12 — hypothèse 1 révisée (Phase 2 engagée sans ingénieur dédié, leviers de saturation nommés) ; hypothèse 6 close (réalisée — matière portée par doctrine §10 bis et organisation.md §3/§4.1). Aucune autre section modifiée. v0.3 → promu, 16 juin 2026 : §9 T-4.1 — incise nommant la capacité Talent & RH / Recrutement comme cible de phase 4 (outil vue candidat T-0013, exécutant le cadre RGPD recrutement promu). Mention légère, aucun autre changement de fond. v0.2 → promu : passage par la boucle de promotion (session fondation 7 juin 2026). *(v0.2 : alignement sur la feuille de route et les grades de la présentation « Talents & recrutement ».)*
 > Domicile cible : `dépôt de fondations (GitHub)`, chemin `/backlog/plan.md`.
 > Adossé à : `/doctrine/doctrine.md`. La doctrine dit *le pourquoi et les règles* ; ce plan dit *le comment et le chantier*. Les deux forment le canon socle que Claude Code résout à l'exécution.
 > Ce document est écrit pour deux lecteurs : **toi** (le gardien, qui exécute l'amorçage) et **les agents** (qui consommeront ensuite les tâches qu'il référence). Il ne se modifie pas dans une copie : il évolue par la boucle de promotion (§11).
@@ -266,11 +266,11 @@ Ce `plan.md` et les `chantiers/*.yaml` sont du **socle**. Toute évolution — r
 
 ## 12. Hypothèses prises (à corriger par le gardien)
 
-1. Tu es seul gardien ; pas d'ingénieur dédié à ce stade. La Phase 2 (evals/résolution) en pâtira en vélocité — c'est le point où une compétence d'ingénierie aiderait le plus.
+1. Tu es seul gardien ; pas d'ingénieur dédié à ce stade. *(Révisée le 05/07/2026, à l'entrée en Phase 2 :)* la Phase 2 est engagée sans ingénieur dédié et la vélocité a tenu — harnais d'evals soldé (T-0020-a), porte de promotion outillée par la machine. En cas de saturation du gardien, les leviers sont la fédération de la promotion (registre `organisation.md` §4.1, première délégation active) et l'agent-gardien (T-0020-c) — pas un recrutement d'urgence.
 2. Les agents agissent sur un dépôt GitHub **réel** (réversible, sous porte de PR) ; pour M365, droits et sécurité, ils ne produisent que des **runbooks** que tu exécutes.
 3. Périmètre v1 = squelette + tranche verticale « gain d'affaire ». Le reste suit en Phase 4.
 4. Couche de résolution automatique **différée** (Phase 3) ; pull réel côté Claude Code/MCP, refresh manuel des surfaces utilisateur en v1.
 5. Le backlog agent-consommable dans le dépôt est le format de sortie retenu, avec ce document comme couche prose par-dessus.
-6. « Nouveau document » = la présentation cabinet « Talents & recrutement ». La doctrine (v1.7 promu) porte le **§10 bis promu** : articulation rôles / grades / trajectoire (sans importer le détail RH volatil). Le « qui répond de quoi » — délégations et titulaires — vit dans le contrat socle SÉPARÉ `contrats/socle/organisation.md` (v1.9) : les deux sont complémentaires, pas redondants (§10 bis articule ; organisation.md enregistre qui tient quel périmètre).
+6. *(Close le 05/07/2026 — réalisée, plus une hypothèse :)* l'articulation rôles / grades / trajectoire vit au §10 bis de la doctrine (promu) ; le « qui répond de quoi » — délégations et titulaires — vit au registre `contrats/socle/organisation.md` (§3, §4.1). La doctrine v1.8 renvoie au registre comme seule source de vérité des délégations.
 
 > Pour corriger une hypothèse, ne modifie pas ce fichier directement : ouvre un candidat. Le plan se gouverne comme il prêche.
