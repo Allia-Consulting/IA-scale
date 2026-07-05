@@ -1,0 +1,28 @@
+---
+id: T-0026
+titre: "Brique CRM — entités Compte / Contact / Opportunité au canon, câblage tenant, épreuve zone → promotion"
+capacite: "Cœur de métier / Développement commercial — Qualification & pipeline"
+phase: 4
+type_action: edition_contrat_socle
+cran: valide   # nature MIXTE : design au canon (agent, branche) ; création des listes au tenant (runbook humain)
+produit:
+  - "(agent) contrats/socle/modele-donnees.md v1.16 : schéma « Comptes » fixé (liste existante, vide) ; entités Contact (liste « Contacts », données personnelles B2B) et Opportunité (liste « Opportunites », pipeline Détectée / Qualifiée / Proposition / Négociation / Gagnée / Perdue) ; lien Opportunité → Mission par CodeMission (identifiant stable, renseigné à « Gagnée »)"
+  - "(runbook humain) création des listes Contacts et Opportunites au tenant (principe §2 ter : colonne créée sous son nom interne ASCII puis libellé renommé) ; mise en conformité de la liste Comptes au schéma"
+  - "(si nécessaire) extension MCP Graph pour l'écriture CRM — à défaut, list_items / create_list_item (Zone-de-proposition) suffisent pour l'épreuve"
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"
+criteres_acceptation:
+  - "Une opportunité réelle naît en Zone-de-proposition (Origine « crm-opportunite ») puis rejoint la liste Opportunites par promotion tracée — le dérivé n'est jamais le saisi"
+  - "Une opportunité passée à « Gagnée » porte le code de la mission créée (CodeMission — couture avec la tranche verticale « gain d'affaire »)"
+  - "Journalisation activée sur la liste Contacts avant tout accès agent réel (même clause que Candidats, cf. T-0003)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Brique nommée dans la vision (pilier « infrastructure d'entreprise » : gestion, finance,
+  RH, CRM), absente du canon et du plan jusqu'ici — instanciée au toilettage d'entrée en
+  Phase 2 (ordre de bataille du 05/07/2026). Design d'abord (modele-donnees v1.16), câblage
+  tenant ensuite ; les listes Comptes et Propositions existent vides au tenant, Contacts et
+  Opportunites sont à créer. Le lien Opportunité → Mission reste une référence par
+  identifiant stable (texte) tant que la liste « Missions » n'est pas câblée — un lookup
+  viendra par candidat ultérieur si utile.
