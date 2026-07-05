@@ -39,7 +39,20 @@ sous_taches:
     depend_de: []
     criteres_acceptation:
       - "Chaque appel d'outil MCP Graph laisse une trace consultable ; une journée réelle de production est relue depuis le journal"
-    statut: a_faire
+    execution: >
+      Code livré en PR #169 (mergée le 05/07/2026, HEAD 3d79120c) : décorateur
+      _journal_appel posé sur les 9 outils — une ligne JSON par appel (ts UTC, outil,
+      cran résolu de la table v1.9, resultat succes/refus/erreur, duree_ms, type_erreur),
+      AUCUNE donnée personnelle ni argument, comportement des outils inchangé (schémas
+      MCP identiques à travers functools.wraps — éprouvé en intégration réelle).
+      MIS EN SERVICE le 05/07/2026 : image allia-mcp-graph:0.10.0
+      (digest sha256:e5579cce…), révision ca-allia-mcp-graph--0000015, env et sondes
+      préservés. VÉRIFIÉ À CHAUD : appel réel list_items (relecture O-001, Liste « CRM »)
+      → ligne {"journal": "mcp-graph", "outil": "list_items", "cran": "auto",
+      "resultat": "succes", "duree_ms": 3363} relue aux journaux console de la révision.
+      RESTE pour le solde (critère à la lettre) : une journée réelle de production relue
+      depuis le journal (Log Analytics) — au plus tôt le 06/07/2026 au soir.
+    statut: en_cours
   - id: T-0020-c
     titre: "Agent-gardien v1 — rayon d'impact calculé sur les consommateurs réels + auto-approbation du faible risque contre politique"
     produit:
