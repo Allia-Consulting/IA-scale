@@ -1,36 +1,45 @@
+---
 id: T-0012
-titre: "Connecteur Teams en écriture (envoi de message de canal) — infrastructure (inscrit au backlog, non construit)"
+titre: "Notification Teams : outil notifier_canal (liste-relais) + flux M365 — la notification de mission passe de manuelle à notifiée"
 capacite: "Socle d'exploitation / Orchestration des agents"
-phase: 4
+phase: 2
 type_action: infrastructure_mcp
-cran: valide            # nature MIXTE : code du connecteur = agent (auto en branche) ; octroi de la permission Graph = RUNBOOK HUMAIN (validé)
+cran: notifie           # type d'action notifier_equipe (table-des-crans v1.9) ; nature MIXTE : code (agent, auto en branche) + liste/flux M365 (runbook humain)
 produit:
-  - "(agent — cran auto) extension du connecteur MCP (ou nouveau connecteur) exposant l'envoi d'un message dans un canal Teams via Microsoft Graph"
-  - "(runbook humain) octroi à l'identité managée de la permission Graph d'envoi de message de canal (ex. ChannelMessage.Send), au moindre privilège — geste du gardien, jamais un agent"
+  - "(agent — cran auto) 9e outil du connecteur MCP Graph : notifier_canal(titre, corps, reference) — écrit dans la liste « Notifications », cible FIGÉE côté serveur (GRAPH_NOTIFICATIONS_LIST_ID), aucun identifiant de liste ni de canal accepté de l'appelant"
+  - "(runbook humain) création de la liste « Notifications » au site AlliaConsuling + flux M365 « élément créé → publier dans le canal Allia Consulting — vie interne (Flow bot) » + pose de GRAPH_NOTIFICATIONS_LIST_ID + image 0.9.0 — gestes du gardien"
 depend_de: []
-# Inscrit au BACKLOG, PAS à construire maintenant (Phase 4). Aucune dépendance dure tant qu'il
-#   n'est pas ordonnancé. NATURE MIXTE (comme T-0002b-2) : le CODE du connecteur relève de l'agent
-#   (édition en branche, cran auto) ; l'OCTROI de la permission Graph d'envoi Teams à l'identité
-#   managée est un RUNBOOK HUMAIN (modifier des droits = proscrit à un agent, table-des-crans.yaml ;
-#   même séquence que T-0002a-bis pour Sites.Selected). PAS de sentinelle RUNBOOK-HUMAIN pour que
-#   l'agent puisse préparer le code ; la part octroi reste la porte du gardien (signalée dans produit).
+# DÉCISION D'ARCHITECTURE (session 05/07/2026) : le design initial « permission Graph d'envoi de
+#   canal (ex. ChannelMessage.Send) octroyée à l'identité managée » est INAPPLICABLE — fait Graph
+#   vérifié (Microsoft Learn, 05/07/2026) : l'envoi de message de canal n'est supporté qu'en
+#   permissions DÉLÉGUÉES ; app-only = migration uniquement (Teamwork.Migrate.All, canal en mode
+#   migration). Voie retenue : LISTE-RELAIS — l'agent écrit (Graph, Sites.Selected déjà octroyé,
+#   ZÉRO permission nouvelle) dans la liste « Notifications » ; un flux M365 standard publie dans
+#   le canal en tant que Flow bot. Zéro secret strict (l'URL d'un webhook Workflows serait un
+#   secret de facto : rejetée). La connexion du flux vit sous le compte du gardien — écart au rôle
+#   ASSUMÉ ET BORNÉ, même nature que T-0005 (la notification d'équipe est un acte de gouvernance
+#   de l'information ; réversible à la fédération du rôle). Évolution nommée si l'interactivité
+#   devient un besoin : bot Azure (identité managée), seule voie d'envoi direct supportée.
+#   Cette livraison LÈVE la réserve « notification Teams manuelle » tracée à T-0024-d (execution).
 contrats_concernes:
   - "contrats/local/communication/newsletter.md"
   - "contrats/socle/identites-et-secrets.md"
+  - "contrats/socle/table-des-crans.yaml"
 criteres_acceptation:
-  - "Le connecteur peut poster un message dans le canal Teams « Allia Consulting — vie interne » via Graph"
-  - "L'authentification suit le modèle zéro secret (identites-et-secrets.md) : identité managée pour le workload, aucun secret applicatif introduit"
-  - "La permission Graph d'envoi est octroyée au moindre privilège (runbook humain du gardien) ; tout octroi tracé"
-  - "Le connecteur ne sait QUE poster un message de canal — il n'élargit pas les droits Graph existants au-delà du strict nécessaire"
+  - "Une notification réelle déposée par l'appel littéral de notifier_canal apparaît dans le canal Teams « Allia Consulting — vie interne », tracée (élément de liste + message dans le canal)"
+  - "Zéro secret : identité managée pour l'écriture Graph ; le flux M365 ne porte aucun secret dans notre infrastructure ; aucune permission Graph nouvelle octroyée"
+  - "L'outil ne sait QUE notifier : cible figée côté serveur, aucun identifiant de liste ni de canal accepté de l'appelant, bornes de taille (255/4000/255)"
+  - "La réserve « notification Teams manuelle » (T-0024-d) est domiciliée ici et levée par l'épreuve — une seule vérité du reste-à-faire"
 rayon_impact: local
-statut: à_faire
+statut: en_cours
 note: >
   Seconde des deux briques reportées du §7 du contrat local newsletter
-  (contrats/local/communication/newsletter.md). INSCRIT AU BACKLOG, NON CONSTRUIT.
-  Le connecteur MCP Graph actuel (outils/mcp-graph/) LIT les Listes SharePoint et ÉCRIT en
-  Zone-de-proposition ; il NE POSTE PAS de message Teams. Publier la newsletter dans le canal
-  suppose cette brique — chantier d'infrastructure du même ordre que T-0002b (transport, image,
-  déploiement, auth), avec une PERMISSION GRAPH SUPPLÉMENTAIRE (envoi de message de canal) à
-  octroyer à l'identité managée par RUNBOOK HUMAIN (même nature que l'octroi Sites.Selected de
-  T-0002a-bis). Prérequis de l'exécution agentique de la newsletter (état « croisière », contrat
-  local §6) et du skill de génération T-0011.
+  (contrats/local/communication/newsletter.md) ; sert AUSSI la notification de mission
+  (T-0024-d, réserve) et, à terme, le skill newsletter T-0011. Ordonnancé en Phase 2
+  (ordre de bataille du 03/07/2026) — phase d'origine 4, avancée par décision gardien.
+  Type d'action notifier_equipe : DÉJÀ au cran notifie dans table-des-crans v1.9 —
+  aucune promotion de socle requise par cette brique.
+avancement:
+  journal:
+    - date: 2026-07-05
+      fait: "Ordonnancement (Phase 4 → Phase 2, ordre de bataille du 03/07) et DÉCISION D'ARCHITECTURE : hypothèse « ChannelMessage.Send app-only » invalidée à la source (Graph : envoi de canal = délégué uniquement, app-only = migration). Voie liste-relais retenue : notifier_canal (9e outil, cible figée GRAPH_NOTIFICATIONS_LIST_ID, zéro permission nouvelle, zéro secret) + flux M365 « élément créé → Post as Flow bot » (runbook gardien). Bot Azure = évolution nommée. Réserve « notification Teams manuelle » (T-0024-d) domiciliée ici. Code proposé en PR ; reste : runbook (liste + flux + env + image 0.9.0) puis épreuve réelle soldante."

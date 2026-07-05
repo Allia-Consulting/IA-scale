@@ -87,6 +87,7 @@ ENV_GROUPES_PERIMETRE_AUTORISES = "GRAPH_GROUPES_PERIMETRE_AUTORISES"  # CSV d'o
 ENV_GROUPES_PARC_AUTORISES = "GRAPH_GROUPES_PARC_AUTORISES"  # CSV d'objectId des groupes de PARC gérables (liste blanche figée côté serveur, dédiée — séparée du périmètre)
 ENV_MISSION_DRIVE_ID = "GRAPH_MISSION_DRIVE_ID"    # bibliothèque hôte de la racine « Missions » (cible figée de l'espace de mission)
 ENV_MISSION_FOLDER_ID = "GRAPH_MISSION_FOLDER_ID"  # dossier racine « Missions » (seul parent des espaces de mission créés)
+ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
 # Le support de kick-off se dépose dans « 01 - Pilotage » (décision gardien, amendement n°2 après test 0.8.0).
@@ -303,6 +304,24 @@ def _config_mission() -> dict[str, str]:
             f"{absentes}. Racine « Missions » posée au runbook T-0024-c. Voir outils/mcp-graph/README.md."
         )
     return valeurs
+
+
+def _config_notifications() -> dict[str, str]:
+    """Lit la configuration de la liste « Notifications » (cible figée de notifier_canal).
+
+    Config DÉDIÉE, séparée de `_config()` : les outils existants ne dépendent PAS de cette
+    variable (aucune régression de leur contrat). L'outil de notification lit sa propre
+    configuration et échoue clairement (ConfigManquante) si elle est absente. Aucun secret
+    (identité managée).
+    """
+    valeur = os.environ.get(ENV_NOTIFICATIONS_LIST_ID, "")
+    if not valeur:
+        raise ConfigManquante(
+            "Configuration « Notifications » incomplète. Variable d'environnement manquante : "
+            f"{ENV_NOTIFICATIONS_LIST_ID}. Liste créée et id posé au runbook T-0012. "
+            "Voir outils/mcp-graph/README.md."
+        )
+    return {"notifications_list_id": valeur}
 
 
 # Caractères interdits dans un composant de nom d'espace (invalides SharePoint / dangereux pour le
@@ -1100,6 +1119,72 @@ def lire_annuaire(
             resultat["membres"] = sorted(_lire_membres_groupe(client, group_id))
 
     return resultat
+
+
+@mcp.tool()
+def notifier_canal(ctx: Context, titre: str, corps: str, reference: str = "") -> dict[str, Any]:
+    """Dépose une notification d'équipe dans la liste « Notifications » (relais vers Teams).
+
+    Type d'action `notifier_equipe` (table-des-crans : cran NOTIFIE) — l'agent agit, le
+    gardien et l'équipe sont informés. Le message part dans le canal Teams « Allia
+    Consulting — vie interne » via un flux M365 (déclencheur : élément créé dans cette
+    liste), PAS par un appel Graph d'envoi de canal : Graph ne supporte l'envoi de message
+    de canal qu'en permissions déléguées (app-only = migration uniquement, fait vérifié le
+    05/07/2026). Le relais par liste conserve le zéro secret et n'ajoute AUCUNE permission
+    Graph (Sites.Selected write couvre déjà le site).
+
+    La liste cible est fixée par GRAPH_NOTIFICATIONS_LIST_ID côté serveur. Cette fonction
+    n'accepte AUCUN identifiant de liste ni de canal de l'appelant : impossible de notifier
+    ailleurs que dans le canal câblé par le gardien. Cet outil ne sait QUE notifier —
+    il n'élargit aucun droit existant.
+
+    Args:
+        titre: objet court de la notification (1 à 255 caractères).
+        corps: contenu du message (1 à 4000 caractères).
+        reference: rattachement facultatif (ex. code mission, id de PR, id d'élément en
+            Zone-de-proposition) — 255 caractères maximum.
+
+    Returns:
+        Un dict {"created_id": "...", "titre": "..."} décrivant la notification déposée.
+
+    Raises:
+        ValueError: titre/corps vides ou hors bornes.
+        ConfigManquante: GRAPH_NOTIFICATIONS_LIST_ID absente.
+    """
+    _verifier_appelant(ctx)
+    if not isinstance(titre, str) or not titre.strip():
+        raise ValueError("`titre` doit être une chaîne non vide.")
+    if not isinstance(corps, str) or not corps.strip():
+        raise ValueError("`corps` doit être une chaîne non vide.")
+    if not isinstance(reference, str):
+        raise ValueError("`reference` doit être une chaîne (éventuellement vide).")
+    titre = titre.strip()
+    corps = corps.strip()
+    reference = reference.strip()
+    if len(titre) > 255:
+        raise ValueError("`titre` dépasse 255 caractères (limite de la colonne Title).")
+    if len(corps) > 4000:
+        raise ValueError("`corps` dépasse 4000 caractères — raccourcir ou pointer une référence.")
+    if len(reference) > 255:
+        raise ValueError("`reference` dépasse 255 caractères.")
+
+    cfg_notif = _config_notifications()
+    cfg = _config()
+    # Cible d'écriture NON paramétrable par l'appelant : la liste Notifications, et elle seule.
+    url = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{cfg_notif['notifications_list_id']}/items"
+    champs: dict[str, Any] = {"Title": titre, "Corps": corps}
+    if reference:
+        champs["Reference"] = reference
+    with httpx.Client(timeout=30) as client:
+        reponse = client.post(
+            url,
+            headers={**_entetes(), "Content-Type": "application/json"},
+            json={"fields": champs},
+        )
+        reponse.raise_for_status()
+        corps_reponse = reponse.json()
+    logger.info("notification déposée — id=%s titre=%s", corps_reponse.get("id"), titre)
+    return {"created_id": corps_reponse.get("id"), "titre": titre}
 
 
 if __name__ == "__main__":

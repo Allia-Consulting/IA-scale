@@ -6,7 +6,7 @@
 
 ## Ce que c'est
 
-Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **huit** opérations sur Microsoft Graph, et huit seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **neuf** opérations sur Microsoft Graph, et neuf seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
@@ -18,6 +18,7 @@ Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en
 | `lire_annuaire(upn="", group_id="")` | **lecture** | `GET /users/{upn}` et/ou `GET /groups/{id}/members` — **résout** un UPN en objectId et/ou **liste** les membres d'un groupe ; **lecture seule stricte**, `group_id` borné à l'**union** des listes blanches périmètre ∪ parc (`T-0007`). |
 | `creer_espace_mission(annee, client, nom_mission)` | **écriture dossier** | `POST .../drives/{MISSION_DRIVE}/items/{MISSION_FOLDER}/children` — crée l'**espace de mission** (dossier au nom **composé côté serveur** `AAAA - Client - Nom de la mission` + arbre **FIGÉ** `01 - Pilotage / 02 - Livrables`) **uniquement** sous la racine **« Missions » FIGÉE**, jamais ailleurs ; collision = **fail** (`T-0024-a`). |
 | `deposer_document_mission(annee, client, nom_mission, sous_dossier, nom_fichier, contenu_base64, sha256_attendu)` | **écriture fichier** | `PUT .../drives/{MISSION_DRIVE}/items/{MISSION_FOLDER}:/{nom_espace}/{sous_dossier}/{nom}:/content` — dépose un **brouillon interne** dans un sous-dossier **whitelisté** d'un espace de mission (nom d'espace **recomposé côté serveur**) ; extension dans `{.docx .pptx .xlsx .pdf .md}` ; collision = **fail** ; **intégrité fail-closed** (`sha256_attendu` recalculé côté serveur, mismatch = refus avant écriture) (`T-0024-a`). |
+| `notifier_canal(titre, corps, reference="")` | **écriture** | `POST /sites/{site}/lists/{NOTIFICATIONS}/items` — dépose une **notification d'équipe** **uniquement** dans la liste « Notifications » **FIGÉE** ; le canal Teams « Allia Consulting — vie interne » est atteint par **flux M365** (élément créé → Post as Flow bot) — Graph n'offre PAS d'envoi de canal en app-only ; cran **notifie** (`T-0012`). |
 
 ## Transport HTTP streamable et endpoint de santé
 
@@ -87,6 +88,20 @@ Deux résolutions, au moins une obligatoire :
   - **Intégrité fail-closed (leçon épreuve `T-0024-d`).** L'appelant fournit `sha256_attendu` (64 hex minuscules) ; après décodage base64, le serveur **recalcule** `sha256(contenu)` et **refuse** (`ValueError` « INTEGRITÉ : sha256 reçu X ≠ attendu Y ») **avant tout appel Graph** si l'empreinte diffère. Un contenu **corrompu en transit** (le cas réel de l'épreuve : 17307 o reçus ≠ 16758 o émis) ne peut donc plus être **stocké silencieusement**. Le retour inclut `sha256` = empreinte du contenu réellement envoyé au `PUT`.
 
 Cran des deux actions : **auto** — espace/brouillon internes, réversibles, locaux (`table-des-crans.yaml` : `creer_espace_mission` ; `deposer_document_mission_zone_travail`, ajouté en `T-0024-b`). La **mise en service** (création de la racine « Missions », résolution des ids, pose des variables sur le service, octroi `write` prouvé) est un **runbook humain** — `T-0024-c`. Le code reste **inerte** tant que les deux variables ne sont pas posées.
+
+## Le garde-fou structurel (sexies) : la notification ne part que par la liste « Notifications »
+
+`notifier_canal(titre, corps, reference="")` dépose une notification d'équipe dans la liste
+SharePoint « Notifications » — cible FIGÉE côté serveur (`GRAPH_NOTIFICATIONS_LIST_ID`), jamais
+choisie par l'appelant. Le message atteint le canal Teams « Allia Consulting — vie interne » par
+un flux M365 (déclencheur : élément créé dans la liste, publication en tant que Flow bot) : Graph
+ne supporte PAS l'envoi de message de canal en app-only (permissions déléguées uniquement ;
+app-only = migration — fait vérifié le 05/07/2026). Ce relais conserve le zéro secret et n'ajoute
+AUCUNE permission Graph. Type d'action `notifier_equipe`, cran `notifie` (table-des-crans) :
+l'agent agit, l'équipe est informée. Latence du déclencheur : de l'ordre de la minute (polling
+standard M365) — acceptable pour une notification d'équipe. Évolution nommée si l'interactivité
+(mentions, cartes, réponses) devient un besoin : bot Azure (identité managée), seule voie d'envoi
+direct supportée — coût aujourd'hui disproportionné pour une notification sortante.
 
 ## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
