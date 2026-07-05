@@ -82,9 +82,16 @@ def _entetes(client_id: str) -> dict[str, str]:
 
 
 def lire_candidats_refuses(cfg: dict[str, str]) -> list[dict[str, Any]]:
-    """Lit toutes les fiches Candidats dont Etape = Refusée (lecture seule)."""
+    """Lit toutes les fiches Candidats dont Etape = Refusée (lecture seule).
+
+    Filtrage CÔTÉ CLIENT (déterministe) : le $filter Graph sur une colonne SharePoint
+    non indexée renvoie 400 sans l'en-tête Prefer HonorNonIndexedQueriesWarningMayFailRandomly,
+    et reste non déterministe avec (« MayFailRandomly ») — découvert à l'épreuve réelle
+    du 05/07/2026 (T-0013-d). La liste se lit intégralement (pagination) puis se filtre
+    en mémoire ; volumétrie candidats largement compatible.
+    """
     url = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{cfg['candidats_list_id']}/items"
-    params = {"$expand": "fields", "$filter": "fields/Etape eq 'Refusée'", "$top": "500"}
+    params = {"$expand": "fields", "$top": "500"}
     items: list[dict[str, Any]] = []
     with httpx.Client(timeout=30) as client:
         while url:
@@ -94,7 +101,7 @@ def lire_candidats_refuses(cfg: dict[str, str]) -> list[dict[str, Any]]:
             items.extend(corps.get("value", []))
             url = corps.get("@odata.nextLink")
             params = {}
-    return items
+    return [i for i in items if (i.get("fields") or {}).get("Etape") == "Refusée"]
 
 
 def journaliser(cfg: dict[str, str], id_candidat: str, date_inscription: str, motif: str) -> None:
