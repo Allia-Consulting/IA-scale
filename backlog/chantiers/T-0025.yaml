@@ -1,0 +1,26 @@
+---
+id: T-0025
+titre: "Domicile de croisière du mécanisme de purge — job Azure planifié sous identité dédiée"
+capacite: "Capacités habilitantes / Talent & RH — Recrutement"
+phase: 4
+type_action: infrastructure_mcp
+cran: valide   # nature MIXTE : packaging/définition du job (agent, branche) ; création du job + attache d'identité (runbook humain)
+produit:
+  - "(agent) packaging du mécanisme outils/purge-recrutement (Dockerfile) et définition du job planifié"
+  - "(runbook humain) Azure Container Apps Job PLANIFIÉ (cadence mensuelle) dans cae-ia-scale, identité user-assigned id-allia-purge-recrutement attachée — la suppression s'exerce ENFIN sous l'identité dédiée au moindre privilège, jamais sous celle du gardien"
+depend_de: ["T-0013-d"]
+# Nommé au toilettage du 05/07/2026 : lève la réserve n°1 de T-0013-d (épreuve exécutée sous
+#   l'identité déléguée du gardien, Cloud Shell — une identité managée ne s'exerce que depuis
+#   une ressource Azure qui la porte).
+contrats_concernes:
+  - "contrats/socle/rgpd-recrutement-candidats.md"
+  - "contrats/socle/identites-et-secrets.md"
+criteres_acceptation:
+  - "Une exécution planifiée réelle du job purge et journalise (ou rapporte 0 éligible) SOUS id-allia-purge-recrutement — vérifiée aux journaux du job ET à la Zone-de-proposition"
+  - "Zéro secret ; aucun élargissement des octrois existants (Sites.Selected write déjà posé, runbook du 19/06/2026)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Domicile de croisière du mécanisme T-0013-d (soldé sur épreuve le 05/07/2026, réserve
+  identité tracée). Jusqu'à ce chantier, toute purge reste un passage manuel du gardien
+  (Cloud Shell) — acceptable : la prochaine échéance réelle de rétention tombe en 2028.

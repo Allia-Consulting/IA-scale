@@ -4,3 +4,7 @@
 # Le dérivé n'est jamais le saisi : ces fichiers ne rejoignent jamais le canon.
 # Le dossier entier est ignoré (couvre aussi les rendus *.html).
 zone-proposition/
+
+# Environnements virtuels Python locaux (venvs d'épreuve/exécution — jamais au canon).
+.venv/
+__pycache__/
