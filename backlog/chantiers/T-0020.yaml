@@ -8,7 +8,7 @@ produit:
   - "TÂCHE-CHAPEAU (plan §7) : la barrière qui rend l'autonomie tenable. Décomposée en quatre sous-tâches T-0020-a..d — un seul fichier, pas d'éclatement prématuré."
 depend_de: []
 contrats_concernes:
-  - "doctrine/doctrine-de-gouvernance.md"
+  - "doctrine/doctrine.md"
   - "backlog/plan.md"
 criteres_acceptation:
   - "Critère de sortie du plan §7 : une PR à faible risque et conforme passe sans le gardien ; toute régression d'un skill est bloquée par la CI."
