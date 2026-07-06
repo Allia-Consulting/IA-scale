@@ -1,7 +1,7 @@
 # Plan de construction du SI augmenté — Allia
 
 > Statut : promu — contrat socle · fait foi.
-> Changelog : v0.5 → promu, 5 juillet 2026 : §9 T-4.1 — incise nommant la brique CRM (Cœur de métier / Développement commercial : entités Compte / Opportunité, pipeline commercial Liste « CRM » et lien opportunité → mission, chantier T-0026), symétrique de l'incise recrutement v0.3. Aucune autre section modifiée. v0.4 → promu, 5 juillet 2026 (toilettage d'entrée en Phase 2) : §12 — hypothèse 1 révisée (Phase 2 engagée sans ingénieur dédié, leviers de saturation nommés) ; hypothèse 6 close (réalisée — matière portée par doctrine §10 bis et organisation.md §3/§4.1). Aucune autre section modifiée. v0.3 → promu, 16 juin 2026 : §9 T-4.1 — incise nommant la capacité Talent & RH / Recrutement comme cible de phase 4 (outil vue candidat T-0013, exécutant le cadre RGPD recrutement promu). Mention légère, aucun autre changement de fond. v0.2 → promu : passage par la boucle de promotion (session fondation 7 juin 2026). *(v0.2 : alignement sur la feuille de route et les grades de la présentation « Talents & recrutement ».)*
+> Changelog : v0.6 → **candidat**, 6 juillet 2026 (toilettage canon d'hygiène) : §4 — convention de vocabulaire clarifiée : `promu` réservé à la boucle de promotion des **contrats** ; cycle de vie d'un **chantier** = `à_faire → en_cours → soldé` (l'étape « mergé, pas encore éprouvé » se lit dans `execution:`, non dans un statut `promu`). Fiches historiques Phase 0/1 non réécrites. Aucune autre section modifiée. v0.5 → promu, 5 juillet 2026 : §9 T-4.1 — incise nommant la brique CRM (Cœur de métier / Développement commercial : entités Compte / Opportunité, pipeline commercial Liste « CRM » et lien opportunité → mission, chantier T-0026), symétrique de l'incise recrutement v0.3. Aucune autre section modifiée. v0.4 → promu, 5 juillet 2026 (toilettage d'entrée en Phase 2) : §12 — hypothèse 1 révisée (Phase 2 engagée sans ingénieur dédié, leviers de saturation nommés) ; hypothèse 6 close (réalisée — matière portée par doctrine §10 bis et organisation.md §3/§4.1). Aucune autre section modifiée. v0.3 → promu, 16 juin 2026 : §9 T-4.1 — incise nommant la capacité Talent & RH / Recrutement comme cible de phase 4 (outil vue candidat T-0013, exécutant le cadre RGPD recrutement promu). Mention légère, aucun autre changement de fond. v0.2 → promu : passage par la boucle de promotion (session fondation 7 juin 2026). *(v0.2 : alignement sur la feuille de route et les grades de la présentation « Talents & recrutement ».)*
 > Domicile cible : `dépôt de fondations (GitHub)`, chemin `/backlog/plan.md`.
 > Adossé à : `/doctrine/doctrine.md`. La doctrine dit *le pourquoi et les règles* ; ce plan dit *le comment et le chantier*. Les deux forment le canon socle que Claude Code résout à l'exécution.
 > Ce document est écrit pour deux lecteurs : **toi** (le gardien, qui exécute l'amorçage) et **les agents** (qui consommeront ensuite les tâches qu'il référence). Il ne se modifie pas dans une copie : il évolue par la boucle de promotion (§11).
@@ -126,12 +126,14 @@ criteres_acceptation:                           # Definition of Done, vérifiabl
   - "Le skill produit un brief structuré à partir d'une proposition gagnée"
   - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien)"
 rayon_impact: "local"                           # rempli/contrôlé par l'agent-gardien
-statut: "à_faire"                               # à_faire | candidat | en_cours | promu | soldé | abandonné
+statut: "à_faire"                               # à_faire | en_cours | soldé | abandonné (historique : candidat/promu — voir convention ci-dessous)
 ```
 
-Cycle de vie : à_faire → candidat → en_cours → promu → soldé. **SOLDÉ = promu ET ÉPROUVÉ SUR LE RÉEL** (exécution réelle sur vraie donnée tenant), distinct de « construit / promu au canon ».
+Cycle de vie d'un **chantier** : `à_faire → en_cours → soldé`. **SOLDÉ = construit/mergé au canon ET ÉPROUVÉ SUR LE RÉEL** (exécution réelle sur vraie donnée tenant).
 
-Règle : un agent ne traite **que** des tâches dont les dépendances sont `promu`, et n'écrit jamais directement le pointeur canonique — il ouvre une PR.
+> **Convention de vocabulaire (toilettage du 6 juillet 2026).** Le mot **promu** appartient en propre à la **boucle de promotion des contrats** (doctrine §7) : un *contrat* candidat devient *promu* quand le gardien le merge au canon. Pour un **chantier**, l'état terminal est **soldé** (mergé au canon *et* éprouvé sur le réel) ; l'étape intermédiaire « mergé, pas encore éprouvé » se lit dans l'`execution:` de la fiche, pas dans un statut `promu`. Les fiches **historiques** (Phase 0/1) portant `statut: promu` ou `candidat` ne sont **pas réécrites** — elles restent lisibles telles quelles ; la convention vaut pour les chantiers **à venir**.
+
+Règle : un agent ne traite **que** des tâches dont les dépendances sont **satisfaites** (`soldé` pour un chantier, `promu` pour un contrat), et n'écrit jamais directement le pointeur canonique — il ouvre une PR.
 
 ---
 
