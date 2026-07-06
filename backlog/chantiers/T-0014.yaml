@@ -22,7 +22,7 @@ criteres_acceptation:
 - "Le déploiement du .sppkg et la mise en page de l'accueil sont des runbooks humains, jamais l'agent"
 - "Le rendu suit le design system (on consomme, on ne recopie pas)"
 rayon_impact: large
-statut: promu # cockpit construit + deploye tenant-wide + publie + rendu eprouve sur la page d'accueil le 26 juin 2026 ; branchement aux listes M365 reelles eprouve sur la page publiee le 03/07/2026 (reserve donnees demo levee, v1.1.1.0)
+statut: soldé # promu ET eprouve sur le reel -> solde. Cockpit construit + deploye tenant-wide + publie + rendu eprouve le 26/06/2026 ; branchement aux listes M365 reelles eprouve sur la page publiee le 03/07/2026, reserve donnees demo LEVEE (PRs #157-#158 v1.1.1.0, solde #159). Requalifie promu->solde au toilettage du 06/07/2026
 execution: >
   Eprouve sur le reel le 26 juin 2026 (poste du gardien + Claude in Chrome, identite du gardien).
   PARTIE AGENT (code, deja mergee #98/#99/#101) : web part SPFx 1.23.1 (rig Heft) / React 17,

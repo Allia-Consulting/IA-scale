@@ -2,6 +2,8 @@
 
 Ce fichier est lu au démarrage de chaque tâche. Il dit où est la vérité et comment agir. Il ne remplace pas la doctrine — il y renvoie.
 
+**Règle de ce fichier : il RÉFÉRENCE, il ne RÉSUME jamais.** Quand une règle ou un mécanisme fait foi dans un contrat, `CLAUDE.md` pointe vers ce contrat et n'en recopie pas le contenu : une copie se périme et diverge de la source (leçon du 6 juillet 2026 — la cadence de la mémoire d'organisation résumée ici avait divergé du contrat qui fait foi).
+
 ## Règle première
 
 Ce dépôt est le **canon des règles** d'Allia. Résous toujours la version à jour **depuis le dépôt, à l'exécution** (pull) ; ne travaille jamais sur une copie mémorisée. N'édite jamais une règle ailleurs qu'ici. N'écris **jamais** directement sur `main` : tu proposes un **candidat** (branche + PR), le gardien promeut.
@@ -11,7 +13,7 @@ Ce dépôt est le **canon des règles** d'Allia. Résous toujours la version à 
 - **Règles** (ce dépôt) : `doctrine/doctrine.md` (fait foi), `contrats/socle/*`, `contrats/local/<perimetre>/*`, `backlog/plan.md`, `skills/<skill>/SKILL.md`, `agents/<agent>/profil.yaml`.
 - **Crans** : `contrats/socle/table-des-crans.yaml` — à consulter avant toute action.
 - **Organisation & délégations** : `contrats/socle/organisation.md`.
-- **Mémoire d'organisation** : résous aussi `contrats/socle/memoire-organisation.md` — le contrat socle qui régit la synthèse hebdomadaire candidate (batch nocturne jeudi→vendredi) écrite en Zone-de-proposition, avant validation ligne à ligne par le gardien.
+- **Mémoire d'organisation** : résous aussi `contrats/socle/memoire-organisation.md` — le contrat socle qui régit la synthèse hebdomadaire candidate écrite en Zone-de-proposition, validée ligne à ligne par le gardien. Le **mécanisme** (cadence, domicile d'exécution, déclenchement) fait foi **dans ce contrat** ; ne le résume pas ici, résous-le.
 - **Données** (les faits) : M365 (missions, temps, imputations, livrables), via MCP. Jamais dans le dépôt.
 
 ## Avant d'agir : résous le cran

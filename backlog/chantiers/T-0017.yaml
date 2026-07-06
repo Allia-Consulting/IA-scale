@@ -26,7 +26,7 @@ criteres_acceptation:
   - "Le cran de l'action exposée est auto (table-des-crans.yaml : televerser_brouillon_offre_zone_travail) ; l'émission de l'offre reste proscrite (prendre_engagement_juridique_ou_financier) et humaine"
   - "La mise en service (rebuild image, redéploiement, pose des variables d'env, octroi write sur la bibliothèque) reste RUNBOOK HUMAIN du gardien"
 rayon_impact: local
-statut: promu # T-0017-a (code, PR #95) + T-0017-b (ids posés + écriture réelle prouvée le 26 juin 2026) éprouvés sur le réel
+statut: soldé # promu ET éprouvé sur le réel -> soldé. T-0017-a (code, PR #95) + T-0017-b (ids posés + écriture réelle prouvée le 26/06/2026 : TEST-T0017b-20260626.docx déposé dans « 00 - Proposition en cours », item_id posé, collision=fail). Requalifié promu->soldé au toilettage du 06/07/2026. Réserve non bloquante : fichier de test à retirer manuellement (geste humain du gardien ; suppression proscrite à l'agent)
 
 sous_taches:
 
