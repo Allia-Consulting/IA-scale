@@ -1,0 +1,69 @@
+# Tests des GARDE-FOUS FAIL-CLOSED de server.py (T-0020-e), TOUJOURS rapporté.
+#
+# Ce workflow n'est PAS borné par `paths` au niveau `on:` — il se déclenche sur TOUTE PR et tout
+# push vers main, afin que le check requis « Tests garde-fous server.py » soit TOUJOURS rapporté
+# (sinon le ruleset main-protection reste en attente et bloque les PR hors-MCP - cf. incident #174).
+# Mais les vrais tests ne tournent QUE si outils/mcp-graph/** a changé ; sinon le job se termine
+# en succès immédiat (rien à tester). Dès que le connecteur change, pytest tourne et rouge bloque.
+name: Tests garde-fous MCP
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests-garde-fous:
+    name: Tests garde-fous server.py
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (historique complet pour le diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Détecter si le connecteur MCP a changé
+        id: diff
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          # Si BASE est absent/nul (ex. première push), on force l'exécution des tests par prudence.
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "mcp_change=true" >> "$GITHUB_OUTPUT"
+            echo "Base indisponible — on lance les tests par prudence."
+            exit 0
+          fi
+          if git diff --name-only "$BASE" "$HEAD" | grep -qE '^outils/mcp-graph/'; then
+            echo "mcp_change=true" >> "$GITHUB_OUTPUT"
+            echo "Changement détecté sous outils/mcp-graph/ — pytest va tourner."
+          else
+            echo "mcp_change=false" >> "$GITHUB_OUTPUT"
+            echo "Aucun changement sous outils/mcp-graph/ — rien à tester (check vert)."
+          fi
+
+      - name: Installer Python 3.12
+        if: steps.diff.outputs.mcp_change == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances de test (hors image de prod)
+        if: steps.diff.outputs.mcp_change == 'true'
+        run: pip install -r outils/mcp-graph/requirements-dev.txt
+
+      - name: pytest — garde-fous fail-closed
+        if: steps.diff.outputs.mcp_change == 'true'
+        run: pytest outils/mcp-graph/tests/ -v
+
+      - name: Rien à tester (connecteur inchangé)
+        if: steps.diff.outputs.mcp_change != 'true'
+        run: echo "Le connecteur MCP n'a pas changé — garde-fous non ré-exécutés, check rapporté vert."
