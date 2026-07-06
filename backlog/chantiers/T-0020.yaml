@@ -75,8 +75,8 @@ sous_taches:
     produit:
       - "outils/mcp-graph/tests/ : pytest couvrant _verifier_appelant (fail-closed token), _composer_nom_espace, et les garde-fous de deposer_document_mission (liste blanche sous-dossier, assainissement nom, extension, format sha256, base64, INTÉGRITÉ sha256 fail-closed T-0024-d)"
       - "outils/mcp-graph/requirements-dev.txt (pytest, hors image de prod)"
-      - ".github/workflows/build-mcp-graph.yml : job « Tests garde-fous server.py »"
-      - "RUNBOOK HUMAIN : ajout du check « Tests garde-fous server.py » aux required_status_checks du ruleset main-protection (rouge bloque)"
+      - ".github/workflows/tests-garde-fous.yml : workflow dédié « Tests garde-fous MCP » portant le job « Tests garde-fous server.py » — TOUJOURS rapporté (sans filtre paths) ; pytest réel si outils/mcp-graph/** change, sinon skip vert (correctif #175 après l'incident #174 : un check requis borné par paths bloquait les PR hors-MCP en « waiting for status »)"
+      - "Check « Tests garde-fous server.py » REQUIS au ruleset main-protection (runbook gardien FAIT — vérifié à la source le 06/07/2026 : les 3 checks requis sont Avis d'impact, Harnais skills, Tests garde-fous server.py) : rouge bloque, actif"
     depend_de: []
     criteres_acceptation:
       - "Chaque garde-fou fail-closed a au moins un test qui prouve le refus (exception attendue)"
