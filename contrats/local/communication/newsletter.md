@@ -1,10 +1,11 @@
 # Newsletter hebdomadaire — communication interne — Allia Consulting
 
-> **Version** : 1.0 — *candidat*. **Statut** : contrat **local** (périmètre Communication & marque) — fait foi sur son périmètre.
+> **Version** : 1.1 — *promu*. **Statut** : contrat **local** (périmètre Communication & marque) — fait foi sur son périmètre.
 > **Changelog** :
+> - v1.1 — promu (procédure allégée), 6 juillet 2026 : promotion du premier contrat local du dépôt. **Le rituel (§0 à §7) est inchangé** ; cette montée de version corrige trois faits périmés de l'en-tête/§8, sans toucher le fond : (i) délégation Sarah Shaiek désormais citée à `organisation.md` v1.10 §3/§4.1 (au lieu de v1.4/v1.5) ; (ii) Sarah dispose d'un compte GitHub dans l'organisation (`@SarahSK-75`) et la ligne CODEOWNERS déléguée est ACTIVE — le §8 est corrigé en conséquence ; (iii) la promotion locale est désormais gouvernée par le registre `organisation.md` §4.1 (Sarah promotrice déléguée depuis le 03/07/2026, socle exclu). Aucune évolution du rituel, des rubriques, de l'ordre du vendredi ni des crans.
 > - v1.0 — candidat, 16 juin 2026 : création du premier contrat local du dépôt. Canonise le rituel de communication interne hebdomadaire (« release note du cabinet ») : cadence inconditionnelle du vendredi, rubriques et sources, régime interne nominatif, ordre du vendredi, workflow agentique cible (rodage puis croisière au cran notifié). Skill de génération et connecteur Teams en écriture = chantiers reportés (§7).
-> **Domicile** : `contrats/local/communication/newsletter.md`. **Propriété** : animateur du périmètre Communication & marque (Sarah Shaiek, délégation promue `organisation.md` v1.4 §3). **Autorité de promotion** : gardien du temple (procédure allégée — `doctrine.md` §5).
-> **Adossé à** : `contrats/socle/organisation.md` v1.5 (§2 périmètre communication, §4 délégation, §5 réconciliation), `doctrine/doctrine.md` (§4 deux plans, §5 contrat local, §6 crans), `contrats/socle/memoire-organisation.md` (source de la rubrique « leçon apprise »), `contrats/socle/anonymisation.md` (§1 — réserve de sortie externe), `contrats/socle/table-des-crans.yaml` (cran *notifié*).
+> **Domicile** : `contrats/local/communication/newsletter.md`. **Propriété** : animateur du périmètre Communication & marque (Sarah Shaiek, délégation promue `organisation.md` v1.10 §3). **Autorité de promotion** : gardien du temple (procédure allégée — `doctrine.md` §5).
+> **Adossé à** : `contrats/socle/organisation.md` v1.10 (§2 périmètre communication, §4/§4.1 délégation, §5 réconciliation), `doctrine/doctrine.md` (§4 deux plans, §5 contrat local, §6 crans), `contrats/socle/memoire-organisation.md` (source de la rubrique « leçon apprise »), `contrats/socle/anonymisation.md` (§1 — réserve de sortie externe), `contrats/socle/table-des-crans.yaml` (cran *notifié*).
 > **Rattachement** : périmètre *Cœur de métier / Connaissance, contenu & IP — communication & marque* ; chantiers reportés `skills/newsletter-hebdo/SKILL.md` (génération, non construit) et connecteur Teams en écriture (non construit, §7).
 > **Frontière** : ce contrat canonise le **rituel** (cadence, rubriques, régime, ordre, cran cible). Son **exécution automatique** (agent génère et publie) dépend de briques non construites (§7) ; en attendant, la publication est assurée à la main par l'animateur ou le gardien (geste humain, hors crans).
 
@@ -75,7 +76,7 @@ Tant que ces deux briques n'existent pas, voir la note transitoire (§6).
 
 Contrat **local** — il fait foi sur son périmètre et évolue par la **boucle de promotion en procédure allégée** (`doctrine.md` §5, §7) : l'**animateur propose**, le **gardien promeut**.
 
-Aujourd'hui, l'animatrice (Sarah Shaiek) n'a pas encore de compte GitHub dans l'organisation : **le gardien porte la proposition** en attendant son branchement. À l'activation de son compte, la ligne dédiée du `.github/CODEOWNERS` (`/contrats/local/communication/ @animateur-communication @Alliaconsulting`, aujourd'hui en commentaire) sera activée, et Sarah proposera elle-même sur ce contrat.
+Sarah Shaiek dispose d'un compte GitHub dans l'organisation (`@SarahSK-75`) et la ligne dédiée du `.github/CODEOWNERS` (`/contrats/local/communication/ @SarahSK-75 @Alliaconsulting`) est **active**. Sarah peut donc **proposer elle-même** sur ce contrat (procédure allégée) ; la promotion reste la porte du gardien, désormais **déléguée à Sarah sur ce seul périmètre local** (`organisation.md` §4.1, registre de fédération de la promotion, depuis le 03/07/2026 — socle et doctrine exclus). La première évolution proposée puis promue PAR Sarah sous son identité constituera l'épreuve réelle de cette délégation.
 
 ---
 
