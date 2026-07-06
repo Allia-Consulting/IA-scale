@@ -1,0 +1,267 @@
+"""Tests des GARDE-FOUS FAIL-CLOSED de server.py (T-0020-e, chapeau T-0020, plan §7 T-2.1).
+
+Angle mort de la Phase 2 : le harnais d'evals (T-0020-a) ne teste que les SKILLS ; le CODE du
+connecteur MCP n'était couvert par aucun test. Ces tests prouvent, en isolant CHAQUE garde-fou,
+que les refus surviennent bien (exception attendue) — et, pour le garde-fou central d'intégrité
+(leçon T-0024-d), que le refus intervient AVANT tout appel réseau.
+
+Aucun appel réseau réel, aucun secret, aucune variable d'environnement requise : tous les
+garde-fous testés s'exécutent avant `_config_mission()` et avant l'ouverture d'un client httpx.
+"""
+
+import base64
+import hashlib
+import json
+
+import pytest
+
+import server
+
+
+# --------------------------------------------------------------------------------------------
+# Utilitaires de test
+# --------------------------------------------------------------------------------------------
+
+def _sous_jacente(obj):
+    """Récupère la fonction sous-jacente d'un outil décoré @mcp.tool()/@_journal_appel.
+
+    Selon la version du SDK mcp résolue, `server.deposer_document_mission` peut être :
+    - un objet Tool portant l'attribut `.fn` (SDK officiel) ; on le prend ;
+    - la fonction wrapper de `_journal_appel` (functools.wraps) portant `.__wrapped__` ; fallback ;
+    - sinon l'objet lui-même (déjà appelable).
+    Dans tous les cas, l'appel exécute les garde-fous de l'outil ; le décorateur de journal, s'il
+    est traversé, re-lève les exceptions à l'identique (comportement inchangé, T-0020-b).
+    """
+    for attr in ("fn", "__wrapped__"):
+        if hasattr(obj, attr):
+            return getattr(obj, attr)
+    return obj
+
+
+def _jwt(payload: dict) -> str:
+    """Fabrique un JWT NON signé factice « header.payload.signature ».
+
+    `payload` est encodé en base64url SANS padding (comme un vrai JWT). Sert à exercer la voie 1
+    de `_verifier_appelant` (en-tête « Authorization: Bearer <jwt> »). La signature n'est pas
+    vérifiée par le code (Easy Auth valide signature/expiry/tenant EN AMONT — hors de ce code).
+    """
+    def b64url(donnees: bytes) -> str:
+        return base64.urlsafe_b64encode(donnees).rstrip(b"=").decode("ascii")
+
+    header = b64url(json.dumps({"alg": "none", "typ": "JWT"}).encode("utf-8"))
+    corps = b64url(json.dumps(payload).encode("utf-8"))
+    return f"{header}.{corps}.signature"
+
+
+class FauxRequest:
+    """Requête Starlette minimale : seule `.headers` (dict, avec `.get`) est utilisée par le code."""
+
+    def __init__(self, headers: dict | None = None):
+        self.headers = headers if headers is not None else {}
+
+
+class FauxRequestContext:
+    """Reproduit ctx.request_context.request (chemin d'attributs lu par _verifier_appelant)."""
+
+    def __init__(self, request):
+        self.request = request
+
+
+class FauxCtx:
+    """Reproduit ctx.request_context (le tool reçoit `ctx: Context` en 1er argument)."""
+
+    def __init__(self, request):
+        self.request_context = FauxRequestContext(request)
+
+
+def _ctx_avec_headers(headers: dict) -> FauxCtx:
+    return FauxCtx(FauxRequest(headers))
+
+
+# --------------------------------------------------------------------------------------------
+# _verifier_appelant — porte d'identité FAIL-CLOSED (T-0009 / T-0015)
+# --------------------------------------------------------------------------------------------
+
+def test_verifier_appelant_sans_requete_http_refuse():
+    """(1) Aucune requête HTTP dans le contexte (transport non-HTTP / hors requête) → refus."""
+    ctx = FauxCtx(request=None)
+    with pytest.raises(PermissionError):
+        server._verifier_appelant(ctx)
+
+
+def test_verifier_appelant_sans_ctx_attribut_refuse():
+    """(1 bis) ctx sans request_context du tout (AttributeError capté) → refus fail-closed."""
+    class CtxVide:
+        pass
+    with pytest.raises(PermissionError):
+        server._verifier_appelant(CtxVide())
+
+
+def test_verifier_appelant_headers_vides_refuse():
+    """(2) Requête présente mais aucun token dans les en-têtes → aucun claim lisible → refus."""
+    ctx = _ctx_avec_headers({})
+    with pytest.raises(PermissionError):
+        server._verifier_appelant(ctx)
+
+
+def test_verifier_appelant_scp_access_as_user_autorise():
+    """(3) Bearer JWT avec scp=access_as_user (flux humain délégué) → autorisé (aucune exception)."""
+    ctx = _ctx_avec_headers({"Authorization": "Bearer " + _jwt({"scp": "access_as_user"})})
+    assert server._verifier_appelant(ctx) is None
+
+
+def test_verifier_appelant_roles_mcp_invoke_autorise():
+    """(4) Bearer JWT avec roles=["MCP.Invoke"] (workload) → autorisé (aucune exception)."""
+    ctx = _ctx_avec_headers({"Authorization": "Bearer " + _jwt({"roles": ["MCP.Invoke"]})})
+    assert server._verifier_appelant(ctx) is None
+
+
+def test_verifier_appelant_claims_insuffisants_refuse():
+    """(5) Bearer JWT avec scp autre + roles vides → ni access_as_user ni MCP.Invoke → refus."""
+    ctx = _ctx_avec_headers(
+        {"Authorization": "Bearer " + _jwt({"scp": "autrechose", "roles": []})}
+    )
+    with pytest.raises(PermissionError):
+        server._verifier_appelant(ctx)
+
+
+# --------------------------------------------------------------------------------------------
+# _composer_nom_espace — validation + composition côté serveur (nom d'espace de mission)
+# --------------------------------------------------------------------------------------------
+
+def test_composer_nom_espace_nominal():
+    """(6) Composantes valides → « AAAA - Client - Nom de la mission »."""
+    assert server._composer_nom_espace("2026", "Siteflow", "Cadrage") == "2026 - Siteflow - Cadrage"
+
+
+@pytest.mark.parametrize("annee", ["20260", "abcd", "1999", "2101", "202"])
+def test_composer_nom_espace_annee_invalide(annee):
+    """(7) annee non-4-chiffres OU hors bornes [2020..2100] → ValueError."""
+    with pytest.raises(ValueError):
+        server._composer_nom_espace(annee, "Siteflow", "Cadrage")
+
+
+def test_composer_nom_espace_client_vide_refuse():
+    """(8a) client vide (ou uniquement des espaces) → ValueError."""
+    with pytest.raises(ValueError):
+        server._composer_nom_espace("2026", "   ", "Cadrage")
+
+
+def test_composer_nom_espace_nom_trop_long_refuse():
+    """(8b) nom_mission de 61+ caractères → ValueError (max 60)."""
+    with pytest.raises(ValueError):
+        server._composer_nom_espace("2026", "Siteflow", "a" * 61)
+
+
+@pytest.mark.parametrize("mauvais", ["a/b", "a\\b", "a..b", "a|b", "a:b", "a<b", "a\x01b"])
+def test_composer_nom_espace_caracteres_interdits_refuse(mauvais):
+    """(9) « / » « \\ » « .. » ou caractère interdit / de contrôle dans une composante → ValueError.
+
+    NB : « \\x01 » (caractère de contrôle NON-espace) sonde bien la garde `ord(c) < 32` ; un « \\t »
+    serait au contraire absorbé par la normalisation des espaces (`" ".join(v.split())`) et donc
+    légitimement accepté — ce n'est pas un caractère interdit mais un espace.
+    """
+    with pytest.raises(ValueError):
+        server._composer_nom_espace("2026", mauvais, "Cadrage")
+
+
+def test_composer_nom_espace_accents_et_espaces_internes_autorises():
+    """(10) Accents et espaces internes autorisés (réduction des espaces multiples)."""
+    resultat = server._composer_nom_espace("2026", "Éléa Conseil", "Revue à mi-parcours")
+    assert resultat == "2026 - Éléa Conseil - Revue à mi-parcours"
+
+
+# --------------------------------------------------------------------------------------------
+# deposer_document_mission — garde-fous en aval de la porte d'identité
+# (on neutralise _verifier_appelant pour isoler CHAQUE garde-fou métier)
+# --------------------------------------------------------------------------------------------
+
+_ARGS_VALIDES = dict(
+    annee="2026",
+    client="Siteflow",
+    nom_mission="Cadrage",
+    sous_dossier="01 - Pilotage",
+    nom_fichier="rapport.docx",
+)
+
+
+@pytest.fixture
+def deposer(monkeypatch):
+    """Fonction sous-jacente de deposer_document_mission, porte d'identité neutralisée."""
+    monkeypatch.setattr(server, "_verifier_appelant", lambda ctx: None)
+    return _sous_jacente(server.deposer_document_mission)
+
+
+def test_deposer_sous_dossier_hors_liste_blanche_refuse(deposer):
+    """(11) sous_dossier hors SOUS_DOSSIERS_MISSION → PermissionError (liste blanche figée)."""
+    args = {**_ARGS_VALIDES, "sous_dossier": "99 - Interdit"}
+    with pytest.raises(PermissionError):
+        deposer(None, contenu_base64="AAAA", sha256_attendu="a" * 64, **args)
+
+
+def test_deposer_nom_fichier_evasion_refuse(deposer):
+    """(12) nom_fichier avec « .. » (ou « / » « \\ ») → ValueError (assainissement, pas d'évasion)."""
+    args = {**_ARGS_VALIDES, "nom_fichier": "../evasion.docx"}
+    with pytest.raises(ValueError):
+        deposer(None, contenu_base64="AAAA", sha256_attendu="a" * 64, **args)
+
+
+def test_deposer_extension_hors_whitelist_refuse(deposer):
+    """(13) extension hors EXTENSIONS_MISSION (.exe) → ValueError."""
+    args = {**_ARGS_VALIDES, "nom_fichier": "rapport.exe"}
+    with pytest.raises(ValueError):
+        deposer(None, contenu_base64="AAAA", sha256_attendu="a" * 64, **args)
+
+
+def test_deposer_sha256_mal_forme_refuse(deposer):
+    """(14) sha256_attendu ≠ 64 hex minuscules → ValueError (format strict)."""
+    with pytest.raises(ValueError):
+        deposer(None, contenu_base64="AAAA", sha256_attendu="xyz", **_ARGS_VALIDES)
+
+
+def test_deposer_base64_invalide_refuse(deposer):
+    """(15) contenu_base64 non décodable, sha256_attendu bien formé → ValueError (échec décodage)."""
+    with pytest.raises(ValueError):
+        deposer(None, contenu_base64="!!!pas du base64!!!", sha256_attendu="a" * 64, **_ARGS_VALIDES)
+
+
+def test_deposer_integrite_mismatch_refuse_avant_reseau(deposer, monkeypatch):
+    """(16) GARDE-FOU CENTRAL (T-0024-d) : sha256_attendu ≠ empreinte du contenu → ValueError,
+    ET aucun appel réseau (httpx.Client jamais instancié : le refus précède le réseau)."""
+    contenu = b"contenu connu de test"
+    contenu_b64 = base64.b64encode(contenu).decode("ascii")
+    faux_sha = hashlib.sha256(b"un AUTRE contenu").hexdigest()  # empreinte qui ne concorde pas
+
+    class HttpxInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError(
+                "Appel réseau tenté malgré un mismatch d'intégrité — le garde-fou fail-closed "
+                "n'a PAS arrêté avant le réseau (régression T-0024-d)."
+            )
+
+    monkeypatch.setattr(server.httpx, "Client", HttpxInterdit)
+
+    with pytest.raises(ValueError) as excinfo:
+        deposer(None, contenu_base64=contenu_b64, sha256_attendu=faux_sha, **_ARGS_VALIDES)
+    assert "INTEGRIT" in str(excinfo.value), "le refus doit être celui du garde-fou d'intégrité"
+
+
+def test_deposer_integrite_concordante_laisse_passer(deposer, monkeypatch):
+    """(17) CONTRE-PREUVE de (16) : sha256_attendu = VRAIE empreinte du contenu → le garde-fou
+    d'intégrité LAISSE PASSER ; le code atteint _config_mission() et, sans config en CI, lève
+    ConfigManquante — une exception AUTRE que le ValueError d'intégrité."""
+    contenu = b"contenu connu de test"
+    contenu_b64 = base64.b64encode(contenu).decode("ascii")
+    vrai_sha = hashlib.sha256(contenu).hexdigest()  # empreinte qui concorde
+
+    with pytest.raises(Exception) as excinfo:
+        deposer(None, contenu_base64=contenu_b64, sha256_attendu=vrai_sha, **_ARGS_VALIDES)
+    # Le garde-fou d'intégrité a été franchi : l'échec ne doit PAS être celui d'intégrité.
+    assert "INTEGRIT" not in str(excinfo.value), (
+        "l'intégrité concordante ne doit pas déclencher le refus d'intégrité"
+    )
+    # Concrètement, sans variables d'environnement M365, c'est _config_mission() qui refuse.
+    assert isinstance(excinfo.value, server.ConfigManquante), (
+        "après le garde-fou d'intégrité, le premier obstacle en CI est ConfigManquante "
+        f"(obtenu : {type(excinfo.value).__name__})"
+    )

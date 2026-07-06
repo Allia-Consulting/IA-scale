@@ -91,3 +91,27 @@ jobs:
       - name: Nettoyer le conteneur de test
         if: always()
         run: docker rm -f mcp-test || true
+
+  # ------------------------------------------------------------------------------------------
+  # SECOND job (T-0020-e) — tests unitaires des GARDE-FOUS FAIL-CLOSED de server.py.
+  # Indépendant du build image : pas de Docker, pas de secret, pas de config M365. Les garde-fous
+  # testés s'exécutent tous AVANT toute lecture de config / tout appel réseau (le serveur « dort »
+  # à l'import). Pour que « rouge bloque » (critère T-0020-e), ce check doit être AJOUTÉ aux
+  # required_status_checks du ruleset main-protection — RUNBOOK HUMAIN du gardien, hors de ce fichier.
+  tests-garde-fous:
+    name: Tests garde-fous server.py
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installer Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances de test (hors image de prod)
+        run: pip install -r outils/mcp-graph/requirements-dev.txt
+
+      - name: pytest — garde-fous fail-closed
+        run: pytest outils/mcp-graph/tests/ -v
