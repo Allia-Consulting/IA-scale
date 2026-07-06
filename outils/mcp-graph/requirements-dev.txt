@@ -1,0 +1,5 @@
+# Dépendances de TEST du connecteur MCP Graph (pytest des garde-fous fail-closed de server.py).
+# Séparées de requirements.txt : ces deps NE partent PAS dans l'image de prod (Dockerfile installe
+# requirements.txt seul). Installation : pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8.0.0
