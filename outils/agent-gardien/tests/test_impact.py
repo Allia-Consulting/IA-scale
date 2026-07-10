@@ -140,3 +140,29 @@ def test_rapport_markdown_termine_par_risque_puis_verdict(tmp_path):
     lignes = md.rstrip().splitlines()
     assert lignes[-2].strip() == "RISQUE: faible"
     assert lignes[-1].strip() == "VERDICT: pass"
+
+
+def test_changed_files_txt_exclu_du_scan(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "contrats/local/comm/isole.md", "# isolé\nAucune référence entrante.\n")
+    # Artefact de travail du workflow : liste les fichiers modifiés (chemins canoniques).
+    # Il NE doit PAS être compté comme consommateur (faux positif corrigé, T-0020-c m2).
+    _ecrire(root, "changed-files.txt", "contrats/local/comm/isole.md\n")
+    res = impact.analyze(root, ["contrats/local/comm/isole.md"])
+    pf = res["par_fichier"]["contrats/local/comm/isole.md"]
+    assert "changed-files.txt" not in pf["consommateurs"]
+    assert pf["n_artefacts"] == 0
+    assert pf["risque"] == "faible"
+    assert res["verdict"] == "pass"
+
+
+def test_id_chantier_en_prose_resolu_en_consommation(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "backlog/chantiers/T-0029.yaml", "id: T-0029\ndepend_de: []\n")
+    # La doctrine (§10) cite le chantier par son id EN PROSE, sans chemin explicite.
+    _ecrire(root, "doctrine/doctrine.md",
+            "# Doctrine\nÉvolution nommée : le miroir de continuité `T-0029`.\n")
+    res = impact.analyze(root, ["backlog/chantiers/T-0029.yaml"])
+    pf = res["par_fichier"]["backlog/chantiers/T-0029.yaml"]
+    assert "doctrine/doctrine.md" in pf["consommateurs"]
+    assert pf["n_artefacts"] >= 1

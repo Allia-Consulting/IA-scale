@@ -51,7 +51,13 @@ _ARBRES = "doctrine|contrats|skills|agents|backlog|evals|outils"
 _PATH_RE = re.compile(
     r"(?:/)?((?:" + _ARBRES + r")/[\w./-]+\.(?:md|ya?ml|py)|CLAUDE\.md)"
 )
+# Citation d'un chantier par son id en prose (« T-0029 »), résolue vers son
+# fichier backlog — au même titre que les ids de skills (T-0020-c marche 2).
+_CHANTIER_ID_RE = re.compile(r"\bT-\d{4}[a-z]?(?:-[a-z0-9]+)?\b")
 _IGNORE_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache"}
+# Artefacts de travail transitoires du workflow, jamais canoniques : exclus de
+# l'index pour ne pas être comptés comme faux consommateurs (T-0020-c marche 2).
+_ARTEFACTS_TRAVAIL = frozenset({"changed-files.txt"})
 
 
 def _lister_fichiers(root):
@@ -60,6 +66,8 @@ def _lister_fichiers(root):
     for base, dirs, noms in os.walk(root):
         dirs[:] = [d for d in dirs if d not in _IGNORE_DIRS]
         for nom in noms:
+            if nom in _ARTEFACTS_TRAVAIL:
+                continue
             rel = os.path.relpath(os.path.join(base, nom), root)
             fichiers.add(rel.replace(os.sep, "/"))
     return fichiers
@@ -74,8 +82,13 @@ def _lire(root, rel):
 
 
 def _refs_texte(raw):
-    """Tous les chemins canoniques cités dans le texte brut (backticks, guillemets, nus)."""
-    return set(_PATH_RE.findall(raw))
+    """Chemins canoniques cités dans le texte brut (backticks, guillemets, nus),
+    plus les citations d'un chantier par son id en prose
+    (« T-0029 » -> backlog/chantiers/T-0029.yaml), au même titre que les ids de skills."""
+    refs = set(_PATH_RE.findall(raw))
+    for cid in _CHANTIER_ID_RE.findall(raw):
+        refs.add("backlog/chantiers/%s.yaml" % cid)
+    return refs
 
 
 def _refs_yaml(raw, rel):
