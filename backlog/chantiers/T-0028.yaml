@@ -1,0 +1,26 @@
+
+---
+id: T-0028
+titre: "Registre des activités de traitement (RGPD art. 30) — nommé au canon puis constitué et tenu à jour"
+capacite: "Corporate & conformité / Gouvernance IA responsable (AI Act) — RGPD"
+phase: 2
+type_action: edition_contrat_socle
+cran: valide   # document de conformité opposable, portée firme, engage l'externe (autorité de contrôle) — porte humaine
+produit:
+  - "(gardien/DPO) registre art. 30 recensant les traitements réels (écoute Teams, recrutement candidats, mémoire d'organisation, journal d'appel MCP, cockpit) : finalités, bases légales, catégories de données et de personnes, destinataires, durées, mesures de sécurité"
+  - "domicile canonique : contrats/socle/registre-traitements-art30.md (à créer), référencé en pull par les contrats RGPD existants"
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/rgpd-ecoute-teams.md"
+  - "contrats/socle/rgpd-recrutement-candidats.md"
+  - "contrats/socle/memoire-organisation.md"
+criteres_acceptation:
+  - "Le registre existe au canon et couvre tous les traitements réels identifiés à date, chacun rattaché à sa base légale et sa durée"
+  - "Chaque contrat RGPD existant pointe vers l'entrée de registre correspondante (pull, pas de copie)"
+  - "Toute nouvelle activité de traitement ouvre une entrée AVANT mise en service (boucle de promotion)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Manque nommé à l'audit du 07/07/2026 : le registre art. 30 (obligation du responsable
+  de traitement) n'existe pas encore au canon. Ce chantier le NOMME ; sa constitution
+  effective est un geste gardien/DPO ultérieur. Base : RGPD article 30.
