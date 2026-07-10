@@ -1,0 +1,5 @@
+# Dépendances de DÉVELOPPEMENT de l'outil agent-gardien (hors runtime CI minimal).
+# Le calcul d'impact ne requiert que PyYAML ; pytest sert aux tests unitaires.
+# Modèle : outils/mcp-graph/requirements-dev.txt.
+pyyaml
+pytest

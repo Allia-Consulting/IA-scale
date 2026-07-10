@@ -1,8 +1,11 @@
-# Agent-gardien CI v0 — doctrine §3. Fruste mais fonctionnel. Impact fin = A0.5 Phase 2.
+# Agent-gardien CI v1 — doctrine §3. Impact FIN déterministe (T-0020-c marche 1).
 #
 # Tête-agent du gardien : sur chaque PR, produit un AVIS D'IMPACT et le poste en
-# commentaire. Il FILTRE, il N'APPROUVE PAS, et ne merge JAMAIS — la promotion
-# reste la porte humaine du gardien.
+# commentaire. Il CALCULE l'impact (rayon + risque) de façon DÉTERMINISTE sur les
+# consommateurs réels — plus de grep fruste — puis confie au LLM le SEUL jugement
+# de casse SÉMANTIQUE des contrats consommateurs (il ne recalcule pas le rayon).
+# Il FILTRE, il N'APPROUVE PAS (l'auto-approbation du faible risque = marche 2,
+# T-2.4, non incluse ici) et ne merge JAMAIS — la promotion reste la porte humaine.
 name: Agent-gardien — conformité (v0)
 
 on:
@@ -16,17 +19,23 @@ permissions:
 
 jobs:
   conformite:
-    name: Avis d'impact
+    name: Avis d'impact          # NE PAS renommer — check requis au ruleset main-protection.
     runs-on: ubuntu-latest
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # gh CLI est natif sur les runners GitHub
     steps:
-      # (1) Checkout complet — l'historique entier sert au grep des consommateurs.
+      # (1) Checkout complet — l'index entier sert au calcul des consommateurs.
       - name: Checkout complet
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # Python + PyYAML : seul prérequis du calcul déterministe (aucune clé requise).
+      - name: Préparer Python + PyYAML
+        run: |
+          python3 --version
+          python3 -m pip install --quiet pyyaml
 
       # Détecter la clé API SANS jamais l'exposer. Si absente : on avertira et on sortira proprement.
       - name: Détecter la présence de la clé API
@@ -40,18 +49,45 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # (2) Récupérer la liste des fichiers modifiés dans la PR (via gh, GITHUB_TOKEN).
+      - name: Lister les fichiers modifiés
+        run: |
+          gh pr view "$PR_NUMBER" --json files --jq '.files[].path' > changed-files.txt
+          echo "Fichiers modifiés :"
+          cat changed-files.txt
+
+      # (3) CALCUL D'IMPACT DÉTERMINISTE — rayon + RISQUE + casse structurelle.
+      #     Ne dépend d'aucune clé : il tourne TOUJOURS. C'est le cœur de la marche 1.
+      - name: Calculer l'impact déterministe
+        id: impact
+        run: |
+          python3 outils/agent-gardien/impact.py --changed $(cat changed-files.txt) > impact.md
+          python3 outils/agent-gardien/impact.py --changed $(cat changed-files.txt) --json > impact.json
+          echo "----- Rapport d'impact déterministe -----"; cat impact.md; echo "-----------------------------------------"
+          # Extraire rayon global (RISQUE) et casse structurelle pour le verdict combiné.
+          RISQUE=$(python3 -c "import json;print(json.load(open('impact.json'))['risque'])")
+          CASSE=$(python3 -c "import json;print(str(json.load(open('impact.json'))['casse_structurelle']).lower())")
+          echo "risque=$RISQUE" >> "$GITHUB_OUTPUT"
+          echo "casse_structurelle=$CASSE" >> "$GITHUB_OUTPUT"
+
       # Garde-fou de configuration : clé absente => avertir, NE PAS bloquer la PR (job en succès).
+      # On poste tout de même l'impact déterministe (bonus), mais on n'exige pas le jugement LLM.
       - name: Avertir si la clé API est absente (sortie propre)
         if: steps.key.outputs.present == 'false'
         run: |
-          gh pr comment "$PR_NUMBER" --body "⚠️ **Agent-gardien (v0)** — le secret \`ANTHROPIC_API_KEY\` n'est pas configuré dans ce dépôt. L'avis d'impact n'a pas pu être produit.
+          {
+            echo "## 🛡️ Agent-gardien (marche 1) — impact déterministe, jugement sémantique non produit"
+            echo ""
+            echo "⚠️ Le secret \`ANTHROPIC_API_KEY\` n'est pas configuré : le **jugement de casse sémantique** (LLM) n'a pas pu être produit. Le **calcul d'impact déterministe** ci-dessous, lui, est disponible."
+            echo ""
+            echo "Ceci **ne bloque pas** la PR : c'est un problème de **configuration**, pas de conformité. Pour l'activer : *Settings → Secrets and variables → Actions → New repository secret* (\`ANTHROPIC_API_KEY\`)."
+            echo ""
+            cat impact.md
+          } > comment.md
+          gh pr comment "$PR_NUMBER" --body-file comment.md
+          echo "::warning::ANTHROPIC_API_KEY absente — jugement sémantique non produit, PR non bloquée."
 
-          Ceci **ne bloque pas** la PR : c'est un problème de **configuration**, pas de conformité. Pour activer l'agent-gardien : *Settings → Secrets and variables → Actions → New repository secret* (\`ANTHROPIC_API_KEY\`).
-
-          *Tête-agent du gardien — doctrine §3. Il filtre, il n'approuve pas.*"
-          echo "::warning::ANTHROPIC_API_KEY absente — avis non produit, PR non bloquée."
-
-      # (2) Installer Claude Code via le script officiel.
+      # (4) Installer Claude Code via le script officiel (seulement si la clé est présente).
       - name: Installer Claude Code
         if: steps.key.outputs.present == 'true'
         run: |
@@ -63,89 +99,118 @@ jobs:
         if: steps.key.outputs.present == 'true'
         run: claude --version
 
-      # (3) Récupérer la liste des fichiers modifiés dans la PR (via gh, GITHUB_TOKEN).
-      - name: Lister les fichiers modifiés
-        if: steps.key.outputs.present == 'true'
-        run: |
-          gh pr view "$PR_NUMBER" --json files --jq '.files[].path' > changed-files.txt
-          echo "Fichiers modifiés :"
-          cat changed-files.txt
-
-      # (4) Lancer Claude Code en mode non-interactif (-p) pour produire l'avis d'impact.
-      #     Outils en lecture seule autorisés explicitement (pas d'invite en CI headless).
-      - name: Produire l'avis d'impact (Claude Code non-interactif)
+      # (5) JUGEMENT DE CASSE SÉMANTIQUE (LLM) — rôle BORNÉ : il ne recalcule PAS le
+      #     rayon (déjà déterministe). Il lit le diff des contrats consommateurs et dit
+      #     si le changement CASSE une attente d'un consommateur. Rédaction courte.
+      - name: Juger la casse sémantique (Claude Code non-interactif)
         if: steps.key.outputs.present == 'true'
         id: avis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Construire le prompt v0 (fruste — recherche par références textuelles).
           {
-            echo "Voici les fichiers modifiés dans cette PR :"
+            echo "Tu es la tête-agent du gardien (doctrine §3). Le RAYON et le RISQUE sont DÉJÀ"
+            echo "calculés de façon déterministe (rapport ci-dessous) — NE LES RECALCULE PAS."
+            echo "Ton SEUL rôle : juger la CASSE SÉMANTIQUE des contrats consommateurs."
+            echo ""
+            echo "Fichiers modifiés :"
             sed 's/^/- /' changed-files.txt
             echo ""
-            echo "Cherche dans le dépôt tous les fichiers qui les référencent (grep sur les noms de fichiers)."
-            echo "Pour chaque fichier modifié qui est un contrat (contrats/socle/, doctrine/, contrats/local/), liste ses consommateurs connus."
-            echo "Produis un avis d'impact structuré : (a) fichiers modifiés, (b) consommateurs détectés, (c) risque estimé (faible / à vérifier), (d) verdict pass/fail."
-            echo "Ce workflow est la tête-agent du gardien (doctrine §3) — il filtre, il n'approuve pas."
+            echo "Rapport d'impact déterministe (rayon + risque + consommateurs réels) :"
+            echo '```'
+            cat impact.md
+            echo '```'
             echo ""
-            echo "Termine impérativement ta réponse par une ligne seule, exactement de la forme : VERDICT: pass   (ou VERDICT: fail)."
+            echo "Pour chaque fichier modifié qui est un contrat (contrats/**, doctrine/**),"
+            echo "lis son diff (git diff origin/\${{ github.base_ref }}...HEAD -- <fichier>) et vérifie"
+            echo "si le changement CASSE une attente d'un consommateur listé (clé/section supprimée"
+            echo "ou renommée sur laquelle un consommateur s'appuie, invariant rompu, sens inversé)."
+            echo "Rédige un avis COURT (5-10 lignes). N'approuve rien, ne merge rien : tu filtres."
+            echo ""
+            echo "Termine impérativement par une ligne seule, exactement : CASSE_SEMANTIQUE: oui   (ou CASSE_SEMANTIQUE: non)."
           } > prompt.txt
 
           echo "----- Prompt envoyé -----"; cat prompt.txt; echo "-------------------------"
 
-          # Mode non-interactif : -p (print). Outils lecture seule pré-autorisés.
           if claude -p "$(cat prompt.txt)" \
               --output-format text \
               --model claude-sonnet-4-6 \
               --max-turns 25 \
               --allowedTools "Read,Grep,Glob,Bash(grep:*),Bash(git:*),Bash(ls:*),Bash(cat:*)" \
-              > avis.md 2> claude-err.log; then
+              > jugement.md 2> claude-err.log; then
             echo "ran=true" >> "$GITHUB_OUTPUT"
           else
             echo "ran=false" >> "$GITHUB_OUTPUT"
             echo "::warning::L'exécution de Claude Code a échoué (voir le commentaire et les logs)."
           fi
 
-      # (5) Poster le résultat en commentaire de la PR (avis si produit, sinon notice d'erreur).
-      - name: Poster le résultat en commentaire
+      # (6) Poster l'AVIS ENRICHI = rayon+RISQUE déterministes + jugement sémantique + verdict combiné.
+      - name: Poster l'avis enrichi
         if: steps.key.outputs.present == 'true'
+        id: verdict
         run: |
+          CASSE_STRUCT="${{ steps.impact.outputs.casse_structurelle }}"
+          RISQUE="${{ steps.impact.outputs.risque }}"
+
           if [ "${{ steps.avis.outputs.ran }}" = "true" ]; then
-            {
-              echo "## 🛡️ Avis d'impact — agent-gardien (v0)"
-              echo ""
-              echo "> Tête-agent du gardien (**doctrine §3**) — il **filtre, n'approuve pas**, et ne merge jamais."
-              echo "> Analyse **fruste** par références textuelles. Impact fin = A0.5 Phase 2."
-              echo ""
-              cat avis.md
-            } > comment.md
+            if grep -qiE '^[[:space:]]*CASSE_SEMANTIQUE:[[:space:]]*oui' jugement.md; then
+              CASSE_SEM="oui"
+            else
+              CASSE_SEM="non"
+            fi
           else
-            {
-              echo "## 🛡️ Agent-gardien (v0) — erreur d'exécution"
-              echo ""
-              echo "Claude Code n'a pas pu produire l'avis d'impact. Extrait des logs :"
-              echo ""
-              echo '```'
-              tail -n 30 claude-err.log 2>/dev/null || echo "(pas de log)"
-              echo '```'
-              echo ""
-              echo "*Une erreur critique a été détectée — le statut CI est marqué en échec.*"
-            } > comment.md
+            CASSE_SEM="indeterminee"
           fi
+
+          # Verdict combiné : fail si casse LLM OU casse structurelle OU erreur d'exécution LLM.
+          if [ "$CASSE_SEM" = "oui" ] || [ "$CASSE_STRUCT" = "true" ] || [ "${{ steps.avis.outputs.ran }}" != "true" ]; then
+            VERDICT="fail"
+          else
+            VERDICT="pass"
+          fi
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 🛡️ Avis d'impact — agent-gardien (marche 1 : impact fin déterministe)"
+            echo ""
+            echo "> Tête-agent du gardien (**doctrine §3**) — elle **calcule et filtre**, **n'approuve pas** (l'auto-approbation du faible risque = marche 2, à venir), et **ne merge jamais**."
+            echo ""
+            echo "### Calcul déterministe (consommateurs réels)"
+            echo ""
+            # Corps du rapport SANS ses deux dernières lignes contractuelles (reprises plus bas).
+            head -n -2 impact.md
+            echo ""
+            echo "### Jugement de casse sémantique (LLM, rôle borné)"
+            echo ""
+            if [ "${{ steps.avis.outputs.ran }}" = "true" ]; then
+              cat jugement.md
+            else
+              echo "⚠️ Jugement LLM non produit — extrait des logs :"
+              echo '```'
+              tail -n 20 claude-err.log 2>/dev/null || echo "(pas de log)"
+              echo '```'
+            fi
+            echo ""
+            echo "### Synthèse"
+            echo ""
+            echo "| Dimension | Valeur |"
+            echo "|---|---|"
+            echo "| Rayon / RISQUE (déterministe) | **$RISQUE** |"
+            echo "| Casse structurelle (déterministe) | **$CASSE_STRUCT** |"
+            echo "| Casse sémantique (jugement LLM) | **$CASSE_SEM** |"
+            echo ""
+            echo "RISQUE: $RISQUE"
+            echo "VERDICT: $VERDICT"
+          } > comment.md
           gh pr comment "$PR_NUMBER" --body-file comment.md
 
-      # (6) Statut : pass si l'avis est produit (verdict non-fail) ; fail si erreur critique
-      #     ou verdict fail détecté. Le workflow conseille — la décision de merge reste humaine.
+      # (7) Statut du check : fail si verdict combiné = fail. Le workflow CONSEILLE et FILTRE ;
+      #     la décision de merge reste la porte humaine du gardien (doctrine §3).
       - name: Marquer le statut (pass/fail)
         if: steps.key.outputs.present == 'true'
         run: |
-          if [ "${{ steps.avis.outputs.ran }}" != "true" ]; then
-            echo "::error::Erreur critique — avis d'impact non produit."
+          if [ "${{ steps.verdict.outputs.verdict }}" = "fail" ]; then
+            echo "::error::Verdict fail — casse (structurelle ou sémantique) détectée, ou jugement non produit."
             exit 1
           fi
-          if grep -qiE '^[[:space:]]*VERDICT:[[:space:]]*fail' avis.md; then
-            echo "::error::Verdict fail — l'agent-gardien a détecté un risque à examiner."
-            exit 1
-          fi
-          echo "Verdict pass — avis d'impact produit et posté. (L'agent conseille ; le merge reste au gardien.)"
+          echo "Verdict pass — avis d'impact déterministe posté. (L'agent filtre ; le merge reste au gardien.)"

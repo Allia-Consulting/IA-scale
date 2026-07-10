@@ -67,7 +67,40 @@ sous_taches:
     depend_de: ["T-0020-a"]
     criteres_acceptation:
       - "Une PR à faible risque conforme est approuvée par l'agent-gardien sans le gardien humain ; une PR à impact large remonte"
-    statut: a_faire
+    marches:
+      - marche: 1
+        titre: "Calcul d'impact fin déterministe (remplace le grep fruste)"
+        reference_plan: "§7 T-2.2"
+        statut: en_cours   # LIVRÉE en unitaire ; épreuve d'intégration post-merge à venir
+        execution: >
+          Livrée le 10/07/2026 : outil outils/agent-gardien/impact.py (stdlib + PyYAML)
+          — indexe le dépôt, parse toutes les formes de dépendance déclarées (adosse_a,
+          contrats_concernes, depend_de, skills:[id], domicile ; citations canoniques en
+          backticks/guillemets, leading-slash, suffixe paragraphe), construit le graphe
+          inverse des consommateurs, calcule consommateurs directs+transitifs, n_artefacts,
+          rayon et RISQUE par règles déterministes (doctrine §6 : socle/doctrine et
+          workflows requis => large ; local/skills/agents => large si consommateur socle
+          ou > N ; backlog/evals/outils => faible), et signale la casse STRUCTURELLE
+          (référence pendante). Émet markdown + JSON, terminés par 'RISQUE:' puis 'VERDICT:'.
+          ÉPROUVÉ ROUGE-PUIS-VERT en unitaire (outils/agent-gardien/tests/test_impact.py,
+          6 tests : socle très consommé, local isolé, skills:[id], référence cassée,
+          transitivité, format de sortie). Workflow .github/workflows/conformite.yml
+          réécrit en v1 : impact déterministe + jugement LLM BORNÉ à la casse sémantique
+          (ne recalcule pas le rayon) + verdict combiné. Nom du check « Avis d'impact »
+          PRÉSERVÉ (requis au ruleset). ÉPREUVE D'INTÉGRATION (le workflow tourne sur une
+          vraie PR) : POST-MERGE — un workflow de PR s'exécute dans sa version de la
+          branche de base, donc la v1 ne s'exerce qu'une fois promue sur main.
+      - marche: 2
+        titre: "Auto-approbation du faible risque contre politique"
+        reference_plan: "§7 T-2.4"
+        statut: a_faire
+        note: >
+          NON incluse dans la marche 1. Requiert une identité de promotion (GitHub App
+          du gardien) et un bypass gouverné du ruleset main-protection pour que l'agent
+          approuve/merge le faible risque conforme sans l'humain — geste d'habilitation
+          gardien. Doctrine §3 : l'auto-approbation du faible risque est permise à la
+          tête-agent ; promouvoir un changement À RISQUE sans l'humain reste interdit.
+    statut: en_cours   # -c ouvert : marche 1 livrée (épreuve intégration post-merge), marche 2 à faire (10/07/2026)
   - id: T-0020-d
     titre: "Mesure de valeur organisationnelle — 3 KPI consommés par le tour de contrôle"
     produit:
