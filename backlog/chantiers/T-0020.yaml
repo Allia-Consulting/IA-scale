@@ -98,7 +98,22 @@ sous_taches:
       - marche: 2
         titre: "Auto-approbation du faible risque contre politique"
         reference_plan: "§7 T-2.4"
-        statut: a_faire
+        statut: solde   # LIVRÉE + ÉPROUVÉE sur le réel (vert #189 auto-mergé par l'App, rouge #188 skippé)
+        execution: >
+          Livrée et éprouvée le 10/07/2026, en deux incréments.
+          (1/2) Fiabilité du classificateur (PR #187) : exclusion de changed-files.txt du scan des
+          consommateurs + résolution des citations d'id de chantier en prose comme consommation ;
+          rouge-puis-vert local sur outils/agent-gardien/tests/test_impact.py.
+          (2/2) Auto-approbation (PR #188) : job `auto-approbation` dans conformite.yml v1
+          (needs conformite ; garde if risque==faible && verdict==pass), jeton via
+          actions/create-github-app-token@v3, anti-faux-vert outils/agent-gardien/attendre_checks.py
+          — exige les 3 checks requis completed/success sur le head_sha exact, sinon fail-closed vers
+          la porte humaine — puis review APPROVE + merge --merge --delete-branch par l'App.
+          EPREUVE SUR LE REEL : ROUGE — PR #188 (touche conformite.yml -> RISQUE=large) -> job SKIPPED
+          -> porte humaine (mergee par le gardien via --admin) ; VERT — PR #189 (docs/ -> faible) ->
+          agent-gardien[bot] a approuve PUIS merge SEUL, zero humain. HEAD main au solde : 5a87b532.
+          Habilitation : App agent-gardien (Integration 4266267) + role admin, tous deux au bypass
+          du ruleset main-protection en mode pull_request.
         note: >
           NON incluse dans la marche 1. Requiert une identité de promotion (GitHub App
           du gardien) et un bypass gouverné du ruleset main-protection pour que l'agent
@@ -110,7 +125,7 @@ sous_taches:
           faux positif observé à l'épreuve #185 (T-0029 compté 1 consommateur = ce fichier) ;
           (b) résoudre la citation d'un chantier par son id EN PROSE (ex. « T-0029 » dans
           doctrine §10) comme consommation, au même titre que les ids de skills.
-    statut: en_cours   # -c ouvert : marche 1 SOLDÉE (éprouvée sur le réel PR #185), marche 2 (auto-approbation) à faire (10/07/2026)
+    statut: solde   # -c SOLDÉ : marche 1 (PR #185) + marche 2 (PR #187/#188), épreuve réelle rouge #188 + vert #189 (10/07/2026)
   - id: T-0020-d
     titre: "Mesure de valeur organisationnelle — 3 KPI consommés par le tour de contrôle"
     produit:
