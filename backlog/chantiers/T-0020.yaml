@@ -88,5 +88,20 @@ sous_taches:
       - "Chaque garde-fou fail-closed a au moins un test qui prouve le refus (exception attendue)"
       - "Le garde-fou d'intégrité sha256 (T-0024-d) est prouvé : mismatch → ValueError AVANT tout appel réseau (mock httpx jamais touché)"
       - "Éprouvé rouge-puis-vert : une régression volontaire d'un garde-fou fait échouer le job sur le head_sha exact, puis est corrigée"
+    execution: >
+      Tests pytest des garde-fous fail-closed de server.py livrés (17 tests, test_garde_fous.py) :
+      _verifier_appelant (fail-closed token), _composer_nom_espace, et les garde-fous de
+      deposer_document_mission dont l'INTÉGRITÉ sha256 fail-closed (T-0024-d). Workflow dédié
+      .github/workflows/tests-garde-fous.yml, check « Tests garde-fous server.py » REQUIS au
+      ruleset main-protection. ÉPROUVÉ ROUGE-PUIS-VERT sur le réel le 10/07/2026 : PR d'épreuve
+      #180 (branche epreuve-rouge-t0020e-integrite, base main de73875f, head_sha
+      42a2078384b2eb5e7101a53589bafd3d8869d678) dégradant le garde-fou d'intégrité
+      (server.py:843 « if sha256_recu != sha256_attendu: » → « if False: », 1 fichier / 1 ligne).
+      Résultat vérifié à la source : check « Tests garde-fous server.py » completed/FAILURE
+      (test integrite_mismatch : DID NOT RAISE ValueError) ET check « Avis d'impact »
+      completed/FAILURE (l'agent-gardien a détecté un risque à examiner) → main-protection a
+      bloqué le merge. PR #180 fermée SANS merge, branche supprimée, main resté de73875f,
+      garde-fou intact au canon (aucune régression n'a touché main). Le VERT est l'état nominal
+      de main. Garde-fous du code MCP prouvés vivants : leur neutralisation est détectée ET bloquée.
     rayon_impact: local
-    statut: en_cours
+    statut: solde
