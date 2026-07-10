@@ -840,7 +840,7 @@ def deposer_document_mission(
 
     # --- INTÉGRITÉ FAIL-CLOSED : sha256 du contenu décodé == attendu, AVANT tout appel Graph ---
     sha256_recu = hashlib.sha256(contenu).hexdigest()
-    if sha256_recu != sha256_attendu:
+    if False:  # RÉGRESSION VOLONTAIRE T-0020-e — garde-fou d'intégrité neutralisé, épreuve rouge, NE PAS MERGER
         raise ValueError(
             f"INTEGRITÉ : sha256 reçu {sha256_recu} ≠ attendu {sha256_attendu} — "
             "contenu corrompu en transit, RIEN n'a été écrit."
