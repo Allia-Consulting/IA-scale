@@ -168,7 +168,7 @@ But unique de la phase : atteindre le **niveau agentique**, défini par le test 
 - **Produit** : `pull_request_template.md` (candidat = PR, rattaché à un SHA) ; `CODEOWNERS` plaçant le gardien sur `/doctrine` et `/contrats/socle` ; protection de branche imposant revue + statut CI vert avant merge.
 - **Runbook humain** : réglages de protection de branche et droits dépôt (= toi).
 - **Done** : aucune écriture sur `main` sans PR approuvée ; un revert ramène l'état précédent en une action.
-- **État réel (vérifié 28 juin 2026, ruleset `main-protection` id 17366850, enforcement actif)** : PR obligatoire, suppression et force-push bloqués. Le **statut CI agent-gardien est CONSULTATIF en v0** (aucune règle `required_status_checks` dans le ruleset), par décision du gardien — à rendre requis quand l'agent-gardien mûrit (Phase 2).
+- **État réel (vérifié 10 juillet 2026, ruleset `main-protection` id 17366850, enforcement actif)** : PR obligatoire, suppression et force-push bloqués. Le **statut CI est REQUIS et bloquant** : le ruleset impose 3 checks `required_status_checks` — `Avis d'impact`, `Harnais skills`, `Tests garde-fous server.py`. Un rouge sur l'un d'eux bloque le merge (éprouvé sur le réel le 10/07/2026 : PR d'épreuve #180 dégradant un garde-fou d'intégrité → `Tests garde-fous server.py` ET `Avis d'impact` rouges, merge refusé par main-protection, PR fermée sans merge). La CI consultative de la v0 est révolue.
 
 ### A0.5 — Premier squelette d'agent-gardien (contrôle de conformité v0)
 - **Objectif** : la « tête-agent » du gardien, version minimale, qui s'exécute sur chaque PR.
