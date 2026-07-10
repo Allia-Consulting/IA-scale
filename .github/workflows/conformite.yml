@@ -4,9 +4,10 @@
 # commentaire. Il CALCULE l'impact (rayon + risque) de façon DÉTERMINISTE sur les
 # consommateurs réels — plus de grep fruste — puis confie au LLM le SEUL jugement
 # de casse SÉMANTIQUE des contrats consommateurs (il ne recalcule pas le rayon).
-# Il FILTRE, il N'APPROUVE PAS (l'auto-approbation du faible risque = marche 2,
-# T-2.4, non incluse ici) et ne merge JAMAIS — la promotion reste la porte humaine.
-name: Agent-gardien — conformité (v0)
+# Il FILTRE et, depuis la marche 2 (T-2.4), AUTO-APPROUVE + MERGE le FAIBLE RISQUE
+# contre politique (job `auto-approbation`) ; l'impact LARGE reste la porte humaine du
+# gardien — il ne merge JAMAIS un changement à risque sans l'humain (doctrine §3).
+name: Agent-gardien — conformité (v1)
 
 on:
   pull_request:
@@ -20,6 +21,9 @@ permissions:
 jobs:
   conformite:
     name: Avis d'impact          # NE PAS renommer — check requis au ruleset main-protection.
+    outputs:
+      risque: ${{ steps.impact.outputs.risque }}
+      verdict: ${{ steps.verdict.outputs.verdict }}
     runs-on: ubuntu-latest
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -214,3 +218,42 @@ jobs:
             exit 1
           fi
           echo "Verdict pass — avis d'impact déterministe posté. (L'agent filtre ; le merge reste au gardien.)"
+
+  auto-approbation:
+    name: Auto-approbation du faible risque
+    needs: conformite
+    if: >-
+      needs.conformite.outputs.risque == 'faible' &&
+      needs.conformite.outputs.verdict == 'pass'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read          # le merge passe par le jeton de l'App, pas GITHUB_TOKEN
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Jeton d'installation de l'App agent-gardien
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Anti-faux-vert — 3 checks requis completed/success sur le head_sha
+        id: gate
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 outils/agent-gardien/attendre_checks.py
+
+      - name: Approuver puis merger (faible risque, contre politique)
+        if: steps.gate.outputs.merge == 'oui'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr review "$PR_NUMBER" --repo "${{ github.repository }}" --approve \
+            --body "Auto-approbation agent-gardien — RISQUE=faible, VERDICT=pass, 3 checks requis completed/success sur le head_sha. Filtrage contre politique (doctrine §9/§10) ; l'impact large reste la porte humaine du gardien."
+          gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" --merge --delete-branch
