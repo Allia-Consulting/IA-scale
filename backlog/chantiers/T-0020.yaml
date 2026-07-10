@@ -89,7 +89,7 @@ sous_taches:
       - "Le garde-fou d'intégrité sha256 (T-0024-d) est prouvé : mismatch → ValueError AVANT tout appel réseau (mock httpx jamais touché)"
       - "Éprouvé rouge-puis-vert : une régression volontaire d'un garde-fou fait échouer le job sur le head_sha exact, puis est corrigée"
     execution: >
-      Tests pytest des garde-fous fail-closed de server.py livrés (17 tests, test_garde_fous.py) :
+      Tests pytest des garde-fous fail-closed de server.py livrés (29 tests collectés, dont 2 paramétrés, test_garde_fous.py) :
       _verifier_appelant (fail-closed token), _composer_nom_espace, et les garde-fous de
       deposer_document_mission dont l'INTÉGRITÉ sha256 fail-closed (T-0024-d). Workflow dédié
       .github/workflows/tests-garde-fous.yml, check « Tests garde-fous server.py » REQUIS au
