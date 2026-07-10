@@ -1,0 +1,24 @@
+
+---
+id: T-0029
+titre: "Miroir de continuité du canon Git — copie de secours gouvernée et restaurable du dépôt de fondations"
+capacite: "Socle d'exploitation & gouvernance / Évaluation & observabilité — continuité"
+phase: 2
+type_action: infrastructure
+cran: notifie   # réplication en lecture : réversible, interne, impact local — notifié car touche la continuité du socle
+produit:
+  - "(agent) miroir périodique du dépôt Allia-Consulting/IA-scale vers un second domicile — lecture/restauration, jamais une seconde source d'écriture"
+  - "(runbook humain) procédure de restauration éprouvée : repartir du miroir si le domicile primaire est perdu, sans réécrire l'historique"
+depend_de: []
+contrats_concernes:
+  - "doctrine/doctrine.md"
+criteres_acceptation:
+  - "Un miroir à jour du canon existe hors du domicile primaire et se rafraîchit sans intervention manuelle"
+  - "Une restauration depuis le miroir est éprouvée sur le réel (drill), historique et journal d'approbation intacts"
+  - "Le miroir reste en lecture seule : une seule source de vérité en écriture (pas de divergence de canon)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Manque nommé à l'audit du 07/07/2026 : le canon Git est point unique de vérité ET
+  point unique de défaillance. Ce chantier NOMME le miroir de continuité ; référencé
+  par la doctrine §10 (évolutions connues) à partir de la v1.9.
