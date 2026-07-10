@@ -1,0 +1,27 @@
+---
+id: T-0027
+titre: "Réduction du bruit de journalisation MCP Graph — les logs console noient le journal métier et alourdissent l'ingestion Log Analytics"
+capacite: "Socle d'exploitation & gouvernance / Évaluation & observabilité"
+phase: 2
+type_action: infrastructure_mcp
+cran: notifie   # redéploiement d'une révision MCP : réversible (rollback = repointer la révision précédente), interne, impact local — notifié car touche un service en production
+produit:
+  - "(agent) abaisser/filtrer la verbosité des logs console non-métier de ca-allia-mcp-graph (sondes liveness/readiness, access logs du framework) pour que le journal structuré _journal_appel ne soit plus noyé"
+  - "(runbook humain) redéploiement d'une révision portant la config de logging réduite, révision précédente conservée pour rollback"
+depend_de: []
+contrats_concernes: []
+criteres_acceptation:
+  - "La cause réelle du bruit est identifiée à la source (échantillon de Log_s non-journal) AVANT toute modification — l'hypothèse sondes/access-logs reste à confirmer"
+  - "Le volume de lignes console non-métier par jour baisse de façon mesurable — constat de référence : ~11 000 à 12 000 lignes/jour pour un seul appel métier sur 30 jours, relevé le 10/07/2026 (table ContainerAppConsoleLogs_CL, espace workspace-rgiascaleQW10)"
+  - "Les lignes {\"journal\": \"mcp-graph\"} ressortent sans être noyées ; comportement fonctionnel du MCP inchangé (schémas MCP, garde-fous, journal métier intacts)"
+rayon_impact: local
+statut: à_faire
+note: >
+  Constat à la source le 10/07/2026, lors de la relecture Log Analytics pour solder
+  T-0020-b : la table ContainerAppConsoleLogs_CL de ca-allia-mcp-graph porte de l'ordre
+  de 11 000 à 12 000 lignes console par jour, alors que le journal métier _journal_appel
+  ne compte qu'un seul appel réel sur 30 jours. Ce bruit (cause probable, À CONFIRMER :
+  sondes liveness/readiness et/ou access logs du framework à haute fréquence) noie le
+  journal métier et alourdit inutilement l'ingestion Log Analytics (coût et lisibilité).
+  Optimisation possible, sans urgence — à traiter après la Phase 2. Aucune donnée
+  personnelle en jeu.
