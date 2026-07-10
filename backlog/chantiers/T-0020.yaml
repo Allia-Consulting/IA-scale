@@ -44,15 +44,21 @@ sous_taches:
       _journal_appel posé sur les 9 outils — une ligne JSON par appel (ts UTC, outil,
       cran résolu de la table v1.9, resultat succes/refus/erreur, duree_ms, type_erreur),
       AUCUNE donnée personnelle ni argument, comportement des outils inchangé (schémas
-      MCP identiques à travers functools.wraps — éprouvé en intégration réelle).
-      MIS EN SERVICE le 05/07/2026 : image allia-mcp-graph:0.10.0
-      (digest sha256:e5579cce…), révision ca-allia-mcp-graph--0000015, env et sondes
-      préservés. VÉRIFIÉ À CHAUD : appel réel list_items (relecture O-001, Liste « CRM »)
-      → ligne {"journal": "mcp-graph", "outil": "list_items", "cran": "auto",
-      "resultat": "succes", "duree_ms": 3363} relue aux journaux console de la révision.
-      RESTE pour le solde (critère à la lettre) : une journée réelle de production relue
-      depuis le journal (Log Analytics) — au plus tôt le 06/07/2026 au soir.
-    statut: en_cours
+      MCP identiques à travers functools.wraps). MIS EN SERVICE le 05/07/2026 : image
+      allia-mcp-graph:0.10.0 (digest sha256:e5579cce…), révision ca-allia-mcp-graph--0000015
+      (confirmée active à 100 % du trafic, 1 réplica, le 10/07/2026 à la source Azure).
+      SOLDÉ le 10/07/2026 par relecture Log Analytics (espace workspace-rgiascaleQW10,
+      table ContainerAppConsoleLogs_CL, réf. Microsoft Learn « Monitor logs in Azure
+      Container Apps », fr-fr, consultée le 10/07/2026). Relecture sur 30 jours : le
+      journal écrit bien au format attendu, sans donnée personnelle — ligne réelle
+      {"journal": "mcp-graph", "ts": "2026-07-05T16:33:12.511+00:00", "outil": "list_items",
+      "cran": "auto", "resultat": "succes", "duree_ms": 3363} relue depuis Log Analytics.
+      RÉSERVE ASSUMÉE (gardien, 10/07/2026) : à cette date le MCP n'a reçu qu'un seul
+      appel réel (ce list_items) ; il n'existe pas encore de journée à fort volume. Le
+      journal est prouvé fonctionnel/conforme/sans PII sur appel réel ; le volume de
+      production sera couvert par l'usage et par les KPI de T-0020-d (dérivés/semaine,
+      délai brief→kick-off) une fois la composition bout-en-bout exécutée.
+    statut: solde
   - id: T-0020-c
     titre: "Agent-gardien v1 — rayon d'impact calculé sur les consommateurs réels + auto-approbation du faible risque contre politique"
     produit:
