@@ -71,7 +71,7 @@ sous_taches:
       - marche: 1
         titre: "Calcul d'impact fin déterministe (remplace le grep fruste)"
         reference_plan: "§7 T-2.2"
-        statut: en_cours   # LIVRÉE en unitaire ; épreuve d'intégration post-merge à venir
+        statut: solde   # LIVRÉE + ÉPROUVÉE sur le réel (PR #185, agent-gardien v1 en production)
         execution: >
           Livrée le 10/07/2026 : outil outils/agent-gardien/impact.py (stdlib + PyYAML)
           — indexe le dépôt, parse toutes les formes de dépendance déclarées (adosse_a,
@@ -87,9 +87,14 @@ sous_taches:
           transitivité, format de sortie). Workflow .github/workflows/conformite.yml
           réécrit en v1 : impact déterministe + jugement LLM BORNÉ à la casse sémantique
           (ne recalcule pas le rayon) + verdict combiné. Nom du check « Avis d'impact »
-          PRÉSERVÉ (requis au ruleset). ÉPREUVE D'INTÉGRATION (le workflow tourne sur une
-          vraie PR) : POST-MERGE — un workflow de PR s'exécute dans sa version de la
-          branche de base, donc la v1 ne s'exerce qu'une fois promue sur main.
+          PRÉSERVÉ (requis au ruleset). ÉPREUVE D'INTÉGRATION CONCLUANTE sur le réel le
+          10/07/2026 (PR #185, head 611fc8e9, agent-gardien v1 EN PRODUCTION sur main) :
+          PR mixte inerte (commentaires seuls) — table-des-crans (socle) classé rayon
+          LARGE / RISQUE LARGE / 82 consommateurs ; T-0029 (feuille backlog) LOCAL /
+          FAIBLE ; casse structurelle false ; jugement LLM borné casse sémantique = non ;
+          RISQUE global large ; VERDICT pass ; check « Avis d'impact » completed/success.
+          Discrimination du rayon PROUVÉE sur une vraie PR. PR #185 fermée sans merge
+          (contrat socle inerte, jamais promu). Marche 1 SOLDÉE.
       - marche: 2
         titre: "Auto-approbation du faible risque contre politique"
         reference_plan: "§7 T-2.4"
@@ -100,7 +105,12 @@ sous_taches:
           approuve/merge le faible risque conforme sans l'humain — geste d'habilitation
           gardien. Doctrine §3 : l'auto-approbation du faible risque est permise à la
           tête-agent ; promouvoir un changement À RISQUE sans l'humain reste interdit.
-    statut: en_cours   # -c ouvert : marche 1 livrée (épreuve intégration post-merge), marche 2 à faire (10/07/2026)
+          RAFFINEMENTS à traiter en marche 2 (l'auto-approbation exige un impact FIABLE) :
+          (a) exclure l'artefact de travail changed-files.txt du scan des consommateurs —
+          faux positif observé à l'épreuve #185 (T-0029 compté 1 consommateur = ce fichier) ;
+          (b) résoudre la citation d'un chantier par son id EN PROSE (ex. « T-0029 » dans
+          doctrine §10) comme consommation, au même titre que les ids de skills.
+    statut: en_cours   # -c ouvert : marche 1 SOLDÉE (éprouvée sur le réel PR #185), marche 2 (auto-approbation) à faire (10/07/2026)
   - id: T-0020-d
     titre: "Mesure de valeur organisationnelle — 3 KPI consommés par le tour de contrôle"
     produit:
