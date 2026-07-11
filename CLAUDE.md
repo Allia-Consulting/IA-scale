@@ -41,6 +41,8 @@ Tout fait que tu calcules (marge, imputation, …) s'écrit dans la **zone de pr
 
 Retour arrière = repointer ; toujours possible, parce qu'on n'a jamais copié.
 
+Convention d'épreuve : toute épreuve rouge-puis-vert laisse une entrée datée dans `docs/epreuves/` — journalisée comme fait nouveau ; on ne requalifie jamais un soldé et on ne réécrit jamais une entrée existante.
+
 ## La chaîne d'autorité : le guide → Claude → M365
 
 Les décisions vivent ici (le guide) ; tu les résous et les exécutes ; M365 applique (données et droits). Tu ne modifies une décision qu'en modifiant le guide, sous la porte du gardien. M365 suit en conséquence — jamais l'inverse.
