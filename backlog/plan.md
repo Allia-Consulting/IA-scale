@@ -223,7 +223,7 @@ La barrière qui rend l'autonomie tenable. **Pièce de génie logiciel — à po
 - **T-2.2** Calcul d'impact fin dans l'agent-gardien (qui consomme, combien d'artefacts, quelles missions en cours).
 - **T-2.3** Observabilité en production : traçabilité des actions, métriques de qualité, journal d'audit consultable.
 - **T-2.4** Auto-approbation du faible risque *contre politique* par l'agent-gardien ; le reste remonte à toi.
-- **Critère de sortie** : une PR à faible risque et conforme passe sans toi ; toute régression d'un skill est bloquée par la CI.
+- **Critère de sortie** : une PR à faible risque et conforme passe sans toi ; toute régression d'un skill est bloquée par la CI. *(Atteint et éprouvé — **Phase 2 close le 13/07/2026** : chapeau `T-0020` soldé, ses cinq sous-items `-a..-e` soldés ; l'agent-gardien auto-merge le faible risque conforme (#189, #190, #193, #194, #195) et la CI bloque les régressions (épreuves rouges #154, #180) ; les 3 KPI d'organisation s'affichent sur le tenant — cockpit publié à `SitePages/Tour-de-contrôle.aspx`, épreuve `docs/epreuves/2026-07-13-t-0020-d-kpi-cockpit.md`.)*
 
 ---
 
