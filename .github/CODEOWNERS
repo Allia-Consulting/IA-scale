@@ -15,3 +15,7 @@
 # En déléguant un périmètre, ajoute l'animateur À CÔTÉ du gardien, par exemple :
 # /contrats/local/communication/   @animateur-communication @Alliaconsulting
 /contrats/local/communication/   @SarahSK-75 @Alliaconsulting
+
+# Délégation étendue au skill newsletter-hebdo et à son golden set (organisation.md §4.1, v1.11).
+/skills/newsletter-hebdo/        @SarahSK-75 @Alliaconsulting
+/evals/skills/newsletter-hebdo/  @SarahSK-75 @Alliaconsulting
