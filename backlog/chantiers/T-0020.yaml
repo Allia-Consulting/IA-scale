@@ -13,7 +13,17 @@ contrats_concernes:
 criteres_acceptation:
   - "Critère de sortie du plan §7 : une PR à faible risque et conforme passe sans le gardien ; toute régression d'un skill est bloquée par la CI."
 rayon_impact: "Toute la firme : chaque PR passe par le harnais ; l'agent-gardien filtre chaque promotion ; les KPI alimentent le tour de contrôle."
-statut: en_cours
+statut: soldé   # chapeau SOLDÉ le 13/07/2026 : les cinq sous-items -a..-e soldés (voir execution: et chacun)
+execution: >
+  CHAPEAU SOLDÉ le 13/07/2026 — les cinq sous-items sont soldés : T-0020-a (harnais d'evals,
+  PR #153), T-0020-b (observabilité MCP, PR #169/#179), T-0020-c (agent-gardien v1 : impact
+  déterministe + auto-approbation, PR #185/#187/#188, épreuve #189), T-0020-e (tests garde-fous
+  server.py requis en CI, épreuve rouge #180), et enfin T-0020-d (3 KPI d'organisation au cockpit,
+  PR #195, ÉPROUVÉ sur le tenant le 13/07/2026 — voir docs/epreuves/2026-07-13-t-0020-d-kpi-cockpit.md).
+  Critère de sortie du plan §7 ATTEINT et éprouvé vivant : une PR à faible risque conforme passe
+  sans le gardien (5 auto-merges de l'agent-gardien à ce jour : #189, #190, #193, #194, #195) et
+  toute régression d'un skill ou d'un garde-fou MCP est bloquée par la CI (épreuves rouges #154,
+  #180). Phase 2 close.
 sous_taches:
   - id: T-0020-a
     titre: "Harnais d'evals des skills — golden set versionné par skill, exécuté en CI sur chaque PR"
@@ -133,7 +143,26 @@ sous_taches:
     depend_de: ["T-0020-b"]
     criteres_acceptation:
       - "Les 3 KPI s'affichent sur données réelles du tenant — le SI passe de « se gouverne » à « prouve la valeur à l'échelle »"
-    statut: a_faire
+    execution: >
+      Livré en PR #195 (5 fichiers sous outils/tour-de-controle-spfx/**) : section
+      « Indicateurs d'organisation » dans le web part existant (surface unique), logique pure
+      unit-testable (kpi-organisation.ts) réutilisant le canal lireListe de T-0014 (spHttpClient,
+      SSO, fail-visible). Les 3 KPI : Missions actives (statut « En cours ») ; Dérivés promus
+      (7 j glissants) sur Missions+Imputations+CRM — proxy exact par le verrou serveur MCP
+      (écriture agent en Zone-de-proposition seule) ; Délai brief→kick-off (appariement
+      BRIEF-<n>/KICKOFF-<n>-* de la Zone, dernier Δ + moyenne). Citation Microsoft Learn
+      « Connect to SharePoint APIs » (SPHttpClient v1). Build vert, jest 11/11 dont l'assertion
+      187 s sur la paire Datalab. Version solution 1.1.2.0. Classée faible risque,
+      auto-approuvée et mergée par agent-gardien[bot] le 13/07/2026 à 19:27:22Z (merge 6d20994a,
+      5e promotion autonome). SOLDÉ le 13/07/2026 sur ÉPREUVE RÉELLE (voir
+      docs/epreuves/2026-07-13-t-0020-d-kpi-cockpit.md) : gestes gardien — .sppkg 1.1.2.0 déployé
+      à l'App Catalog (tenant-wide), première surface DURABLE créée (page
+      SitePages/Tour-de-contrôle.aspx publiée v1.0, ~19:41Z — le cockpit n'avait jusque-là aucune
+      surface durable, T-0014 éprouvé en serve local). Constat visuel à la source : Missions
+      actives = 2 (Siteflow, Datalab) ; Dérivés promus (7 j) = 2 (fiche Mission Datalab + IMP-2,
+      promues le 13/07) ; Délai brief→kick-off = 3 min 07 s (paire BRIEF-2/KICKOFF-2, donnée de
+      l'épreuve de composition S29 servie depuis la source M365). Style sobre vérifié.
+    statut: solde
   - id: T-0020-e
     titre: "Tests pytest des garde-fous fail-closed de server.py, requis en CI"
     produit:
