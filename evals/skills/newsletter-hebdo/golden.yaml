@@ -1,0 +1,35 @@
+skill: newsletter-hebdo
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Cas nominal — cadence inconditionnelle du vendredi (newsletter.md §1)."
+    contient:
+      - "chaque vendredi"
+  - id: ancre-02
+    type: invariant
+    description: "Cas nominal — l'ordre du vendredi : mémoire validée d'abord (newsletter.md §4)."
+    contient:
+      - "ordre du vendredi"
+  - id: ancre-03
+    type: invariant
+    description: "Garde-fou — leçon apprise du VALIDÉ seul, jamais du verbatim ni avant validation."
+    contient:
+      - "jamais dans le verbatim brut, jamais avant la validation"
+  - id: ancre-04
+    type: invariant
+    description: "Garde-fou — verrou d'écriture : Zone-de-proposition uniquement, via create_list_item."
+    contient:
+      - "Zone-de-proposition UNIQUEMENT"
+      - "jamais dans une liste source"
+      - "create_list_item"
+  - id: ancre-05
+    type: invariant
+    description: "Garde-fou — l'agent ne publie jamais dans Teams (connecteur non construit)."
+    contient:
+      - "ne publie jamais"
+  - id: ancre-06
+    type: invariant
+    description: "Garde-fou — réserve de sortie externe : reprise externe = porte d'anonymisation."
+    contient:
+      - "anonymisation.md"
