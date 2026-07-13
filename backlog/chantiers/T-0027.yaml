@@ -15,7 +15,7 @@ criteres_acceptation:
   - "Le volume de lignes console non-métier par jour baisse de façon mesurable — constat de référence : ~11 000 à 12 000 lignes/jour pour un seul appel métier sur 30 jours, relevé le 10/07/2026 (table ContainerAppConsoleLogs_CL, espace workspace-rgiascaleQW10)"
   - "Les lignes {\"journal\": \"mcp-graph\"} ressortent sans être noyées ; comportement fonctionnel du MCP inchangé (schémas MCP, garde-fous, journal métier intacts)"
 rayon_impact: local
-statut: à_faire
+statut: soldé   # épreuve réelle du 13/07/2026 (voir execution:)
 note: >
   Constat à la source le 10/07/2026, lors de la relecture Log Analytics pour solder
   T-0020-b : la table ContainerAppConsoleLogs_CL de ca-allia-mcp-graph porte de l'ordre
@@ -25,3 +25,24 @@ note: >
   journal métier et alourdit inutilement l'ingestion Log Analytics (coût et lisibilité).
   Optimisation possible, sans urgence — à traiter après la Phase 2. Aucune donnée
   personnelle en jeu.
+execution: >
+  SOLDÉ le 13/07/2026 sur épreuve réelle avant/après, chaque état constaté à la source
+  (Log Analytics, espace workspace-rgiascaleQW10, table ContainerAppConsoleLogs_CL). Voir
+  docs/epreuves/2026-07-13-t-0027-extinction-bruit-healthz.md. CAUSE CONFIRMÉE (l'hypothèse
+  du critère 1 est levée) : fenêtre 24 h sur la révision --0000015 (image 0.10.0) = 11 704
+  lignes console dont 11 518 (98,4 %) = sondes /healthz relayées par uvicorn.access (3 sondes
+  actives : Liveness 30 s, Readiness 10 s, Startup 10 s) ; + dumps d'en-têtes azure-identity
+  à INFO. Anti-faux-rouge : le journal {"journal": "mcp-graph"} était vivant mais NOYÉ (lignes
+  list_items du 13/07 ~17:42 retrouvées dans le bruit avant correctif). CORRECTIF : PR #193
+  (mergée par agent-gardien[bot] à 17:59:34Z — 3e preuve du circuit d'auto-approbation du
+  faible risque) — filtre _FiltreSondesHealthz sur uvicorn.access + loggers
+  azure.core.pipeline.policies.http_logging_policy et azure.identity à WARNING ; journal_mcp
+  (handler dédié, propagate=False) INTACT ; test dédié test_filtre_healthz_ne_touche_pas_le_journal,
+  suite 30/30 verte. MISE EN SERVICE : image allia-mcp-graph:0.10.1 (digest sha256:d6331406ae62…,
+  build ACR 18:02–18:03Z depuis le canon au SHA ef817513), révision ca-allia-mcp-graph--0000016
+  Healthy/RunningAtMaxScale à 100 % du trafic ; --0000015 (0.10.0) conservée pour rollback en
+  une action. ÉPREUVE APRÈS BASCULE (~18:15Z) : healthz = 0 sur --0000016 (total 55 lignes
+  console depuis 18:03Z), et le journal émet toujours sur données réelles du tenant —
+  {"journal": "mcp-graph", "ts": "2026-07-13T18:08:08.202+00:00", "outil": "list_items",
+  "cran": "auto", "resultat": "succes", "duree_ms": 3060}. Les 3 critères d'acceptation sont
+  satisfaits ; comportement fonctionnel du MCP inchangé (schémas, garde-fous, journal métier).
