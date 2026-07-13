@@ -12,8 +12,18 @@
 
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import type { Zone, Compteur, DetailItem } from './types';
+import {
+  COLONNE_STATUT_MISSION,
+  compterMissionsActives,
+  compterCreesDepuis,
+  apparierBriefKickoff,
+  moyenneDeltas,
+  formaterDuree
+} from './kpi-organisation';
 
 export interface CockpitData {
+  /** T-0020-d — les 3 KPI d'organisation (mesure de valeur, dernier maillon Phase 2). */
+  readonly indicateurs: Zone;
   readonly pipeCommercial: Zone;
   readonly recrutement: Zone;
   readonly activite: Zone;
@@ -171,12 +181,124 @@ async function chargerActivite(sp: SPHttpClient, dataSiteUrl: string): Promise<Z
   };
 }
 
+/**
+ * Section « Indicateurs d'organisation » (T-0020-d) — les 3 KPI figés, lecture seule.
+ * Réutilise `lireListe` (canal unique T-0014, spHttpClient, SSO) ; jamais de $filter
+ * serveur (leçon T-0013-d) — on lit puis on filtre côté client. Chaque KPI dégrade en
+ * « — » sobre si sa source est absente/illisible, jamais d'erreur ni de chiffre inventé.
+ */
+async function chargerIndicateursOrganisation(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
+  const [missions, imputations, crm, zone] = await Promise.all([
+    lireListe(sp, dataSiteUrl, 'Missions', `$select=${COLONNE_STATUT_MISSION},Created&$top=2000`),
+    lireListe(sp, dataSiteUrl, 'Imputations', '$select=Created&$top=2000'),
+    lireListe(sp, dataSiteUrl, 'CRM', '$select=Created&$top=2000'),
+    lireListe(sp, dataSiteUrl, 'Zone-de-proposition', '$select=Title,Created&$top=2000')
+  ]);
+
+  // KPI 1 — Missions actives.
+  let kpiMissions: Compteur;
+  if (missions.etat === 'ok') {
+    const n = compterMissionsActives(missions.valeurs);
+    kpiMissions = {
+      id: 'kpi-missions-actives',
+      libelle: 'Missions actives',
+      valeur: String(n),
+      items: [],
+      note: n === 0 ? 'Aucune mission active pour l’instant.' : undefined
+    };
+  } else {
+    kpiMissions = {
+      id: 'kpi-missions-actives',
+      libelle: 'Missions actives',
+      valeur: '—',
+      items: [],
+      note: missions.etat === 'non_cable' ? NOTE_NON_CABLE : NOTE_INDISPONIBLE
+    };
+  }
+
+  // KPI 2 — Dérivés promus (7 jours glissants) : Missions + Imputations + CRM.
+  // Proxy exact : une création en liste SOURCE ne peut venir que d'une promotion humaine
+  // (l'agent n'écrit qu'en Zone-de-proposition — verrou serveur MCP). Voir kpi-organisation.ts.
+  const maintenant = new Date();
+  const sources: ReadonlyArray<{ readonly libelle: string; readonly lecture: Lecture }> = [
+    { libelle: 'Missions', lecture: missions },
+    { libelle: 'Imputations', lecture: imputations },
+    { libelle: 'CRM', lecture: crm }
+  ];
+  const detailsPromus: DetailItem[] = [];
+  let sommePromus = 0;
+  let auMoinsUneSourceLue = false;
+  for (const s of sources) {
+    if (s.lecture.etat === 'ok') {
+      auMoinsUneSourceLue = true;
+      const n = compterCreesDepuis(s.lecture.valeurs, maintenant, 7);
+      sommePromus += n;
+      detailsPromus.push({ libelle: s.libelle, statut: String(n), signal: 'neutral' });
+    } else {
+      detailsPromus.push({ libelle: s.libelle, statut: '—', signal: 'neutral' });
+    }
+  }
+  const kpiPromus: Compteur = {
+    id: 'kpi-derives-promus-7j',
+    libelle: 'Dérivés promus (7 j)',
+    valeur: auMoinsUneSourceLue ? String(sommePromus) : '—',
+    items: detailsPromus,
+    note: auMoinsUneSourceLue
+      ? 'Créations en listes sources sur 7 jours glissants — proxy des promotions humaines (l’agent n’écrit qu’en Zone-de-proposition).'
+      : NOTE_INDISPONIBLE
+  };
+
+  // KPI 3 — Délai brief→kick-off : appariement BRIEF-<n> / KICKOFF-<n>-* dans la Zone.
+  let kpiDelai: Compteur;
+  if (zone.etat === 'ok') {
+    const paires = apparierBriefKickoff(zone.valeurs);
+    if (paires.length === 0) {
+      kpiDelai = {
+        id: 'kpi-delai-brief-kickoff',
+        libelle: 'Délai brief→kick-off',
+        valeur: '—',
+        items: [],
+        note: 'Aucune paire brief→kick-off à ce jour.'
+      };
+    } else {
+      const dernier = paires[paires.length - 1];
+      const items: DetailItem[] = [
+        { libelle: `Dernier (mission n°${dernier.n})`, statut: formaterDuree(dernier.deltaSecondes), signal: 'neutral' }
+      ];
+      if (paires.length > 1) {
+        items.push({
+          libelle: `Moyenne (${paires.length} paires)`,
+          statut: formaterDuree(moyenneDeltas(paires)),
+          signal: 'neutral'
+        });
+      }
+      kpiDelai = {
+        id: 'kpi-delai-brief-kickoff',
+        libelle: 'Délai brief→kick-off',
+        valeur: formaterDuree(dernier.deltaSecondes),
+        items
+      };
+    }
+  } else {
+    kpiDelai = {
+      id: 'kpi-delai-brief-kickoff',
+      libelle: 'Délai brief→kick-off',
+      valeur: '—',
+      items: [],
+      note: zone.etat === 'non_cable' ? NOTE_NON_CABLE : NOTE_INDISPONIBLE
+    };
+  }
+
+  return { compteurs: [kpiMissions, kpiPromus, kpiDelai] };
+}
+
 /** Charge l'ensemble du cockpit. Chaque zone échoue indépendamment (fail-visible). */
 export async function chargerCockpit(sp: SPHttpClient, dataSiteUrl: string): Promise<CockpitData> {
-  const [pipeCommercial, recrutement, activite] = await Promise.all([
+  const [indicateurs, pipeCommercial, recrutement, activite] = await Promise.all([
+    chargerIndicateursOrganisation(sp, dataSiteUrl),
     chargerPipeCommercial(sp, dataSiteUrl),
     chargerRecrutement(sp, dataSiteUrl),
     chargerActivite(sp, dataSiteUrl)
   ]);
-  return { pipeCommercial, recrutement, activite };
+  return { indicateurs, pipeCommercial, recrutement, activite };
 }

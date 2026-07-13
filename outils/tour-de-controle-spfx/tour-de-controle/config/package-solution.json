@@ -3,7 +3,7 @@
   "solution": {
     "name": "tour-de-controle-client-side-solution",
     "id": "2fde3b3c-8586-4a4f-836d-95537dfb501b",
-    "version": "1.1.1.0",
+    "version": "1.1.2.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "tour-de-controle Feature",
         "description": "The feature that activates elements of the tour-de-controle solution.",
         "id": "1ef089d1-949c-409a-947c-2ba2372ea336",
-        "version": "1.1.1.0"
+        "version": "1.1.2.0"
       }
     ]
   },
