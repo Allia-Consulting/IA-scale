@@ -94,6 +94,22 @@ journal_mcp.addHandler(_journal_handler)
 journal_mcp.propagate = False
 journal_mcp.setLevel(logging.INFO)
 
+
+# --- T-0027 : réduction du bruit de logs -----------------------------------------------------
+# Cause mesurée sur Log Analytics (13/07/2026, 24 h) : 98,4 % des lignes console étaient les
+# sondes /healthz relayées par uvicorn.access — le journal {"journal": "mcp-graph"} était noyé.
+# 1) Filtre des sondes sur le logger d'accès uvicorn (le logger nommé existe avant le démarrage
+#    d'uvicorn : addFilter ici s'applique à toutes ses lignes). Aucun autre accès n'est filtré.
+class _FiltreSondesHealthz(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/healthz" not in record.getMessage()
+
+logging.getLogger("uvicorn.access").addFilter(_FiltreSondesHealthz())
+
+# 2) Diagnostics HTTP du SDK azure-identity (dumps d'en-têtes à INFO) : relevés à WARNING.
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+logging.getLogger("azure.identity").setLevel(logging.WARNING)
+# --- fin T-0027 -------------------------------------------------------------------------------
 # Cran par outil — résolu depuis contrats/socle/table-des-crans.yaml (v1.9) :
 # lectures (list_items, lire_annuaire) = auto par nature (réversible, interne) ;
 # ecrire_fait_derive_zone_proposition / televerser_brouillon_offre_zone_travail /
