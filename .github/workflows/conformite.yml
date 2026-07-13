@@ -24,6 +24,7 @@ jobs:
     outputs:
       risque: ${{ steps.impact.outputs.risque }}
       verdict: ${{ steps.verdict.outputs.verdict }}
+      delegue: ${{ steps.impact.outputs.delegue }}
     runs-on: ubuntu-latest
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -71,8 +72,11 @@ jobs:
           # Extraire rayon global (RISQUE) et casse structurelle pour le verdict combiné.
           RISQUE=$(python3 -c "import json;print(json.load(open('impact.json'))['risque'])")
           CASSE=$(python3 -c "import json;print(str(json.load(open('impact.json'))['casse_structurelle']).lower())")
+          # Périmètre délégué (CODEOWNERS) : « oui » si au moins un fichier modifié relève d'un délégué.
+          DELEGUE=$(python3 -c "import json;print('oui' if json.load(open('impact.json'))['delegue'] else 'non')")
           echo "risque=$RISQUE" >> "$GITHUB_OUTPUT"
           echo "casse_structurelle=$CASSE" >> "$GITHUB_OUTPUT"
+          echo "delegue=$DELEGUE" >> "$GITHUB_OUTPUT"
 
       # Garde-fou de configuration : clé absente => avertir, NE PAS bloquer la PR (job en succès).
       # On poste tout de même l'impact déterministe (bonus), mais on n'exige pas le jugement LLM.
@@ -222,9 +226,11 @@ jobs:
   auto-approbation:
     name: Auto-approbation du faible risque
     needs: conformite
+    # périmètre délégué → porte humaine du délégué (organisation.md §4.1), jamais d'auto-merge.
     if: >-
       needs.conformite.outputs.risque == 'faible' &&
-      needs.conformite.outputs.verdict == 'pass'
+      needs.conformite.outputs.verdict == 'pass' &&
+      needs.conformite.outputs.delegue == 'non'
     runs-on: ubuntu-latest
     permissions:
       contents: read          # le merge passe par le jeton de l'App, pas GITHUB_TOKEN
