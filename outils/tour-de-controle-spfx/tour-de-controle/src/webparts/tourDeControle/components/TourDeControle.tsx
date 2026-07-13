@@ -123,6 +123,19 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
         </span>
       </div>
 
+      {/* Indicateurs d'organisation (T-0020-d) — la valeur, en trois mesures.
+          Bande sobre au-dessus des zones d'exploration ; se fond dans le style
+          existant (mêmes compteurs, aucun vert, aucune pastille). Lecture seule. */}
+      <div className={styles.zone}>
+        <div className={styles.zoneHead}>
+          <div>
+            <p className={styles.zoneTitle}>Indicateurs d&rsquo;organisation</p>
+            <p className={styles.zoneSub}>La valeur, en trois mesures</p>
+          </div>
+        </div>
+        {data ? renderCompteurs(data.indicateurs.compteurs) : chargement}
+      </div>
+
       {/* 1 — Pipe commercial */}
       <div className={styles.zone}>
         <div className={styles.zoneHead}>
