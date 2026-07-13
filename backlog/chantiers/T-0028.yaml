@@ -19,7 +19,7 @@ criteres_acceptation:
   - "Chaque contrat RGPD existant pointe vers l'entrée de registre correspondante (pull, pas de copie)"
   - "Toute nouvelle activité de traitement ouvre une entrée AVANT mise en service (boucle de promotion)"
 rayon_impact: firme
-statut: à_faire
+statut: soldé
 note: >
   Manque nommé à l'audit du 07/07/2026 : le registre art. 30 (obligation du responsable
   de traitement) n'existe pas encore au canon. Ce chantier le NOMME ; sa constitution
