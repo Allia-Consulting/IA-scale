@@ -12,6 +12,7 @@ garde-fous testés s'exécutent avant `_config_mission()` et avant l'ouverture d
 import base64
 import hashlib
 import json
+import logging
 
 import pytest
 
@@ -265,3 +266,38 @@ def test_deposer_integrite_concordante_laisse_passer(deposer, monkeypatch):
         "après le garde-fou d'intégrité, le premier obstacle en CI est ConfigManquante "
         f"(obtenu : {type(excinfo.value).__name__})"
     )
+
+
+# --------------------------------------------------------------------------------------------
+# T-0027 — réduction du bruit de logs : le filtre /healthz ne touche pas le journal structuré
+# --------------------------------------------------------------------------------------------
+
+def _record(message: str) -> logging.LogRecord:
+    """Fabrique un LogRecord dont getMessage() vaut `message` (comme une ligne uvicorn.access)."""
+    return logging.LogRecord(
+        name="uvicorn.access", level=logging.INFO, pathname=__file__, lineno=0,
+        msg=message, args=(), exc_info=None,
+    )
+
+
+def test_filtre_healthz_ne_touche_pas_le_journal():
+    """(18) T-0027 : le filtre des sondes rejette /healthz, laisse passer le reste, et n'est PAS
+    posé sur le logger journal_mcp — le journal {"journal": "mcp-graph"} reste STRICTEMENT intact.
+    """
+    filtre = server._FiltreSondesHealthz()
+
+    # (a) une sonde /healthz est rejetée (le bruit qui noyait le journal).
+    assert filtre.filter(_record('127.0.0.1 - "GET /healthz HTTP/1.1" 200')) is False
+
+    # (b) un vrai appel MCP passe — aucun accès utile n'est filtré.
+    assert filtre.filter(_record('10.0.0.4 - "POST /mcp HTTP/1.1" 200')) is True
+
+    # (c) le journal structuré ne porte PAS ce filtre (intégrité du journal T-0020-b) ;
+    #     le filtre vit bien sur le logger d'accès uvicorn, et nulle part sur journal_mcp.
+    assert not any(
+        isinstance(f, server._FiltreSondesHealthz) for f in server.journal_mcp.filters
+    ), "le filtre /healthz ne doit jamais être posé sur journal_mcp"
+    assert any(
+        isinstance(f, server._FiltreSondesHealthz)
+        for f in logging.getLogger("uvicorn.access").filters
+    ), "le filtre /healthz doit être posé sur uvicorn.access"
