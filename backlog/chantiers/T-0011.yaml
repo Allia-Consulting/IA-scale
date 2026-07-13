@@ -1,5 +1,5 @@
 id: T-0011
-titre: "Skill « newsletter-hebdo » : génération du brouillon de newsletter interne (inscrit au backlog, non construit)"
+titre: "Skill « newsletter-hebdo » : génération du brouillon de newsletter interne (construit et promu — PR #199 ; solde à la première exécution réelle)"
 capacite: "Cœur de métier / Connaissance, contenu & IP — communication & marque"
 phase: 4
 type_action: edition_contrat_local
@@ -27,10 +27,10 @@ criteres_acceptation:
   - "Le rendu respecte le design system ; régime interne nominatif (pas d'anonymisation tant qu'interne)"
   - "Aucun contrat consommateur n'est cassé (vérifié par l'agent-gardien)"
 rayon_impact: local
-statut: à_faire
+statut: en_cours
 note: >
   Première des deux briques reportées du §7 du contrat local newsletter
-  (contrats/local/communication/newsletter.md). INSCRIT AU BACKLOG, NON CONSTRUIT.
+  (contrats/local/communication/newsletter.md). CONSTRUIT ET PROMU (PR #199, 13/07/2026), promotion gardien — délégation non retenue à ce stade (PR #198 fermée sans merge, arbitrage gardien). SOLDE à la première exécution réelle sur le tenant (brouillon en Zone-de-proposition un vendredi).
   Ce skill couvre la GÉNÉRATION (brouillon en zone de proposition, cran auto), PAS la
   publication (geste distinct porté par le connecteur Teams T-0012). Le passage de l'état
   « rodage » (brouillon relu par un humain) à l'état « croisière » (agent génère et publie
