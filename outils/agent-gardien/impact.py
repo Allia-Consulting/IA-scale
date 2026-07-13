@@ -59,6 +59,13 @@ _IGNORE_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".mypy_c
 # l'index pour ne pas être comptés comme faux consommateurs (T-0020-c marche 2).
 _ARTEFACTS_TRAVAIL = frozenset({"changed-files.txt"})
 
+# Propriétaire « gardien » au sens CODEOWNERS. Un périmètre est DÉLÉGUÉ dès qu'un
+# propriétaire AUTRE que le gardien y figure (organisation.md §4.1) : il relève
+# alors de la porte humaine de son délégué et l'agent-gardien l'exclut de son
+# circuit d'auto-approbation — jamais d'auto-merge d'un périmètre délégué.
+_GARDIEN = "@Alliaconsulting"
+_CODEOWNERS_REL = ".github/CODEOWNERS"
+
 
 def _lister_fichiers(root):
     """Index de tous les fichiers du dépôt, en chemins relatifs POSIX."""
@@ -146,6 +153,46 @@ def _consommateurs_transitifs(cible, consommateurs):
     return vus
 
 
+def _normaliser_pattern(pattern):
+    """Pattern CODEOWNERS -> préfixe POSIX : « / » de tête retiré ; un répertoire
+    conserve son « / » de queue pour un match par préfixe robuste."""
+    return pattern.strip().replace(os.sep, "/").lstrip("/")
+
+
+def _perimetres_delegues(root):
+    """Préfixes normalisés des périmètres délégués, lus dans .github/CODEOWNERS.
+
+    Un (pattern, owners) est délégué si owners contient au moins un propriétaire
+    différent du gardien. Le pattern « * » (défaut global) est TOUJOURS exclu —
+    il ne rend jamais tout le dépôt délégué. Commentaires et lignes vides ignorés."""
+    prefixes = []
+    for ligne in _lire(root, _CODEOWNERS_REL).splitlines():
+        ligne = ligne.split("#", 1)[0].strip()
+        if not ligne:
+            continue
+        champs = ligne.split()
+        if len(champs) < 2:
+            continue
+        pattern, owners = champs[0], champs[1:]
+        if pattern == "*":
+            continue
+        if any(o != _GARDIEN for o in owners):
+            prefixes.append(_normaliser_pattern(pattern))
+    return prefixes
+
+
+def _chemin_delegue(chemin, prefixes):
+    """Un chemin (normalisé POSIX) matche-t-il un périmètre délégué ?"""
+    chemin = chemin.strip().replace(os.sep, "/").lstrip("/")
+    for p in prefixes:
+        if p.endswith("/"):
+            if chemin == p.rstrip("/") or chemin.startswith(p):
+                return True
+        elif chemin == p or chemin.startswith(p + "/"):
+            return True
+    return False
+
+
 def _sous(prefixes, chemin):
     return any(chemin.startswith(p) for p in prefixes)
 
@@ -176,15 +223,19 @@ def analyze(repo_root, changed):
     """Cœur du calcul. Retourne un dict sérialisable décrivant l'impact."""
     index = _lister_fichiers(repo_root)
     consommateurs = _construire_graphe(repo_root, index)
+    prefixes_delegues = _perimetres_delegues(repo_root)
 
     par_fichier = {}
     casse_structurelle = False
     risque_global = "faible"
+    delegue = False
 
     for chemin in changed:
         chemin = chemin.strip().replace(os.sep, "/").lstrip("/")
         if not chemin:
             continue
+        if _chemin_delegue(chemin, prefixes_delegues):
+            delegue = True
         conso = _consommateurs_transitifs(chemin, consommateurs)
         n = len(conso)
         risque = _risque_fichier(chemin, conso, index)
@@ -213,6 +264,7 @@ def analyze(repo_root, changed):
         "par_fichier": par_fichier,
         "risque": risque_global,
         "casse_structurelle": casse_structurelle,
+        "delegue": delegue,
         "verdict": verdict,
     }
 
@@ -246,6 +298,7 @@ def rapport_markdown(res):
     out.append("> Tête-agent du gardien (**doctrine §3**) — il **calcule et filtre**, "
                "il **n'approuve pas**, il **ne merge jamais**.")
     out.append("")
+    out.append("DELEGUE: %s" % ("oui" if res.get("delegue") else "non"))
     out.append("RISQUE: %s" % res["risque"])
     out.append("VERDICT: %s" % res["verdict"])
     return "\n".join(out)

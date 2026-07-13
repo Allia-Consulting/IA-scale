@@ -166,3 +166,72 @@ def test_id_chantier_en_prose_resolu_en_consommation(tmp_path):
     pf = res["par_fichier"]["backlog/chantiers/T-0029.yaml"]
     assert "doctrine/doctrine.md" in pf["consommateurs"]
     assert pf["n_artefacts"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# Périmètre délégué (CODEOWNERS) — exclusion du circuit d'auto-approbation.
+# Un périmètre délégué relève de la porte humaine de SON délégué
+# (organisation.md §4.1) : l'agent-gardien ne doit JAMAIS l'auto-merger.
+# ---------------------------------------------------------------------------
+# CODEOWNERS de référence : le gardien partout, plus un périmètre délégué.
+_CODEOWNERS = (
+    "# CODEOWNERS de test\n"
+    "*                                 @Alliaconsulting\n"
+    "/doctrine/                        @Alliaconsulting\n"
+    "/contrats/socle/                  @Alliaconsulting\n"
+    "\n"
+    "# Périmètre délégué : l'animateur À CÔTÉ du gardien.\n"
+    "/contrats/local/communication/    @SarahSK-75 @Alliaconsulting\n"
+)
+
+
+def test_changement_delegue_marque_delegue(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, ".github/CODEOWNERS", _CODEOWNERS)
+    _ecrire(root, "contrats/local/communication/newsletter.md", "# newsletter\n")
+
+    res = impact.analyze(root, ["contrats/local/communication/newsletter.md"])
+    assert res["delegue"] is True
+
+    md = impact.rapport_markdown(res)
+    assert any(l.strip() == "DELEGUE: oui" for l in md.splitlines())
+
+
+def test_changement_docs_non_delegue(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, ".github/CODEOWNERS", _CODEOWNERS)
+    _ecrire(root, "docs/epreuves/e-2026.md", "# épreuve\n")
+
+    res = impact.analyze(root, ["docs/epreuves/e-2026.md"])
+    assert res["delegue"] is False
+
+    md = impact.rapport_markdown(res)
+    assert any(l.strip() == "DELEGUE: non" for l in md.splitlines())
+
+
+def test_regle_etoile_ne_delegue_pas_tout(tmp_path):
+    root = str(tmp_path)
+    # La règle "*" est possédée par un NON-gardien : elle ne doit PAS déléguer
+    # tout le dépôt (le pattern "*" est exclu du calcul de délégation).
+    codeowners = (
+        "*                                 @QuelquUnDAutre\n"
+        "/contrats/local/communication/    @SarahSK-75 @Alliaconsulting\n"
+    )
+    _ecrire(root, ".github/CODEOWNERS", codeowners)
+    _ecrire(root, "docs/epreuves/e-2026.md", "# épreuve\n")
+
+    res = impact.analyze(root, ["docs/epreuves/e-2026.md"])
+    assert res["delegue"] is False
+
+
+def test_rapport_delegue_juste_avant_risque_verdict(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, ".github/CODEOWNERS", _CODEOWNERS)
+    _ecrire(root, "contrats/local/communication/newsletter.md", "# newsletter\n")
+    res = impact.analyze(root, ["contrats/local/communication/newsletter.md"])
+    md = impact.rapport_markdown(res)
+    lignes = md.rstrip().splitlines()
+    # DELEGUE s'insère immédiatement AVANT les deux lignes finales contractuelles.
+    assert lignes[-3].strip() == "DELEGUE: oui"
+    assert lignes[-2].strip().startswith("RISQUE:")
+    assert lignes[-1].strip().startswith("VERDICT:")
