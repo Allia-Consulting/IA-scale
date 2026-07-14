@@ -74,7 +74,7 @@ import httpx
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from mcp.server.fastmcp import Context, FastMCP
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 GRAPH_SCOPE = "https://graph.microsoft.com/.default"  # scope unique (moindre privilège)
@@ -236,6 +236,51 @@ async def healthz(request: Request) -> JSONResponse:
     une sonde de l'hébergement (Container Apps) doit pouvoir l'appeler sans config M365.
     """
     return JSONResponse({"status": "ok"})
+
+
+# Coordonnées OAuth PUBLIQUES (métadonnées de découverte, RFC 9728 / RFC 8414) — ce ne sont PAS des
+# secrets : identifiants de tenant, de client (audience) et de scope figurent dans chaque requête de
+# jeton. Fixés ici car ce sont des invariants du déploiement (endpoint MCP + inscription d'app Entra).
+_OAUTH_RESOURCE = "https://ca-allia-mcp-graph.delightfulocean-1bf3f3c5.francecentral.azurecontainerapps.io/mcp"
+_OAUTH_TENANT_ISSUER = "https://login.microsoftonline.com/a8d48a4e-329b-4302-b83a-5b085cefa944/v2.0"
+_OAUTH_SCOPE = "api://0028a5ff-925a-4700-b703-2f2d0ce728fc/access_as_user"
+
+
+@mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
+async def oauth_protected_resource(request: Request) -> JSONResponse:
+    """Métadonnées de la RESSOURCE PROTÉGÉE (RFC 9728) — découverte OAuth du connecteur.
+
+    PUBLIC PAR CONCEPTION (RFC 9728 §3.1) : lecture seule, aucune donnée, aucune authentification.
+    Un client MCP (claude.ai) lit ce document AVANT d'avoir un jeton pour savoir QUEL serveur
+    d'autorisation solliciter et QUEL scope demander ; c'est la porte d'ENTRÉE de la découverte, pas
+    une surface de données. Ne touche pas Graph, n'acquiert aucun jeton.
+
+    NB : cette route ne relâche EN RIEN la porte d'identité — /mcp reste FAIL-CLOSED sur le Bearer
+    (voie 1, `_verifier_appelant`, T-0015). Elle publie seulement où et comment obtenir ce Bearer.
+    """
+    return JSONResponse(
+        {
+            "resource": _OAUTH_RESOURCE,
+            "authorization_servers": [_OAUTH_TENANT_ISSUER],
+            "scopes_supported": [_OAUTH_SCOPE],
+            "bearer_methods_supported": ["header"],
+        }
+    )
+
+
+@mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
+async def oauth_authorization_server(request: Request) -> RedirectResponse:
+    """Métadonnées du SERVEUR D'AUTORISATION (RFC 8414) — déléguées à Microsoft Entra.
+
+    CHOIX : redirection 302 (et non 404) vers l'`openid-configuration` du tenant Entra. Raison —
+    ce serveur est une RESSOURCE protégée, pas un serveur d'autorisation : l'autorité qui émet les
+    jetons est Microsoft. Le document d'autorité fait donc foi CHEZ Microsoft ; on y renvoie plutôt
+    que de recopier (une copie se périmerait — rotation de clés, endpoints). La redirection maximise
+    la compatibilité des clients qui sondent cette route sur la ressource avant de suivre le
+    `authorization_servers` de RFC 9728. PUBLIC, lecture seule, sans données, sans authentification ;
+    ne relâche pas la porte /mcp (toujours fail-closed sur le Bearer).
+    """
+    return RedirectResponse(f"{_OAUTH_TENANT_ISSUER}/.well-known/openid-configuration", status_code=302)
 
 
 def _verifier_appelant(ctx: Context) -> None:

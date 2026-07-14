@@ -9,6 +9,7 @@ Aucun appel réseau réel, aucun secret, aucune variable d'environnement requise
 garde-fous testés s'exécutent avant `_config_mission()` et avant l'ouverture d'un client httpx.
 """
 
+import asyncio
 import base64
 import hashlib
 import inspect
@@ -515,3 +516,53 @@ def test_workbook_instancier_gabarit_souche_vierge_absente_refuse(_sans_porte, _
     fn = _sous_jacente(server.workbook_instancier_gabarit)
     with pytest.raises(FileNotFoundError):
         fn(None, code_mission="MISSION-2")
+
+
+# --------------------------------------------------------------------------------------------
+# Découverte OAuth (RFC 9728 / RFC 8414) — routes PUBLIQUES de métadonnées.
+# La découverte est OUVERTE par conception ; la porte /mcp reste FAIL-CLOSED (T-0015).
+# Les handlers custom_route sont des coroutines qui n'utilisent pas la requête (métadonnées statiques).
+# --------------------------------------------------------------------------------------------
+
+def _run(coro):
+    return asyncio.run(coro)
+
+
+def test_oauth_protected_resource_public_sans_auth():
+    """(30) /.well-known/oauth-protected-resource répond 200 SANS aucune auth ni en-tête."""
+    rep = _run(server.oauth_protected_resource(FauxRequest({})))
+    assert rep.status_code == 200
+
+
+def test_oauth_protected_resource_json_rfc9728_exact():
+    """(31) Le document RFC 9728 porte EXACTEMENT les 4 clés attendues et leurs valeurs."""
+    rep = _run(server.oauth_protected_resource(FauxRequest({})))
+    corps = json.loads(rep.body)
+    assert set(corps.keys()) == {
+        "resource",
+        "authorization_servers",
+        "scopes_supported",
+        "bearer_methods_supported",
+    }
+    assert corps["resource"] == server._OAUTH_RESOURCE
+    assert corps["resource"].endswith("/mcp")
+    assert corps["authorization_servers"] == [server._OAUTH_TENANT_ISSUER]
+    assert corps["scopes_supported"] == [server._OAUTH_SCOPE]
+    assert corps["bearer_methods_supported"] == ["header"]
+
+
+def test_oauth_authorization_server_redirige_vers_entra():
+    """(32) /.well-known/oauth-authorization-server → 302 vers l'openid-configuration du tenant Entra."""
+    rep = _run(server.oauth_authorization_server(FauxRequest({})))
+    assert rep.status_code == 302
+    assert rep.headers["location"] == f"{server._OAUTH_TENANT_ISSUER}/.well-known/openid-configuration"
+
+
+def test_decouverte_ouverte_mais_mcp_reste_fail_closed():
+    """(33) La découverte OAuth est OUVERTE, mais elle ne relâche PAS la porte /mcp : sans Bearer
+    valide, _verifier_appelant refuse toujours (fail-closed, T-0015)."""
+    # Découverte : ouverte, aucune auth requise.
+    assert _run(server.oauth_protected_resource(FauxRequest({}))).status_code == 200
+    # /mcp : toujours fermé sans token (en-têtes vides).
+    with pytest.raises(PermissionError):
+        server._verifier_appelant(_ctx_avec_headers({}))
