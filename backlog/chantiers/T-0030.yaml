@@ -1,0 +1,29 @@
+---
+id: T-0030
+titre: "Sous-système de facturation — registre canonique des factures et allocation machine du NumFacture"
+capacite: "Capacités habilitantes / Gestion financière — Facturation & encaissement"
+phase: 1
+type_action: infrastructure
+cran: validé   # crée une source de vérité financière + une séquence légale : irréversible dans ses effets comptables, sortie de firme possible (factures)
+produit:
+  - "(liste SharePoint canon) registre 'Factures' — source de vérité du NumFacture, allouant une numérotation séquentielle globale cabinet F-AAAA-NNNN unique, continue et sans trou (exigence légale FR de chronologie ininterrompue)"
+  - "(agent) réconciliation bidirectionnelle classeur de saisie ↔ liste Factures : allocation atomique du numéro côté liste (contrôle de concurrence optimiste IF-MATCH/ETag, cf. helper ecrireListe S33), puis réécriture du numéro alloué dans le classeur Excel en face de l'étiquette locale de la ligne"
+  - "(agent) alimentation de T_Echeancier du gabarit mission à partir des factures ainsi numérotées"
+depend_de: []
+contrats_concernes:
+  - contrats/socle/modele-donnees.md   # T_Echeancier §5.2 ; le NumFacture n'est PLUS saisi par l'humain
+criteres_acceptation:
+  - "Aucun NumFacture n'est saisi par un être humain : il est alloué exclusivement par la machine depuis la liste Factures"
+  - "La séquence F-AAAA-NNNN est unique, continue et sans trou, y compris sous ingestions concurrentes de plusieurs missions (allocation atomique éprouvée sur le réel)"
+  - "La clé de réconciliation est (CodeMission, ÉtiquetteLocale) avant allocation, puis NumFacture une fois le numéro posé ; une re-ingestion ne réalloue jamais un numéro déjà attribué"
+  - "Fusion incrémentale : mise à jour montant/échéance/statut sur ligne existante, ajout sur ligne neuve, jamais de suppression silencieuse (anomalie signalée)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S34 (14/07/2026) en dérivation de la tuyauterie économique du cockpit.
+  Origine : la colonne NumFacture de T_Echeancier ne peut être saisie à la main sans casser
+  l'unicité de la clé de réconciliation ni la continuité légale de la numérotation. Le classeur
+  de saisie retire donc NumFacture de la zone équipe (remplacé par une étiquette locale libre) ;
+  la présente tâche construit le registre et l'agent qui allouent et réconcilient. Chantier
+  différé par arbitrage gardien hors du cap S34 (gabarit → MCP Workbook → consolidation →
+  cockpit v3), à mener en session dédiée.
