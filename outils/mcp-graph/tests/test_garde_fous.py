@@ -340,7 +340,13 @@ def test_resoudre_item_gabarit_code_valide_franchit_validation():
 
 
 @pytest.mark.parametrize(
-    "outil", ["workbook_ajouter_lignes", "workbook_maj_ligne", "workbook_archiver_gabarit"]
+    "outil",
+    [
+        "workbook_ajouter_lignes",
+        "workbook_maj_ligne",
+        "workbook_archiver_gabarit",
+        "workbook_instancier_gabarit",
+    ],
 )
 def test_primitives_ecriture_gabarit_ne_prennent_aucune_cible_libre(outil):
     """(21) Les primitives d'ÉCRITURE gabarit n'exposent AUCUN drive_id / item_id / folder_id : la
@@ -392,3 +398,120 @@ def test_workbook_maj_ligne_valeurs_vides_refuse(_sans_porte):
     fn = _sous_jacente(server.workbook_maj_ligne)
     with pytest.raises(ValueError):
         fn(None, code_mission="MISSION-2", table="Saisie", index=0, valeurs=[])
+
+
+# --------------------------------------------------------------------------------------------
+# workbook_instancier_gabarit — instanciation par COPIE de la souche vierge, cible figée fail-closed
+# --------------------------------------------------------------------------------------------
+
+class _FauxReponseCopie:
+    """Réponse httpx minimale : status_code, .json(), .headers, raise_for_status() inerte < 400."""
+
+    def __init__(self, status_code, json_data=None, headers=None):
+        self.status_code = status_code
+        self._json = json_data if json_data is not None else {}
+        self.headers = headers if headers is not None else {}
+
+    def json(self):
+        return self._json
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise AssertionError(
+                f"raise_for_status ne devrait pas être atteint sur {self.status_code} "
+                "(les cas 404/409 sont interceptés AVANT par un garde-fou explicite)."
+            )
+
+
+class _FauxClientCopie:
+    """Client httpx factice : GET source (souche vierge) puis POST /copy au statut configuré.
+
+    Capture le dernier POST (URL + corps JSON) pour prouver la cible FIGÉE (dossier gabarit résolu
+    côté serveur) et `@microsoft.graph.conflictBehavior=fail`. `statut_source` permet de simuler une
+    souche vierge absente (404).
+    """
+
+    dernier_post = None
+    dernier_get = None
+
+    def __init__(self, statut_copie=202, statut_source=200):
+        self._statut_copie = statut_copie
+        self._statut_source = statut_source
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get(self, url, headers=None):
+        _FauxClientCopie.dernier_get = {"url": url}
+        return _FauxReponseCopie(self._statut_source, {"id": "souche-vierge-item-id"})
+
+    def post(self, url, headers=None, json=None):
+        _FauxClientCopie.dernier_post = {"url": url, "json": json}
+        entetes = {"Location": "https://graph.microsoft.com/monitor/xyz"} if self._statut_copie == 202 else {}
+        return _FauxReponseCopie(self._statut_copie, {}, entetes)
+
+
+@pytest.fixture
+def _config_gabarit_factice(monkeypatch):
+    """Fournit une config GABARIT valide et neutralise l'acquisition de jeton pour exercer le corps
+    réseau (mocké) de l'instanciation — `_entetes()` acquerrait sinon un jeton Azure (indisponible
+    hors tenant). Aucun secret : en-tête factice."""
+    monkeypatch.setattr(
+        server,
+        "_config_gabarit",
+        lambda: {"gabarit_drive_id": "DRIVE-CA", "gabarit_folder_id": "FOLDER-06", "gabarit_old_folder_id": "FOLDER-00"},
+    )
+    monkeypatch.setattr(server, "_entetes", lambda: {"Authorization": "Bearer faketoken"})
+
+
+@pytest.mark.parametrize("mauvais", ["", "   ", "a/b", "a\\b", "a..b", "..", "code\x01"])
+def test_workbook_instancier_gabarit_code_invalide_refuse(_sans_porte, mauvais):
+    """(26) code_mission vide / « / » « \\ » « .. » / caractère de contrôle → ValueError, AVANT réseau
+    (l'assainissement partagé `_assainir_code_mission` précède _config_gabarit et httpx)."""
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+    with pytest.raises(ValueError):
+        fn(None, code_mission=mauvais)
+
+
+def test_workbook_instancier_gabarit_nominal_cible_figee(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27) Nominal : la copie vise la cible FIGÉE (dossier gabarit résolu côté serveur), le nom dérivé
+    est `gabarit-<code>.xlsx`, `conflictBehavior=fail` est posé, la source est la souche vierge canon
+    (résolue par chemin sous le dossier figé), et le 202+Location est remonté tel quel."""
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientCopie(statut_copie=202))
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    resultat = fn(None, code_mission="  MISSION-2  ")  # espaces → strip par l'assainissement
+
+    assert resultat["code_mission"] == "MISSION-2"
+    assert resultat["nom_gabarit"] == "gabarit-MISSION-2.xlsx"
+    assert resultat["accepted"] is True
+    assert resultat["emplacement"] == "https://graph.microsoft.com/monitor/xyz"
+    # Source = souche vierge canon, résolue par CHEMIN sous le dossier gabarit figé.
+    assert server.GABARIT_VIERGE_NOM in _FauxClientCopie.dernier_get["url"]
+    assert "FOLDER-06" in _FauxClientCopie.dernier_get["url"]
+    # Destination FIGÉE : même dossier gabarit + nom dérivé + jamais d'écrasement.
+    corps = _FauxClientCopie.dernier_post["json"]
+    assert corps["parentReference"]["id"] == "FOLDER-06"
+    assert corps["parentReference"]["driveId"] == "DRIVE-CA"
+    assert corps["name"] == "gabarit-MISSION-2.xlsx"
+    assert corps["@microsoft.graph.conflictBehavior"] == "fail"
+
+
+def test_workbook_instancier_gabarit_cible_existante_refuse(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(28) FAIL-CLOSED : la copie renvoie 409 (gabarit déjà existant) → FileExistsError, jamais
+    d'écrasement (conflictBehavior=fail)."""
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientCopie(statut_copie=409))
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+    with pytest.raises(FileExistsError):
+        fn(None, code_mission="MISSION-2")
+
+
+def test_workbook_instancier_gabarit_souche_vierge_absente_refuse(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(29) Souche vierge canon absente (GET source → 404) → FileNotFoundError (jamais de copie muette)."""
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientCopie(statut_source=404))
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+    with pytest.raises(FileNotFoundError):
+        fn(None, code_mission="MISSION-2")

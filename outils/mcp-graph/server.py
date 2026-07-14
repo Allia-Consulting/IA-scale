@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose TREIZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -18,8 +18,9 @@ Ce serveur expose TREIZE opérations à un agent, via le Model Context Protocol 
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission dans « 00 - Old » (copie horodatée) avant régénération.
+    - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par COPIE de la souche vierge canon — cible FIGÉE « 06 - Gabarit ERP », fail-closed (jamais d'écrasement).
 
-(Compte des opérations = 13 outils réellement décorés ; un `grep` du décorateur d'outil retourne 14,
+(Compte des opérations = 14 outils réellement décorés ; un `grep` du décorateur d'outil retourne 15,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
 
 Transport & santé :
@@ -199,6 +200,9 @@ ENV_MISSION_FOLDER_ID = "GRAPH_MISSION_FOLDER_ID"  # dossier racine « Missions 
 ENV_GABARIT_DRIVE_ID     = "GRAPH_GABARIT_DRIVE_ID"      # drive du site Contrats-admin hébergeant les gabarits
 ENV_GABARIT_FOLDER_ID    = "GRAPH_GABARIT_FOLDER_ID"     # dossier « 06 - Gabarit ERP » (cible figée d'écriture gabarit)
 ENV_GABARIT_OLD_FOLDER_ID= "GRAPH_GABARIT_OLD_FOLDER_ID" # dossier « 00 - Old » (archivage avant régénération)
+# Souche UNIQUE : le gabarit vierge canon à la racine de « 06 - Gabarit ERP » (modele-donnees §5.2).
+# Source FIGÉE de workbook_instancier_gabarit — jamais choisie par l'appelant.
+GABARIT_VIERGE_NOM       = "gabarit-pilotage-mission.xlsx"
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
@@ -452,6 +456,29 @@ def _config_gabarit() -> dict[str, str]:
     return valeurs
 
 
+def _assainir_code_mission(code_mission: str) -> str:
+    """Assainit `code_mission` (fail-closed) et retourne le code strippé.
+
+    Routine PARTAGÉE (décision S34) par `_resoudre_item_gabarit` et `workbook_instancier_gabarit` —
+    donc par toutes les primitives gabarit : MÊME vocabulaire d'assainissement que le nom de fichier de
+    `deposer_document_mission` (non vide, ni « / » « \\ » « .. », ni caractère de contrôle). La
+    validation précède TOUT appel réseau (fail-closed) : la cible gabarit reste figée sous
+    « 06 - Gabarit ERP », jamais un chemin libre.
+
+    Raises:
+        ValueError: code_mission vide ou contenant un motif interdit.
+    """
+    if not isinstance(code_mission, str) or not code_mission.strip():
+        raise ValueError("`code_mission` doit être une chaîne non vide.")
+    code = code_mission.strip()
+    if any(motif in code for motif in ("/", "\\", "..")) or any(ord(c) < 32 for c in code):
+        raise ValueError(
+            "`code_mission` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. », "
+            "ni caractère de contrôle (la cible gabarit est figée sous « 06 - Gabarit ERP »)."
+        )
+    return code
+
+
 def _resoudre_item_gabarit(client_http: httpx.Client, code_mission: str) -> str:
     """Résout l'item_id du gabarit d'une mission SOUS le domicile FIGÉ « 06 - Gabarit ERP ».
 
@@ -469,14 +496,7 @@ def _resoudre_item_gabarit(client_http: httpx.Client, code_mission: str) -> str:
         FileNotFoundError: aucun gabarit pour ce code_mission dans « 06 - Gabarit ERP » (404).
         ConfigManquante: GRAPH_GABARIT_* absentes.
     """
-    if not isinstance(code_mission, str) or not code_mission.strip():
-        raise ValueError("`code_mission` doit être une chaîne non vide.")
-    code = code_mission.strip()
-    if any(motif in code for motif in ("/", "\\", "..")) or any(ord(c) < 32 for c in code):
-        raise ValueError(
-            "`code_mission` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. », "
-            "ni caractère de contrôle (la cible gabarit est figée sous « 06 - Gabarit ERP »)."
-        )
+    code = _assainir_code_mission(code_mission)
     cfg = _config_gabarit()
     drive_id = cfg["gabarit_drive_id"]
     folder_id = cfg["gabarit_folder_id"]
@@ -1567,6 +1587,85 @@ def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]
     return {
         "code_mission": code_mission.strip(),
         "nom_archive": nom_archive,
+        "accepted": reponse.status_code == 202,
+        "emplacement": reponse.headers.get("Location"),
+    }
+
+
+@mcp.tool()
+@_journal_appel("workbook_instancier_gabarit")
+def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]:
+    """INSTANCIE le gabarit d'une mission par COPIE de la souche vierge canon (écriture BORNÉE, fail-closed).
+
+    POST /drives/{GABARIT_DRIVE_ID}/items/{item_vierge}/copy → « 06 - Gabarit ERP » (GRAPH_GABARIT_FOLDER_ID)
+
+    Écriture BORNÉE par construction : source = `gabarit-pilotage-mission.xlsx` (souche vierge unique,
+    GABARIT_VIERGE_NOM) à la racine de « 06 - Gabarit ERP » résolue côté serveur ; destination = le MÊME
+    dossier, nom `gabarit-<code_mission>.xlsx`. L'appelant ne fournit AUCUN drive_id / item_id /
+    folder_id — seulement `code_mission`, assaini par la MÊME routine (`_assainir_code_mission`) que les
+    autres primitives gabarit. Il est structurellement impossible d'instancier ailleurs.
+
+    CRÉATION PURE, FAIL-CLOSED : `@microsoft.graph.conflictBehavior=fail`. Si un `gabarit-<code>.xlsx`
+    existe déjà, Graph refuse la copie (409) et cette primitive lève FileExistsError — l'instanciation
+    ne détruit ni n'écrase JAMAIS un gabarit en place. Réversible par simple suppression de la copie.
+
+    NB : l'instanciation SYSTÉMATIQUE d'un gabarit manquant (décision gardien 14/07/2026 : plus jamais
+    un geste humain) est orchestrée par le SKILL consommateur `consolidation-pilotage`, PAS par un outil
+    composite — cette primitive reste BÊTE : elle instancie, rien d'autre.
+
+    Graph /copy est ASYNCHRONE : la réponse est un 202 Accepted + en-tête Location (URL de suivi) ;
+    cette primitive ne bloque PAS sur l'achèvement de la copie (le skill poll le Location).
+
+    Args:
+        code_mission: code de la mission (assaini côté serveur ; compose gabarit-<code>.xlsx).
+
+    Returns:
+        dict {"code_mission", "nom_gabarit", "accepted": bool, "emplacement": <Location|None>}.
+
+    Raises:
+        ValueError: code_mission invalide.
+        FileExistsError: un gabarit existe déjà pour ce code_mission (conflictBehavior=fail → 409).
+        FileNotFoundError: souche vierge canon introuvable dans « 06 - Gabarit ERP ».
+        ConfigManquante: GRAPH_GABARIT_* absentes.
+    """
+    _verifier_appelant(ctx)
+    code = _assainir_code_mission(code_mission)
+    cfg = _config_gabarit()
+    drive_id = cfg["gabarit_drive_id"]
+    folder_id = cfg["gabarit_folder_id"]
+    nom_gabarit = f"gabarit-{code}.xlsx"
+    with httpx.Client(timeout=30) as client_http:
+        # Source = souche vierge canon, résolue par CHEMIN sous le dossier gabarit figé (jamais libre).
+        url_source = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_id}:/{GABARIT_VIERGE_NOM}"
+        reponse_source = client_http.get(url_source, headers=_entetes())
+        if reponse_source.status_code == 404:
+            raise FileNotFoundError(
+                f"souche vierge canon introuvable dans « 06 - Gabarit ERP » "
+                f"(fichier attendu : {GABARIT_VIERGE_NOM}). Souche unique à poser au runbook gardien."
+            )
+        reponse_source.raise_for_status()
+        item_vierge = reponse_source.json()["id"]
+        # Copie vers le MÊME dossier, nom gabarit-<code>.xlsx, FAIL-CLOSED (jamais d'écrasement).
+        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_vierge}/copy"
+        reponse = client_http.post(
+            url,
+            headers={**_entetes(), "Content-Type": "application/json"},
+            json={
+                "parentReference": {"driveId": drive_id, "id": folder_id},
+                "name": nom_gabarit,
+                "@microsoft.graph.conflictBehavior": "fail",
+            },
+        )
+        # Collision : un gabarit de même nom existe déjà — NE PAS réessayer, NE PAS écraser.
+        if reponse.status_code == 409:
+            raise FileExistsError(
+                f"un gabarit existe déjà pour {code} dans « 06 - Gabarit ERP » ({nom_gabarit}) : "
+                "instanciation refusée (collision=fail). Aucun écrasement, aucune fusion."
+            )
+        reponse.raise_for_status()
+    return {
+        "code_mission": code,
+        "nom_gabarit": nom_gabarit,
         "accepted": reponse.status_code == 202,
         "emplacement": reponse.headers.get("Location"),
     }
