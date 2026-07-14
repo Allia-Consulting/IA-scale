@@ -142,11 +142,11 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
           <span className={styles.zoneNum}>1</span>
           <div>
             <p className={styles.zoneTitle}>Pipe commercial</p>
-            <p className={styles.zoneSub}>Le premier coup d&rsquo;œil</p>
+            <p className={styles.zoneSub}>Comptes actifs, propositions, pipe pondéré</p>
           </div>
         </div>
         {data ? renderCompteurs(data.pipeCommercial.compteurs) : chargement}
-        {actionInerte('Relancer une opportunité')}
+        {actionInerte('Nouvelle opportunité')}
       </div>
 
       {/* 2 — Recrutement (agrégats par étape uniquement — page tenant-wide, RGPD) */}
@@ -155,11 +155,11 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
           <span className={styles.zoneNum}>2</span>
           <div>
             <p className={styles.zoneTitle}>Recrutement</p>
-            <p className={styles.zoneSub}>Synthèses d&rsquo;entretien par étape</p>
+            <p className={styles.zoneSub}>Entretiens en cours par étape (agrégat)</p>
           </div>
         </div>
         {data ? renderCompteurs(data.recrutement.compteurs) : chargement}
-        {actionInerte('Valider les synthèses en attente')}
+        {actionInerte('Ajouter un candidat')}
       </div>
 
       {/* 3 & 4 — états réels */}

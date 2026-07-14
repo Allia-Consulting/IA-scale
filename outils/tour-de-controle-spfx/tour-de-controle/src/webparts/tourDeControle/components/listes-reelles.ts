@@ -7,11 +7,12 @@
 //   2. Échec de lecture → note « lecture indisponible » sobre. JAMAIS de repli
 //      silencieux sur des constantes de démonstration.
 //   3. Liste vide → vide assumé (0 / —), aucune invention.
-// Recrutement : COMPTEURS AGRÉGÉS PAR STATUT UNIQUEMENT — la page est tenant-wide,
-// aucun champ nominatif candidat n'est lu ni affiché (RGPD, rgpd-recrutement-candidats.md).
+// Recrutement : COMPTEURS AGRÉGÉS PAR ÉTAPE UNIQUEMENT — la page est tenant-wide,
+// aucun champ nominatif candidat n'est lu ni affiché (RGPD, rgpd-recrutement-candidats.md,
+// option A). La lecture ne sélectionne que la colonne `Etape` (cf. QUERY_RECRUTEMENT).
 
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
-import type { Zone, Compteur, DetailItem } from './types';
+import type { Zone, Compteur, DetailItem, Ecriture } from './types';
 import {
   COLONNE_STATUT_MISSION,
   compterMissionsActives,
@@ -20,6 +21,29 @@ import {
   moyenneDeltas,
   formaterDuree
 } from './kpi-organisation';
+import {
+  Ecrivain,
+  optionsEcriture,
+  creerOpportunite as creerOpportunitePure,
+  changerEtapeOpportunite as changerEtapeOpportunitePure,
+  COL_STATUT_COMPTE,
+  COL_ETAPE_CRM,
+  COL_MONTANT_CRM,
+  COL_NOM_OPPORTUNITE,
+  QUERY_RECRUTEMENT,
+  ETAPE_CANDIDAT_E1,
+  ETAPE_CANDIDAT_E2,
+  ETAPE_CANDIDAT_E3,
+  ETAPE_CANDIDAT_PROPOSITION,
+  compterComptesClients,
+  opportunitesEnProposition,
+  montantPropose,
+  montantOpportunite,
+  nomOpportunite,
+  pipePondere,
+  compterCandidatsEtape,
+  formaterEuros
+} from './pipe-recrutement';
 
 export interface CockpitData {
   /** T-0020-d — les 3 KPI d'organisation (mesure de valeur, dernier maillon Phase 2). */
@@ -60,6 +84,70 @@ async function lireListe(
   }
 }
 
+/**
+ * Écriture guidée d'un item de liste (création ou mise à jour), symétrique de
+ * `lireListe`. POST via SPHttpClient sous l'identité de l'utilisateur connecté —
+ * aucune élévation de droits, le digest est injecté automatiquement.
+ *   - CRÉATION : POST sur .../items ;
+ *   - MISE À JOUR : POST sur .../items(<id>) tunnellisé MERGE (cf. optionsEcriture).
+ * Les en-têtes (Accept odata.metadata=none, X-HTTP-Method/IF-MATCH) sont construits par
+ * `optionsEcriture` (pipe-recrutement.ts — source unique de vérité, unit-testée).
+ * Ne lève JAMAIS : 403 → `refuse` (fail-visible), tout autre échec → `indisponible`.
+ * Source Microsoft Learn (14/07/2026) : connect-to-sharepoint + working-with-lists-and-
+ * list-items-with-rest (SharePoint REST OData 4.0).
+ */
+async function ecrireListe(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  titre: string,
+  champs: Record<string, unknown>,
+  id?: number
+): Promise<Ecriture> {
+  const base = `${dataSiteUrl}/_api/web/lists/getByTitle('${encodeURIComponent(titre)}')/items`;
+  const url = id === undefined ? base : `${base}(${id})`;
+  const { headers, body } = optionsEcriture(id === undefined ? 'create' : 'update', champs);
+  try {
+    const res: SPHttpClientResponse = await sp.post(url, SPHttpClient.configurations.v1, { headers, body });
+    if (res.status === 403) {
+      return { etat: 'refuse' };
+    }
+    if (!res.ok) {
+      return { etat: 'indisponible' };
+    }
+    return { etat: 'ok' };
+  } catch {
+    return { etat: 'indisponible' };
+  }
+}
+
+/** Lie le primitif d'écriture pur (Ecrivain) au contexte `sp` + `dataSiteUrl`. */
+function ecrivainPour(sp: SPHttpClient, dataSiteUrl: string): Ecrivain {
+  return (titre, champs, id) => ecrireListe(sp, dataSiteUrl, titre, champs, id);
+}
+
+/**
+ * Gestes d'écriture guidée du bandeau pipe — PRÊTS À BRANCHER (le câblage UI reste
+ * hors de cette PR : l'ossature de rendu n'expose pas encore de formulaire). La logique
+ * pure (payloads + délégation) est dans pipe-recrutement.ts et unit-testée ; ces
+ * enveloppes ne font que fournir l'Ecrivain lié au contexte SPFx.
+ */
+export function creerOpportunite(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  params: { readonly nom: string; readonly montant: number; readonly etape: string }
+): Promise<Ecriture> {
+  return creerOpportunitePure(ecrivainPour(sp, dataSiteUrl), params);
+}
+
+export function changerEtapeOpportunite(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  id: number,
+  etape: string
+): Promise<Ecriture> {
+  return changerEtapeOpportunitePure(ecrivainPour(sp, dataSiteUrl), id, etape);
+}
+
 /** Compteur « nombre d'éléments » d'une liste, fail-visible, vide assumé. */
 function compteurCompte(
   id: string,
@@ -83,57 +171,109 @@ function compteurCompte(
   };
 }
 
-/** Zone 1 — Pipe commercial : Comptes + Propositions (réellement vides aujourd'hui). */
-async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
-  const [comptes, propositions] = await Promise.all([
-    lireListe(sp, dataSiteUrl, 'Comptes', '$select=Id&$top=1000'),
-    lireListe(sp, dataSiteUrl, 'Propositions', '$select=Id&$top=1000')
-  ]);
-  return {
-    compteurs: [
-      compteurCompte('pipe-comptes', 'Comptes', comptes, 'compte client'),
-      compteurCompte('pipe-prop', 'Propositions', propositions, 'proposition')
-    ]
-  };
+/** Compteur « — » sobre pour une source non lisible (non câblé / indisponible). */
+function compteurAbsent(id: string, libelle: string, etat: 'non_cable' | 'indisponible'): Compteur {
+  return { id, libelle, valeur: '—', items: [], note: etat === 'non_cable' ? NOTE_NON_CABLE : NOTE_INDISPONIBLE };
 }
 
 /**
- * Zone 2 — Recrutement : Candidats-Synthèses AGRÉGÉES PAR STATUT (EtapeSynthese).
- * On ne lit QUE la colonne de statut — aucun Title, nom, ni interviewer (RGPD).
+ * Bandeau « Pipe commercial » (tour-de-controle.md v2.0 §3 bandeau 2).
+ * Source RÉELLE : Liste « CRM » (Étape, Montant) + Liste « Comptes » (Statut).
+ * La bibliothèque « Propositions » n'est PAS utilisée (vide). Quatre compteurs :
+ * Comptes actifs · Propositions en cours · Montant proposé · Pipe pondéré (60/15 figé).
+ * Chaque source échoue indépendamment (fail-visible ; jamais de constante de démo).
+ */
+async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
+  const [comptes, crm] = await Promise.all([
+    lireListe(sp, dataSiteUrl, 'Comptes', `$select=${COL_STATUT_COMPTE},Id&$top=1000`),
+    lireListe(sp, dataSiteUrl, 'CRM', `$select=${COL_NOM_OPPORTUNITE},${COL_ETAPE_CRM},${COL_MONTANT_CRM}&$top=2000`)
+  ]);
+
+  // Comptes actifs (Statut = Client).
+  const cComptes: Compteur = comptes.etat !== 'ok'
+    ? compteurAbsent('pipe-comptes', 'Comptes actifs', comptes.etat)
+    : (() => {
+        const n = compterComptesClients(comptes.valeurs);
+        return {
+          id: 'pipe-comptes',
+          libelle: 'Comptes actifs',
+          valeur: String(n),
+          items: [],
+          note: n === 0 ? 'Aucun compte client pour l’instant.' : undefined
+        };
+      })();
+
+  // Les trois compteurs CRM partagent une seule lecture.
+  let cProp: Compteur, cMontant: Compteur, cPondere: Compteur;
+  if (crm.etat !== 'ok') {
+    cProp = compteurAbsent('pipe-prop', 'Propositions en cours', crm.etat);
+    cMontant = compteurAbsent('pipe-montant', 'Montant proposé', crm.etat);
+    cPondere = compteurAbsent('pipe-pondere', 'Pipe pondéré', crm.etat);
+  } else {
+    const props = opportunitesEnProposition(crm.valeurs);
+    // Détail creusable : opportunités en Proposition — données commerciales, pas personnelles.
+    const items: ReadonlyArray<DetailItem> = props.map(o => ({
+      libelle: nomOpportunite(o),
+      statut: formaterEuros(montantOpportunite(o)),
+      signal: 'neutral' as const
+    }));
+    cProp = {
+      id: 'pipe-prop',
+      libelle: 'Propositions en cours',
+      valeur: String(props.length),
+      items,
+      note: props.length === 0 ? 'Aucune proposition en cours.' : undefined
+    };
+    cMontant = {
+      id: 'pipe-montant',
+      libelle: 'Montant proposé',
+      valeur: formaterEuros(montantPropose(crm.valeurs)),
+      items: []
+    };
+    cPondere = {
+      id: 'pipe-pondere',
+      libelle: 'Pipe pondéré',
+      valeur: formaterEuros(pipePondere(crm.valeurs)),
+      items: []
+    };
+  }
+
+  return { compteurs: [cComptes, cProp, cMontant, cPondere] };
+}
+
+/**
+ * Bandeau « Recrutement » (tour-de-controle.md v2.0 §3 bandeau 3, option A RGPD).
+ * Source RÉELLE : Liste « Candidats », colonne `Etape` UNIQUEMENT (QUERY_RECRUTEMENT) —
+ * PAS « Candidats-Synthèses » (vide). RÈGLE INVIOLABLE : aucun champ nominatif lu ni
+ * affiché ; aucune écriture dans ce bandeau (action candidat renvoyée à T-0013-b).
+ * Quatre compteurs, purs agrégats : Entretien E1 · E2 · E3 · Décisions en cours.
  */
 async function chargerRecrutement(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
-  const lecture = await lireListe(
-    sp,
-    dataSiteUrl,
-    'Candidats-Synthèses',
-    '$select=EtapeSynthese&$top=2000'
-  );
-  if (lecture.etat === 'non_cable') {
-    return { compteurs: [{ id: 'rec-synth', libelle: 'Synthèses d’entretien', valeur: '—', items: [], note: NOTE_NON_CABLE }] };
+  const lecture = await lireListe(sp, dataSiteUrl, 'Candidats', QUERY_RECRUTEMENT);
+
+  const etapes: ReadonlyArray<{ readonly id: string; readonly libelle: string; readonly etape: string }> = [
+    { id: 'rec-e1', libelle: 'Entretien E1', etape: ETAPE_CANDIDAT_E1 },
+    { id: 'rec-e2', libelle: 'Entretien E2', etape: ETAPE_CANDIDAT_E2 },
+    { id: 'rec-e3', libelle: 'Entretien E3', etape: ETAPE_CANDIDAT_E3 },
+    { id: 'rec-dec', libelle: 'Décisions en cours', etape: ETAPE_CANDIDAT_PROPOSITION }
+  ];
+
+  if (lecture.etat !== 'ok') {
+    return { compteurs: etapes.map(e => compteurAbsent(e.id, e.libelle, lecture.etat as 'non_cable' | 'indisponible')) };
   }
-  if (lecture.etat === 'indisponible') {
-    return { compteurs: [{ id: 'rec-synth', libelle: 'Synthèses d’entretien', valeur: '—', items: [], note: NOTE_INDISPONIBLE }] };
-  }
-  // Agrégation par statut — les libellés d'étape ne sont pas des données personnelles.
-  const parEtape = new Map<string, number>();
-  for (const item of lecture.valeurs) {
-    const etape = typeof item.EtapeSynthese === 'string' && item.EtapeSynthese ? item.EtapeSynthese : '(sans étape)';
-    parEtape.set(etape, (parEtape.get(etape) ?? 0) + 1);
-  }
-  const total = lecture.valeurs.length;
-  const items: ReadonlyArray<DetailItem> = Array.from(parEtape.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([etape, n]) => ({ libelle: etape, statut: String(n), signal: 'neutral' as const }));
+
+  // Agrégat pur — un NOMBRE par étape, aucun item nominatif (jamais de liste de candidats).
   return {
-    compteurs: [
-      {
-        id: 'rec-synth',
-        libelle: 'Synthèses d’entretien',
-        valeur: String(total),
-        items,
-        note: total === 0 ? 'Aucune synthèse pour l’instant.' : undefined
-      }
-    ]
+    compteurs: etapes.map(e => {
+      const n = compterCandidatsEtape(lecture.valeurs, e.etape);
+      return {
+        id: e.id,
+        libelle: e.libelle,
+        valeur: String(n),
+        items: [],
+        note: n === 0 ? 'Aucun pour l’instant.' : undefined
+      };
+    })
   };
 }
 
