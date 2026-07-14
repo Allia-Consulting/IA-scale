@@ -1,0 +1,30 @@
+---
+id: T-0034
+titre: "Domaine custom mcp.allia-consulting.com et connecteur claude.ai durable"
+capacite: "Socle d'exploitation & gouvernance / couture M365 — accès OAuth du connecteur MCP"
+phase: 1
+type_action: infrastructure
+cran: valide   # configuration domaine/certificat/Entra + audience Easy Auth : paramétrage auth/tenant (proscrit à l'agent) → runbook gardien, porte humaine
+produit:
+  - "(tenant) domaine custom sur la Container App ca-allia-mcp-graph — customDomainVerificationId 3C2B20DFC50DF62FC2ED49E4760EFFCE2493124FB69926768D2360C22E4760CD — avec certificat managé"
+  - "(Entra) identifierUri https://mcp.allia-consulting.com/mcp posé sur l'app resource 0028a5ff-925a-4700-b703-2f2d0ce728fc (l'identifierUri https est refusé sur azurecontainerapps.io — domaine non vérifiable — d'où le domaine custom)"
+  - "(découverte) PRM — routes /.well-known de server.py (livrées PR #216) et connecteur claude.ai REPOINTÉS vers https://mcp.allia-consulting.com/mcp ; audience Easy Auth élargie en conséquence"
+  - "(résultat) connecteur claude.ai qui se connecte DURABLEMENT via le flux OAuth standard, sans dépendre du jeton délégué Azure CLI (1 h)"
+depend_de: []   # s'appuie sur la découverte OAuth déjà livrée (PR #216, image 0.12.1) ; pas de dépendance à un autre chantier de backlog
+contrats_concernes: []
+criteres_acceptation:
+  - "Le connecteur claude.ai se connecte au serveur MCP par flux OAuth standard (plus seulement par jeton délégué Azure CLI éphémère)"
+  - "L'identifierUri https://mcp.allia-consulting.com/mcp résout vers l'app resource du tenant (fin de l'erreur Entra 9010010)"
+  - "Les routes /.well-known (PRM RFC 9728) servent mcp.allia-consulting.com/mcp ; /mcp reste FAIL-CLOSED sur le Bearer (voie 1, T-0015) — la découverte n'ouvre rien"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S35 (14/07/2026). Cause établie en session : erreur Entra 9010010 — le paramètre
+  « resource » (l'URL du serveur MCP, exigé par la spec MCP) ne résout vers AUCUNE app du tenant, et
+  l'identifierUri https est refusé sur le domaine azurecontainerapps.io (non vérifiable). Remède : un
+  domaine custom vérifiable (mcp.allia-consulting.com) sur la Container App, certificat managé, et
+  l'identifierUri https porté par ce domaine. Acquis à ce jour : la découverte OAuth RFC 9728 est
+  LIVRÉE, déployée (image 0.12.1) et vérifiée de l'extérieur (PR #216) ; la pré-autorisation Azure CLI
+  est en place — la voie « jeton délégué » (validité 1 h) est opérationnelle en attendant le domaine
+  custom, et a servi à valider la chaîne d'exécution en S35. Les gestes de configuration (domaine,
+  certificat, Entra, Easy Auth) sont PROSCRITS à l'agent (paramétrage auth/tenant) : runbook gardien.
