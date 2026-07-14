@@ -19,7 +19,7 @@ criteres_acceptation:
   - "Le ciblage utilise le drive du site Contrats/admin (/drives/{gabarit_drive_id}), pas /sites/{site}/drive"
   - "Éprouvé sur le tenant après redéploiement de l'image (runbook gardien Azure) — soldé seulement à ce moment"
 rayon_impact: local
-statut: à_faire
+statut: en_cours  # 14/07/2026 : code mergé (PR #213, main b5ddb2a4) + déployé — image 0.11.0 (digest sha256:dc17aea3), Container App ca-allia-mcp-graph rév --0000017 Running/Succeeded, variables GRAPH_GABARIT_DRIVE_ID/_FOLDER_ID/_OLD_FOLDER_ID posées. Solde conditionné à la première exécution réelle d'une primitive par l'usage (skill de consolidation lisant/écrivant un vrai gabarit sur le tenant) — pas d'épreuve fabriquée.
 note: >
   Nommé en session S34 (14/07/2026). Ce chantier existait dans l'ordre de bataille S34
   (point 2) mais n'était tracé dans AUCUNE fiche canon avant celle-ci — il ne vivait que
