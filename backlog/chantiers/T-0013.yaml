@@ -69,7 +69,7 @@ sous_taches:
       décision gardien) — nouveau compteur « Suivi par étape » dans la zone Recrutement,
       contre données de démonstration ; pas de web part autonome. Construction du code =
       cran auto en branche ; mise en service (nouvelle carte) = cran validé, porte du
-      gardien (tour-de-controle.md §5). Part droits/config M365 = runbook humain, hors code.
+      gardien (tour-de-controle.md §6). Part droits/config M365 = runbook humain, hors code.
 
   - id: T-0013-c
     titre: "Écriture des synthèses d'entretien en Zone-de-proposition (checklist en dur)"
