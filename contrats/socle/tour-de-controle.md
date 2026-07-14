@@ -1,8 +1,9 @@
 # Tour de contrôle — point d'entrée unique du SI — Allia Consulting
 
-> **Version** : 2.0 — *promu*. **Statut** : contrat socle — fait foi.
+> **Version** : 2.1 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/tour-de-controle.md`. **Autorité de promotion** : gardien du temple.
 > **Changelog** :
+> v2.1 — promu via boucle de promotion, 14 juillet 2026 (lecture du réel, session S34 ; aligné sur `modele-donnees.md` v1.18) : **rectification du modèle économique**. Il n'y a **pas de classeur consolidé** — le cockpit lit les **gabarits de pilotage actifs** (dérivés ERP par mission, régénérés par agent depuis la couche saisie) et le **référentiel de coûts** à audience restreinte, en direct. §4 refondu. Les bandeaux économiques (staffing, rentabilité, factures à émettre) passent en **lecture seule** : l'édition économique humaine (affectations, validation d'imputations, statut « émise ») se fait dans le **classeur de saisie** de la mission (`modele-donnees.md` §5.6), **hors cockpit**. Le régime « voir → creuser → agir » demeure, mais « agir » ne porte plus que sur les **listes** (CRM, recrutement) ; l'économique est en lecture. §1, §3 (bandeaux 1/4/5), §5 alignés.
 > v2.0 — promu via boucle de promotion, 14 juillet 2026 : refonte par arbitrage gardien (conception fonctionnelle des 13–14 juillet, session S33). Le cockpit passe de « consommateur en lecture seule » à **point d'entrée unique du SI** : voir, creuser, agir — éditions humaines guidées et cascades déterministes confirmées. Nouvelle hiérarchie figée en six bandeaux (staffing, pipe commercial, recrutement, rentabilité, factures à émettre). Introduction du modèle économique distribué (fichiers de pilotage par mission consolidés par agent). Le principe v1.0 « jamais un double éditable » est abrogé pour les gestes humains ; il demeure pour les agents (Zone-de-proposition, crans). La maquette v1 reste historique et non normative.
 > v1.0 — promu via boucle de promotion, 19 juin 2026 : création. Fige le parti-pris d'expérience utilisateur du cockpit (« Tour de contrôle »), l'orientation technique SPFx, et le régime « socle animé » (consommé par toute la firme, animé par un animateur désigné, promu par le gardien — sur le modèle du design system, doctrine §5). Répond au chantier nommé en doctrine §10 (« le cockpit du collaborateur reste à concevoir »). Chantier de construction : backlog/chantiers/T-0014.yaml. Maquette de référence : contrats/socle/maquettes/tour-de-controle-cockpit-v1.html (non normative).
 > **Adossé à** : doctrine/doctrine.md (§3 rôles, §5 socle vs local, §6 crans), contrats/socle/organisation.md, contrats/socle/design-system.md, contrats/socle/modele-donnees.md, contrats/socle/table-des-crans.yaml.
@@ -18,14 +19,16 @@ dans les listes brutes. Elle est la page d'accueil du site AlliaConsuling.
 **L'utilisateur ne navigue pas dans des listes — il voit, il creuse, il agit depuis une
 seule surface.**
 
-- **Voir** : le cockpit lit les listes M365 et le classeur consolidé de pilotage (pull).
+- **Voir** : le cockpit lit les listes M365, les **gabarits de pilotage actifs** et le **référentiel de coûts** (pull) — il n'y a pas de classeur consolidé.
 - **Creuser** : un compteur ouvre son détail dans le cockpit ; l'exploration ne déclenche
   jamais une écriture.
 - **Agir** : deux régimes distincts, jamais confondus.
-  1. **Édition humaine guidée** : l'utilisateur écrit dans les listes sources depuis le
-     cockpit, sous sa propre identité Entra, avec ses droits et le journal de versions
-     SharePoint. Le cockpit remplace la grille brute par un geste contraint ; il n'élève
-     aucun droit.
+  1. **Édition humaine guidée (listes seulement)** : l'utilisateur écrit dans les **listes**
+     sources (CRM, recrutement) depuis le cockpit, sous sa propre identité Entra, avec ses
+     droits et le journal de versions SharePoint. Le cockpit remplace la grille brute par un
+     geste contraint ; il n'élève aucun droit. **L'économique (jours, imputations, échéancier)
+     ne s'édite PAS dans le cockpit** : il vit dans le classeur de saisie (`modele-donnees.md`
+     §5.6) ; les bandeaux économiques du cockpit sont en lecture seule.
   2. **Cascade déterministe** : un geste humain peut déclencher une écriture multiple
      portée par du code promu (exemples figés en §3). Toute cascade **s'annonce avant
      d'exécuter** (liste exhaustive des écritures) et **n'exécute que sur confirmation
@@ -51,7 +54,8 @@ le rayon d'impact est la firme entière.
 - **Hiérarchie des bandeaux (ordre figé, priorité décroissante)** :
   1. **Staffing** — % de staffing mensuel des salariés (hors sous-traitance), douze mois,
      sélecteur d'année, pourcentage lisible dans la barre, effectif actif au sommet de
-     chaque barre, distinction réalisé / prévisionnel. Geste : gérer les affectations.
+     chaque barre, distinction réalisé / prévisionnel. **Lecture seule** : les affectations
+     s'éditent dans le classeur de saisie (`modele-donnees.md` §5.6), pas dans le cockpit.
   2. **Pipe commercial** — comptes actifs (Comptes, Statut = Client) ; propositions en
      cours (CRM, Étape = Proposition) ; montant proposé (somme des montants en étape
      Proposition) ; **pipe pondéré** (pondérations figées : Proposition 60 %,
@@ -63,35 +67,40 @@ le rayon d'impact est la firme entière.
      changement d'étape en ligne ; passage en Acceptée → cascade « fiche
      Ressources-Profil + affectation initiale », sur confirmation.
   4. **Rentabilité et résultats** — tableau douze mois × (Budget | Réalisé) + colonne
-     Total ; lignes CA total et EBITDA ; source exclusive : classeur consolidé (§4).
+     Total ; lignes CA total et EBITDA ; source : **gabarits actifs + référentiel de coûts**, lus à la volée (§4).
      L'absence de donnée s'affiche « · », jamais zéro inventé.
-  5. **Factures à émettre** — échéancier consolidé filtré au statut « à émettre » ;
-     chaque ligne pointe vers le PDF de la facture dans le dépôt Teams. Geste unique :
-     « Émise » (écrit le statut dans l'échéancier, la ligne sort de la vue). Aucune
-     création de facture depuis le cockpit : les factures naissent de l'échéancier.
+  5. **Factures à émettre** — échéanciers des **gabarits actifs** filtrés au statut
+     « à émettre » ; chaque ligne pointe vers le PDF de la facture dans le dépôt Teams.
+     **Lecture seule** : le statut « émise » s'écrit dans le classeur de saisie
+     (`modele-donnees.md` §5.6), hors cockpit, puis l'agent le re-dérive. Aucune
+     création de facture depuis le cockpit.
 - **Honnêteté des données** : jamais de chiffre inventé ; le cockpit affiche la
-  fraîcheur de la consolidation et signale tout fichier mission en anomalie
-  (« consolidé le J à H — 1 fichier en anomalie : M-XXX »).
+  fraîcheur de sa dernière lecture des gabarits et signale tout gabarit en anomalie
+  (« lu le J à H — 1 gabarit en anomalie : M-XXX »).
 - **Sobriété** : style sobre du design system, pas d'ornement d'état.
 
 ## 4. Modèle économique distribué
 
-- **Un gabarit promu** `gabarit-pilotage-mission.xlsx` (tables nommées : T_Affectations,
-  T_Imputations, T_Echeancier) est instancié pour chaque mission dans l'espace de la
-  mission, sous la responsabilité du responsable de mission.
+- **Trois couches** (`modele-donnees.md` §5) : une **saisie** humaine par mission (source),
+  un **gabarit ERP par mission** `gabarit-<CodeMission>.xlsx` (dérivé, régénéré par agent
+  depuis la saisie ; tables nommées T_Affectations, T_Imputations, T_Echeancier), et un
+  **référentiel de coûts** à audience restreinte. **Il n'y a pas de classeur consolidé.**
 - **Les coûts ne descendent jamais dans les fichiers mission.** T_Ressources (coûts
-  jour) et T_Structure (coûts de fonctionnement) vivent uniquement dans le **classeur
-  consolidé central, à audience restreinte**.
-- **La consolidation est un dérivé régénérable, produit par agent** : énumération des
-  missions actives, lecture des tables nommées de chaque fichier, reconstruction du
-  consolidé. Un fichier au schéma cassé est **signalé, jamais silencieusement ignoré**.
-- **Le cockpit ne lit que le consolidé** — jamais les fichiers mission en direct.
+  jour) et T_Structure (coûts de fonctionnement) vivent uniquement dans le **référentiel
+  de coûts, à audience restreinte**.
+- **Les gabarits sont des dérivés régénérables, produits par agent** depuis la couche
+  saisie (boucle lun-ven 5h/13h, `modele-donnees.md` §5.6). Une saisie ou un gabarit au
+  schéma cassé est **signalé, jamais silencieusement ignoré**.
+- **Le cockpit lit les gabarits actifs et le référentiel de coûts en direct** — il n'y a
+  pas de consolidé, et le cockpit ne réécrit pas les gabarits (dérivés agent).
 - **Une seule vérité par champ** : Ressources-Profil porte identité, grade,
-  disponibilité ; le consolidé porte coûts et dates contractuelles. Aucun champ ne vit
-  à deux endroits.
-- La validation mensuelle des imputations est un geste du responsable de mission **dans
-  le cockpit** ; le mail de rappel de fin de mois est une capacité d'agent à venir,
-  contractualisée séparément (cran défini à ce moment-là).
+  disponibilité ; le référentiel de coûts porte coûts et dates contractuelles. Aucun champ
+  ne vit à deux endroits.
+- **L'édition économique humaine se fait dans la saisie, hors cockpit.** La saisie et la
+  validation mensuelle des imputations sont des gestes du responsable de mission **dans le
+  classeur de saisie** (`modele-donnees.md` §5.6), sous son identité ; le cockpit est en
+  lecture seule sur l'économique. Le mail de rappel de fin de mois est une capacité d'agent
+  à venir, contractualisée séparément (cran défini à ce moment-là).
 - Le schéma détaillé du gabarit et les conventions de dépôt relèvent de
   `contrats/socle/modele-donnees.md` (PR distincte).
 
@@ -100,10 +109,11 @@ le rayon d'impact est la firme entière.
 - **Modèle retenu inchangé** : web part SharePoint Framework (React/Fluent UI) hébergée
   sur la page d'accueil du site AlliaConsuling — SSO automatique, lecture native des
   listes, pas de coût d'exploitation supplémentaire.
-- **Écritures** : la web part écrit dans les listes sous l'identité de l'utilisateur
-  connecté (REST SharePoint / Graph délégué) ; le statut d'échéancier s'écrit dans le
-  classeur consolidé via l'API Graph Excel (tables nommées). Aucune élévation de droits,
-  aucun compte de service.
+- **Écritures** : la web part écrit dans les **listes** (CRM, recrutement) sous l'identité
+  de l'utilisateur connecté (REST SharePoint / Graph délégué). Le cockpit **n'écrit pas
+  l'économique** (jours, imputations, statut d'échéancier) : cette édition a lieu dans le
+  classeur de saisie de la mission (`modele-donnees.md` §5.6), hors cockpit. Aucune
+  élévation de droits, aucun compte de service.
 - **Conséquences assumées inchangées** : chaîne de build dédiée (Node, TypeScript,
   toolchain SPFx) ; déploiement du `.sppkg` via l'App Catalog du tenant = geste de
   configuration tenant, **runbook humain** (gardien), jamais un agent. Le code de la web

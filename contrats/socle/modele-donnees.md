@@ -1,9 +1,9 @@
 # Modèle de données — Allia Consulting
 
-> **Version** : 1.17 — *promu*. **Statut** : contrat socle — fait foi.
+> **Version** : 1.18 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/modele-donnees.md`. **Autorité de promotion** : gardien du temple.
 > **Adossé à** : `doctrine/doctrine.md` (§2 et §8), `contrats/socle/organisation.md`.
-> **Changelog** : v1.17 — promu via boucle de promotion, 14 juillet 2026 (conception S33, adossé à `tour-de-controle.md` v2.0) : **modèle économique distribué** (§5). Introduction d’un type d’objet nouveau au modèle — le **classeur Excel à tables nommées** — distinct des listes SharePoint : un **gabarit de pilotage par mission** (jours et CA, jamais les coûts) instancié dans l’espace de chaque mission, et un **classeur consolidé central à audience restreinte** (coûts ressources et structure) régénéré par agent. Couture Graph par **Workbook/Tables API** (et non Lists API). Corrige aussi une référence de section périmée dans `T-0013.yaml` (§5→§6 suite à `tour-de-controle.md` v2.0).
+> **Changelog** : v1.18 — promu via boucle de promotion, 14 juillet 2026 (lecture du réel, session S34 ; adossé à `tour-de-controle.md` v2.1) : **rectification des domiciles réels du modèle économique (§5)**. Il n'y a **pas de classeur consolidé unique** — les mentions antérieures d'un `pilotage-consolide.xlsx` sont caduques. Le modèle réel a **trois couches** : (i) **saisie** humaine (source) dans des classeurs `saisie-…xlsx` sur le site **Management et Gestion** ; (ii) **gabarit ERP par mission** `gabarit-<CodeMission>.xlsx` (dérivé régénéré par agent) sur le site **Contrats et administratif**, dossier `06 - Gabarit ERP` (+ `00 - Old`, 1 mission = 1 gabarit actif) ; (iii) **référentiel de coûts** à audience restreinte (T_Ressources, T_Structure). La tour de contrôle lit les **gabarits actifs + le référentiel en direct**, sans artefact consolidé. §5.1 réécrit, §5.3 « consolidé » → **référentiel de coûts**, §5.4 « calcul à la volée », **§5.6 ajoutée** (couche saisie + boucle agent lun-ven 5h/13h Paris, détection par `lastModifiedDateTime`). L'édition économique humaine se fait dans la saisie, **hors cockpit** (lecture seule côté cockpit). Coordonnées tenant en **variables d'environnement** posées par runbook gardien — jamais au canon. v1.17 — promu via boucle de promotion, 14 juillet 2026 (conception S33, adossé à `tour-de-controle.md` v2.0) : **modèle économique distribué** (§5). Introduction d’un type d’objet nouveau au modèle — le **classeur Excel à tables nommées** — distinct des listes SharePoint : un **gabarit de pilotage par mission** (jours et CA, jamais les coûts) instancié dans l’espace de chaque mission, et un **classeur consolidé central à audience restreinte** (coûts ressources et structure) régénéré par agent. Couture Graph par **Workbook/Tables API** (et non Lists API). Corrige aussi une référence de section périmée dans `T-0013.yaml` (§5→§6 suite à `tour-de-controle.md` v2.0).
 > **Changelog** : v1.16 — promu via boucle de promotion, 5 juillet 2026 (chantier `T-0026`) : **brique CRM — pipeline commercial** (§2, §2 bis, §2 ter, §3). Ajout de l'entité **Opportunité**, domicile **Liste « CRM »** (à créer, runbook `T-0026`) : étapes **Qualification / Proposition / Gagnée / Perdue**, montant, échéance, responsable ; lien **opportunité → mission** porté par `CodeMission` — couture par identifiant stable, renseigné à la bascule « Gagnée », où se branche la tranche cadrage-mission / kick-off. Schéma de colonnes posé sur la Liste « Comptes » existante (id compte, nom, secteur, statut Prospect / Client / Inactif) ; §2 ter étendu (Comptes, CRM) ; §3 — une opportunité **détectée par un agent** est un dérivé : elle naît en Zone-de-proposition et rejoint la Liste « CRM » à validation (promotion tracée) ; la saisie humaine directe reste une source. **Aucune entité Contact ni donnée personnelle** (décision gardien du 05/07/2026 : ce volet est hors périmètre). Écriture agent **inchangée** : Zone-de-proposition uniquement (garde-fou structurel §3/§4). Câblage tenant (colonnes Comptes, création de la Liste « CRM ») = runbook `T-0026`. Aucun domicile existant modifié. v1.15 — promu via boucle de promotion, 19 juin 2026 : §2 bis + §3 — ajout de la colonne **Contenu** (texte multiligne) à la liste « Zone-de-proposition », destinée à porter le corps d'un fait dérivé riche (ex. synthèse d'entretien au format auto-portant) que Title / Origine (mono-ligne) ne peuvent pas porter ; prérequis de l'écriture réelle des synthèses (preuve T-0013-c). Aucun autre domicile ni règle modifié. v1.14 — promu via boucle de promotion, 18 juin 2026 : bascule des **valeurs d'énumération** du schéma recrutement sur le substrat M365 — `Etape`/`EtapeSynthese` → **E1 / E2 / E3** (+ **Proposition / Acceptée / Refusée** pour `Etape`) ; `Source` réordonnée et recasée (**Cooptation / Chasseur / Candidature spontanée / LinkedIn**) ; `Grade` « **Consultant Senior** » (casse). §2 bis et §2 ter alignés. Aucun changement de domicile ni de règle. v1.13 — promu via boucle de promotion, 18 juin 2026 : **CORRECTION** du schéma des deux listes de recrutement (v1.12 promu), projetant la règle de rétention promue (`rgpd-recrutement-candidats.md` §5, v1.4). §2 bis + §2 ter, liste **Candidats** : **Poste visé → Grade visé** (échelle firme — Consultant Junior … Associé, choix sans ajout manuel) ; **Étape** = entretien 1 / 2 / 3 / proposition / accepté / refusé (**drop « sourcing » et « vivier »** — un refusé rejoint le vivier par la **règle** §5, pas par une valeur d'étape) ; **horloge de rétention = colonne native « Créé le »** (date d'inscription, 2 ans, `T-0013-d`) — **suppression des colonnes de date custom** `DateDernierContact` / `DateAboutissementInstruction` ; **`DernierInterviewer` → `ResponsableAction`** (Owner d'action, Personne ; au stade proposition = dernier interviewer, ancrage 1b). Liste **Candidats-Synthèses** : `EtapeSynthese` gagne **entretien 3** ; lookup Synthèse→Candidat et régime « dérivé né en Zone-de-proposition, rejoint à validation ; notes brutes éphémères » **inchangés**. Aucune autre section ni domicile modifié. v1.12 — schéma complet des deux listes de recrutement (couture M365, guide → M365 ; prérequis T-0013-a..d et recrutement-pipeline), promu via boucle de promotion, 18 juin 2026 : au §2 bis, fixation des **colonnes, types et noms internes (Graph)** des listes **Candidats** (Title, NomCandidat, PosteVise, Source, Email, Telephone, Etape, DateDernierContact, DateAboutissementInstruction, DernierInterviewer) et **Candidats-Synthèses** (Title, Candidat [lookup → Candidats], EtapeSynthese, DateEntretien, Interviewer, Synthese) ; valeurs d'étape figées ; nouvelle sous-section **§2 ter — Noms internes (couture Graph)** (mapping libellé ↔ nom interne ; principe « créer la colonne sous son nom interne propre puis renommer le libellé » pour éviter les encodages `_x00e9_` / tirets côté Graph). Lookup Synthèse→Candidat inchangé (canon v1.11) ; le dérivé **naît en Zone-de-proposition** et ne rejoint « Candidats-Synthèses » **qu'à validation** ; notes brutes éphémères, jamais une colonne. Régime données personnelles candidat + journalisation prérequis **inchangés**. Aucune autre section ni domicile modifié. v1.11 — entité Candidat & synthèses d'entretien (sous-tâche T-0013-a), 17 juin 2026 : ajout au §2 des entités **Candidat** (liste unique « Candidats », colonne étape sourcing→vivier, colonnes de dates pour la purge T-0013-d) et **Synthèse d'entretien** (liste dédiée « Candidats-Synthèses », rattachée au candidat) ; domiciles réels au §2 bis ; régime **données personnelles candidat** aligné sur Ressources-RH/CVs (journalisation d'audit prérequis runbook, cf. T-0003). Exécute le cadre RGPD recrutement promu (rgpd-recrutement-candidats.md + annexes 1 et 3). Aucun domicile existant modifié. v1.10 — balayage post-promotion, 12 juin 2026 : `memoire-organisation.md` est promu ; les deux mentions « candidat » (§2 bis, §3) sont retirées. Aucun changement de règle ni de domicile. v1.9 — alignement des mentions d'entrée sur le modèle des identités appelantes (post-T-0010), 12 juin 2026 : les §2 bis et §4 ne décrivent plus l'entrée comme « bearer du principe appelant unique `allia-mcp-graph-client` » mais selon `identites-et-secrets.md` §2 — humains : identité Entra (PKCE, client public `allia-mcp-graph-client`, groupe `grp-mcp-graph-users`) ; workloads : identité managée ; le secret client est supprimé (dette éteinte, `T-0010`). Aucun changement de règle ni de domicile. v1.8 — endpoints réels après déploiement (item prévu par la chapeau `T-0002b`), 10 juin 2026 : le connecteur **Graph MCP en écriture** est **déployé et prouvé** (chapeau `T-0002b` promue — cinq sous-tâches) ; endpoint MCP `https://ca-allia-mcp-graph.delightfulocean-1bf3f3c5.francecentral.azurecontainerapps.io/mcp` (entrée : **bearer OAuth 2.0** du principe appelant unique `allia-mcp-graph-client`, Easy Auth Return401 ; sortie Graph : identité managée, **zéro secret**) ; la Zone-de-proposition est **réelle** et l'**écriture y est outillée** (preuve `create_list_item` le 10 juin) — la simulation locale `zone-proposition/` cesse d'être le domicile transitoire des **nouveaux** dérivés (les synthèses « mémoire hebdo » basculeront avec `T-0005`). Mentions d'état §2 bis/§3/§4. **Aucun changement de règle ni de domicile logique.** v1.7 — état de câblage de la zone de proposition, 10 juin 2026 (runbook `T-0002b-3`) : la liste « Zone-de-proposition » **existe désormais au tenant** (créée le 10 juin 2026 par le gardien, colonne texte « Origine » = champ d'origine, §2 bis/§3) ; la zone n'est plus « simulée en local » *faute de liste* — la simulation locale (`zone-proposition/`) reste le domicile **transitoire** des dérivés tant que l'**écriture réelle** via le connecteur n'est pas prouvée (fin de la chapeau `T-0002b` : entrée Easy Auth `T-0002b-4`, principe appelant `T-0002b-5`). **Aucun changement de règle, aucun changement de domicile.** v1.6 — promu via boucle de promotion, 8 juin 2026 (session doctrine) : §2 bis — ajout du **champ d'origine « mémoire hebdo »** sur la liste « Zone-de-proposition », qui marque les éléments produits par le batch nocturne de **mémoire d'organisation** (synthèse hebdomadaire candidate) et les distingue des autres faits dérivés ; en attendant T-0002b, ces éléments sont simulés en local sous `zone-proposition/memoire/`. Renvoi normatif vers le contrat socle (candidat) `contrats/socle/memoire-organisation.md`. Aucun autre domicile ni câblage modifié. v1.5 — repointage des renvois après le découpage (PR #23) du chantier d'écriture Graph en **T-0002a** (runbook Entra, promu) et **T-0002b** (déploiement / écriture réelle), 7 juin 2026 : toutes les mentions du chantier d'écriture (§2, §2 bis, §3, §4 et changelog v1.1) pointent désormais vers **T-0002b**. Aucun domicile ni câblage modifié. v1.4 — alignement sur le déclencheur d'anonymisation corrigé (`anonymisation.md` v1.3), 7 juin 2026 : la note de la bibliothèque « Capitalisation » (§2 bis) ne dit plus « porte anonymisation à la réutilisation inter-client » ; le canon interne reste **nominatif**, la porte joue à la **sortie externe**. Aucun domicile ni câblage modifié. v1.3 — promu via boucle de promotion (contenu inchangé ; état « partiellement câblé » du §2 bis/§4 inchangé). v1.2 — §2 bis : distinction explicite nom d'affichage (« Allia Consulting ») vs identifiant d'URL (« alliaconsuling », conservé). Aucun domicile ni câblage modifié.
 > v1.1 — câblage M365 réel (site AlliaConsuling : §2 bis) ; domiciles « à confirmer » → **partiellement câblé — session 7 juin 2026 ; écriture Graph = T-0002b** ; ajout de l'entité **CVs** (donnée personnelle, RGPD). Les **emplacements** sont renseignés ; l'**écriture** via Graph Lists API reste à outiller (connecteur Graph MCP en écriture — `backlog/chantiers/T-0002b.yaml`).
 > C'est **la couture M365** : les agents résolvent ce contrat pour savoir où lire et écrire les faits. Si M365 change, seule l'implémentation derrière ce contrat change ; les consommateurs ne bougent pas.
@@ -138,25 +138,34 @@ ne s'y applique pas ; ce qui fait foi ici, ce sont les **noms de tables** et leu
 
 ### 5.1 Principe
 
-- **Distribué en écriture, centralisé en lecture.** Chaque mission possède son propre
-  fichier de pilotage, édité par le responsable de mission. Le cockpit ne lit jamais
-  ces fichiers en direct : il lit **uniquement** un **classeur consolidé** régénéré par
-  agent (`tour-de-controle.md` §4).
-- **Un gabarit, pas N formats.** Tous les fichiers mission sont instanciés depuis un
-  gabarit unique promu au canon ; c'est la condition de la consolidation.
+- **Saisie humaine, dérivation par agent, lecture directe.** Chaque mission possède un
+  classeur de **saisie** — la seule chose que l'humain édite (cf. §5.6). L'agent en dérive
+  un **gabarit ERP** par mission ; la tour de contrôle lit les **gabarits actifs et le
+  référentiel de coûts en direct** (`tour-de-controle.md` §4). **Il n'y a pas de classeur
+  consolidé.**
+- **Un gabarit, pas N formats.** Tous les gabarits sont dérivés d'un gabarit vierge unique
+  promu au canon ; c'est la condition de la lecture agrégée.
 - **Les coûts ne descendent jamais dans les fichiers mission.** Coûts jour des
-  ressources et coûts de structure vivent **seulement** dans le consolidé, à audience
-  restreinte. Un responsable de mission ne voit pas le coût des ressources.
+  ressources et coûts de structure vivent **seulement** dans le **référentiel de coûts**,
+  à audience restreinte (§5.3). Un responsable de mission ne voit pas le coût des ressources.
 - **Une seule vérité par champ.** `Ressources-Profil` (liste) porte identité, grade,
-  disponibilité ; le consolidé porte coûts et dates contractuelles. Aucun recouvrement.
+  disponibilité ; le référentiel de coûts porte coûts et dates contractuelles. Aucun recouvrement.
 
 ### 5.2 Gabarit de pilotage par mission
 
 - **Domicile canon** : `contrats/socle/gabarit-pilotage-mission.xlsx` (fichier binaire
   promu ; source de vérité du schéma). Le présent contrat en porte la description
   normative ci-dessous.
-- **Instanciation** : `pilotage-<CodeMission>.xlsx` dans l'espace SharePoint/Teams de la
-  mission, à la bascule « Gagnée » d'une opportunité (couture par `CodeMission`, cf. §2).
+- **Instanciation** : un gabarit **par mission** — `gabarit-<CodeMission>.xlsx` — à la racine
+  du dossier `06 - Gabarit ERP` de la bibliothèque « Documents » du site **Contrats et
+  administratif** (`AlliaConsulting-Contratsetadministratif`). Règle : **1 mission = 1 gabarit**,
+  un seul gabarit actif par mission à cette racine. Le gabarit précédent est archivé dans le
+  sous-dossier `00 - Old` (versionnage visible ; ne garder à la racine que les gabarits actifs).
+  Le modèle vierge de référence est `gabarit-pilotage-mission.xlsx` (même dossier). L'humain ne
+  dépose JAMAIS le gabarit : il est initié, actualisé et archivé par l'agent (cf. §5.6).
+  Coordonnées tenant (drive-id, folder-id de `06 - Gabarit ERP` et de `00 - Old`) : variables
+  d'environnement `GRAPH_GABARIT_DRIVE_ID` / `GRAPH_GABARIT_FOLDER_ID` / `GRAPH_GABARIT_OLD_FOLDER_ID`,
+  posées par runbook gardien — jamais en dur au canon.
 - **Trois tables nommées** (en-têtes figés) :
 
 `T_Affectations` — le prévisionnel de staffing et de charge.
@@ -174,7 +183,7 @@ ne s'y applique pas ; ce qui fait foi ici, ce sont les **noms de tables** et leu
 | Ressource | Texte | identifiant Entra |
 | Mois | Date (1er du mois) | |
 | JoursRealises | Nombre | saisie du collaborateur |
-| StatutValidation | Texte | `à valider` / `validé` — écrit par le responsable via le cockpit |
+| StatutValidation | Texte | `à valider` / `validé` — écrit par le responsable dans la saisie (§5.6), re-dérivé dans le gabarit par l'agent ; cockpit en lecture seule sur l'économique |
 
 `T_Echeancier` — le plan de facturation de la mission.
 | En-tête | Type | Notes |
@@ -187,23 +196,25 @@ ne s'y applique pas ; ce qui fait foi ici, ce sont les **noms de tables** et leu
 | Statut | Texte | `à émettre` / `émise` / `payée` |
 | LienFacture | Texte | URL du PDF dans le dépôt Teams de la mission |
 
-### 5.3 Classeur consolidé central
+### 5.3 Référentiel de coûts (audience restreinte)
 
-- **Domicile** : classeur `pilotage-consolide.xlsx` dans un emplacement à **audience
-  restreinte** (droits réglés par runbook humain — jamais par un agent ;
+- **Domicile** : un **référentiel de coûts** dédié (classeur ou liste) dans un emplacement
+  à **audience restreinte** (droits réglés par runbook humain — jamais par un agent ;
   `organisation.md` §5). Emplacement concret et périmètre d'accès : à câbler par le
-  gardien, consigné en §5.5 quand réel (aucun chemin inventé ici).
-- **Nature** : **dérivé régénérable**. L'agent énumère les missions actives, lit les
-  trois tables nommées de chaque fichier mission, et reconstruit le consolidé. Aucune
-  saisie humaine directe dans les tables dérivées.
-- **Deux tables propres au consolidé** (jamais dans les fichiers mission) :
+  gardien, consigné en §5.5 quand réel (aucun chemin inventé ici). **Pas de classeur
+  consolidé** : ce référentiel ne porte que les coûts, jamais l'agrégat des missions.
+- **Nature** : **source à audience restreinte**. Les coûts jour des ressources et les
+  coûts de structure y sont saisis/maintenus par un rôle habilité ; l'agent et la tour de
+  contrôle les **lisent** (jamais un responsable de mission). Ces coûts ne descendent
+  jamais dans les gabarits mission.
+- **Deux tables propres au référentiel** (jamais dans les gabarits mission) :
 
 `T_Ressources` — le référentiel de coûts.
 | En-tête | Type | Notes |
 |---|---|---|
 | Ressource | Texte | identifiant Entra |
 | Type | Texte | `salarié` / `sous-traitant` (le staffing du cockpit exclut les ST) |
-| CoutJour | Nombre | € — donnée sensible, confinée au consolidé |
+| CoutJour | Nombre | € — donnée sensible, confinée au référentiel de coûts |
 | DateEntree | Date | date contractuelle d'entrée |
 | DateSortie | Date | vide si actif |
 
@@ -214,7 +225,10 @@ ne s'y applique pas ; ce qui fait foi ici, ce sont les **noms de tables** et leu
 | PosteCout | Texte | libellé du poste |
 | Montant | Nombre | € |
 
-### 5.4 Ce que le consolidé calcule (lu tel quel par le cockpit)
+### 5.4 Ce que la tour de contrôle calcule (à la volée)
+
+La tour de contrôle calcule ces agrégats **à la volée** en lisant les gabarits actifs et le
+référentiel de coûts (pas de classeur consolidé intermédiaire).
 
 - **Staffing mensuel** (bandeau 1) : par salarié actif du mois (T_Ressources.Type =
   `salarié`, actif selon DateEntree/DateSortie), taux = JoursPrevus (réalisé =
@@ -224,15 +238,44 @@ ne s'y applique pas ; ce qui fait foi ici, ce sont les **noms de tables** et leu
   Σ (JoursRealises × TJM). Le TJM par mission est porté par la brique Missions/CRM.
 - **EBITDA** (bandeau 4) : CA − (jours × CoutJour) − T_Structure du mois.
 - **Factures à émettre** (bandeau 5) : lignes T_Echeancier au statut `à émettre`.
-- **Fraîcheur et anomalies** : le consolidé horodate sa régénération et liste les
-  fichiers mission au schéma cassé (signalés, jamais ignorés silencieusement).
+- **Fraîcheur et anomalies** : la tour de contrôle horodate sa dernière lecture et liste les
+  gabarits au schéma cassé (signalés, jamais ignorés silencieusement).
 
 ### 5.5 État du câblage
 
-- Gabarit `gabarit-pilotage-mission.xlsx` : **à promouvoir** (fichier binaire, PR dédiée).
-- Extension MCP Graph **Workbook/Tables API** (lecture des tables mission, écriture du
-  consolidé et du statut d'échéancier) : **à construire** — les outils Graph actuels ne
-  couvrent que les listes. Microsoft Learn obligatoire avant ce code.
-- Skill de consolidation + golden set : **à construire**.
-- Emplacement du consolidé et projection des droits (audience restreinte) : **runbook
-  humain (gardien)**, à consigner ici quand réel.
+- Gabarit vierge `gabarit-pilotage-mission.xlsx` : **promu** au socle (PR #208).
+- Extension MCP Graph **Workbook/Tables API** (lecture des saisies et du référentiel,
+  écriture et archivage des gabarits par mission) : **à construire** (T-0031) — les outils
+  Graph actuels ne couvrent que les listes. Microsoft Learn obligatoire avant ce code.
+  Doc Graph REST v1.0 (Workbook/Tables).
+- Agent de génération des gabarits + golden set : **à construire** (lit les saisies,
+  régénère les gabarits, déclenche l'actualisation de la tour de contrôle).
+- **Modèle : pas de classeur consolidé unique.** La tour de contrôle lit les **gabarits
+  actifs + le référentiel de coûts en direct**. Les mentions antérieures d'un
+  `pilotage-consolide.xlsx` sont caduques.
+- Domiciles réels (drive-id/folder-id des trois couches — saisie, gabarit `06 - Gabarit ERP`
+  + `00 - Old`, référentiel de coûts) : **variables d'environnement** posées par runbook
+  gardien, jamais au canon. Le référentiel de coûts et sa projection de droits restent à
+  consigner ici quand réels.
+
+### 5.6 Couche de saisie et boucle d'actualisation (agent)
+
+- **Saisie (surface équipe, source humaine).** Classeurs `saisie-...xlsx` à la racine de la
+  bibliothèque « Documents » du site **Management et Gestion**
+  (`AlliaConsulting-ManagementetGestion`). `00 - Template Mission` porte le template de saisie ;
+  `01 - Missions cloturées` archive les missions terminées. **L'humain n'édite QUE la saisie**
+  (y compris les gestes économiques — affectations, validation d'imputations, statut
+  d'échéancier) ; il ne le fait PAS depuis le cockpit, en **lecture seule** sur l'économique
+  (`tour-de-controle.md` §1, §4). Coordonnées tenant : `GRAPH_SAISIE_DRIVE_ID` /
+  `GRAPH_SAISIE_FOLDER_ID` (runbook gardien).
+- **Trois domiciles distincts, trois audiences** : saisie (gestion opérationnelle), gabarit
+  ERP (contrats/administratif) et référentiel de coûts (audience restreinte, §5.3) vivent sur
+  des emplacements séparés. L'agent **écrit** uniquement les gabarits (cible figée par
+  construction, cf. T-0031, sur le modèle de `deposer_document_mission`) et **lit** les saisies
+  et le référentiel ; il n'écrit jamais les coûts.
+- **Boucle agent** : lun→ven, 05h00 et 13h00 (heure de Paris). À chaque passage, l'agent lit les
+  saisies ; pour toute saisie dont `lastModifiedDateTime` est postérieur au dernier passage, il
+  (1) archive le gabarit courant de la mission dans `00 - Old`, (2) régénère le gabarit
+  `gabarit-<CodeMission>.xlsx`, (3) déclenche l'actualisation de la tour de contrôle.
+- **Piège de ciblage** : le tenant est `alliaconsuling` (une seule « t ») mais les URL de sites
+  portent `AlliaConsulting-...` (deux « t »). Vérifié sur le réel le 14/07/2026.
