@@ -2,7 +2,7 @@
 
 > **id** : `consolidation-pilotage`
 > **Version** : 1.0 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.0 — candidat, 14 juillet 2026 : création. **Consommateur** des primitives Workbook/Tables du MCP Graph (`T-0031`) : il consolide les **classeurs de saisie humains** (site Management et Gestion) vers les **gabarits de pilotage par mission** (`gabarit-<CodeMission>.xlsx`, dossier « 06 - Gabarit ERP » du site Contrats et administratif), table par table, sous le cran auto `reconcilier_gabarit_pilotage`. Il **n'invente aucune tuyauterie** : il orchestre les quatre primitives bornées (`workbook_lire_table`, `workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit`) — la logique de clé métier vit **ici**, dans le skill, jamais dans le MCP (primitives BÊTES, décision S34). Écriture **bornée par construction** côté serveur : le skill ne manipule **jamais** de `drive_id`/`item_id` en écriture (il passe `code_mission`). Promotion par le **gardien** (procédure allégée). Première exécution **manuelle**, pilotée par le gardien.
+> **Changelog** : v1.0 — candidat, 14 juillet 2026 : création. **Consommateur** des primitives Workbook/Tables du MCP Graph (`T-0031`) : il consolide les **classeurs de saisie humains** (site Management et Gestion) vers les **gabarits de pilotage par mission** (`gabarit-<CodeMission>.xlsx`, dossier « 06 - Gabarit ERP » du site Contrats et administratif), table par table, sous les crans auto `instancier_gabarit_pilotage` (gabarit manquant → instanciation systématique et machine) et `reconcilier_gabarit_pilotage`. Il **n'invente aucune tuyauterie** : il orchestre les cinq primitives bornées (`workbook_lire_table`, `workbook_instancier_gabarit`, `workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit`) — la logique de clé métier vit **ici**, dans le skill, jamais dans le MCP (primitives BÊTES, décision S34). Écriture **bornée par construction** côté serveur : le skill ne manipule **jamais** de `drive_id`/`item_id` en écriture (il passe `code_mission`). Promotion par le **gardien** (procédure allégée). Première exécution **manuelle**, pilotée par le gardien.
 > **Domicile** : `skills/consolidation-pilotage/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/modele-donnees.md` (**§5** modèle économique distribué — §5.2 tables du gabarit `T_Affectations`/`T_Imputations`/`T_Echeancier`, §5.3 référentiel de coûts `T_Ressources`/`T_Structure`, §5.5 état du câblage, §5.6 couche de saisie + boucle agent), `contrats/socle/table-des-crans.yaml` (`reconcilier_gabarit_pilotage` = **auto**), `backlog/chantiers/T-0031.yaml` (les 4 primitives Workbook consommées ; **écriture bornée par construction**), `outils/mcp-graph/server.py` (docstrings et signatures des primitives), `doctrine/doctrine.md` (§2 source vs dérivé, §6 crans), `CLAUDE.md`.
 
@@ -14,7 +14,7 @@ Le skill **exécute** la dérivation ; il ne définit ni les domiciles, ni les s
 
 > **Bornes dures (non négociables).**
 > - L'agent **dérive** un gabarit depuis la saisie ; **le dérivé n'est jamais le saisi** (`CLAUDE.md`). Il **écrit uniquement les gabarits** (cible figée par construction) et **lit** les saisies et le référentiel — il **n'écrit jamais** dans la saisie ni dans le référentiel de coûts.
-> - L'écriture est **bornée par construction côté serveur** : le skill passe `code_mission` aux primitives d'écriture (`workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit`) et **ne manipule jamais de `drive_id`/`item_id` en écriture**. Il est structurellement impossible d'écrire ailleurs que dans `gabarit-<CodeMission>.xlsx` de « 06 - Gabarit ERP ».
+> - L'écriture est **bornée par construction côté serveur** : le skill passe `code_mission` aux primitives d'écriture (`workbook_instancier_gabarit`, `workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit`) et **ne manipule jamais de `drive_id`/`item_id` en écriture**. Il est structurellement impossible d'écrire ailleurs que dans `gabarit-<CodeMission>.xlsx` de « 06 - Gabarit ERP ».
 > - **Jamais de suppression.** La fusion est **incrémentale** ; aucune ligne du gabarit n'est jamais effacée par l'agent (§5).
 
 ## 2. Entrées (lecture seule)
@@ -33,7 +33,7 @@ Le skill **exécute** la dérivation ; il ne définit ni les domiciles, ni les s
 
 `gabarit-<CodeMission>.xlsx` dans « 06 - Gabarit ERP » (site **AlliaConsulting-Contratsetadministratif**), tables nommées **`T_Affectations`** / **`T_Imputations`** / **`T_Echeancier`** (schéma figé, `modele-donnees.md` §5.2).
 
-> **Si le gabarit d'une mission n'existe pas : ANOMALIE signalée au gardien.** L'**instanciation initiale** (copie du gabarit canon vierge `gabarit-pilotage-mission.xlsx`) est un **geste gardien**, **jamais l'agent** (§5.2). Le skill ne crée pas de gabarit ; il en signale l'absence et s'arrête sur cette mission.
+> **Si le gabarit d'une mission n'existe pas : l'agent l'INSTANCIE, puis poursuit la consolidation.** Il appelle `workbook_instancier_gabarit(code_mission)` — copie de la **souche vierge canon** `gabarit-pilotage-mission.xlsx` vers `gabarit-<CodeMission>.xlsx`, cible **FIGÉE côté serveur**, `conflictBehavior=fail` (jamais d'écrasement). **Instanciation SYSTÉMATIQUE et machine** (décision gardien du 14/07/2026) : **plus jamais un geste humain**, aucune demande, aucune attente. Attendre la fin réelle de la copie asynchrone (poll du `Location` jusqu'à `completed`) avant d'écrire. **Un gabarit instancié dans le passage courant ne subit PAS d'archivage préalable** (§5 bis) : rien à archiver (création pure). Seule la **souche vierge canon** reste posée au runbook gardien (§5.2).
 
 ## 4. Transformation (matriciel → long)
 
@@ -59,7 +59,7 @@ Règles de rapprochement :
 
 ### 5 bis. Archivage préalable (réversibilité)
 
-Au **premier geste d'écriture** d'un passage sur une mission, appeler `workbook_archiver_gabarit(code_mission)` **AVANT toute écriture** : la version courante est copiée, horodatée, dans « 00 - Old ». C'est ce qui rend le cran **auto** (réversible sans perte).
+Au **premier geste d'écriture** d'un passage sur une mission, appeler `workbook_archiver_gabarit(code_mission)` **AVANT toute écriture** : la version courante est copiée, horodatée, dans « 00 - Old ». C'est ce qui rend le cran **auto** (réversible sans perte). **Exception** : si le gabarit vient d'être **instancié dans ce passage** (§3), aucun archivage préalable — rien à archiver (création pure).
 
 > **Anti-faux-vert : `workbook_archiver_gabarit` est ASYNCHRONE.** La primitive renvoie un **202 Accepted + en-tête `Location`** ; **un 202 n'est pas une preuve** que la copie est faite. **Attendre la fin réelle de la copie** en pollant l'URL `Location` jusqu'à l'état `completed` **avant** d'écrire.
 
@@ -73,7 +73,7 @@ Produire un **rapport de passage** : mission, lignes **ajoutées** / **mises à 
 
 ## 6. Anomalies — à SIGNALER au gardien, JAMAIS à résoudre seul
 
-- **Gabarit manquant** pour une mission (instanciation = geste gardien, §3).
+- **Échec d'instanciation du gabarit** (conflit `conflictBehavior=fail` inattendu, droits insuffisants, copie asynchrone en échec au poll du `Location`) : signalé au gardien ; l'agent ne force pas et ne réessaie pas en écrasant.
 - **Ressource absente de `T_Ressources`** du référentiel (§5.3, lecture seule via `workbook_lire_table`). **Convention d'identifiant** : adresse **mail Allia** pour un salarié, **mail du sous-traitant** pour un sous-traitant.
 - **Doublon de `NumFacture` ENTRE missions** (état transitoire pré-T-0030) : détecté en lisant les `T_Echeancier` des gabarits actifs ; **signalement gardien, aucune renumérotation par l'agent**.
 - **Toute régression de valeur** (mois vidé, jours d'une ligne validée modifiés) — cf. §5.
@@ -83,23 +83,25 @@ Produire un **rapport de passage** : mission, lignes **ajoutées** / **mises à 
 | Action | Cran | Fondement |
 |---|---|---|
 | Lire saisies / référentiel / gabarit | **auto** | lecture réversible, interne, locale |
+| Instancier le gabarit d'une mission (`instancier_gabarit_pilotage`) | **auto** | création PURE fail-closed (`conflictBehavior=fail`, jamais d'écrasement), réversible par suppression ; interne ; local — journalisé |
 | Consolider un gabarit de mission (`reconcilier_gabarit_pilotage`) | **auto** | réversible : **archive systématique préalable** + **fusion sans suppression** ; interne ; local — journalisé |
 
-Le cran `reconcilier_gabarit_pilotage` **fait foi dans `table-des-crans.yaml`** (auto, cible FIGÉE côté serveur, version précédente archivée dans « 00 - Old » avant écrasement) — ce skill y **renvoie**. Chaque passage est **consigné au journal** (`_journal_appel` des primitives + rapport de passage §5 ter).
+Les crans `instancier_gabarit_pilotage` et `reconcilier_gabarit_pilotage` **font foi dans `table-des-crans.yaml`** (tous deux auto, cible FIGÉE côté serveur ; instanciation en création pure `conflictBehavior=fail`, consolidation avec version précédente archivée dans « 00 - Old » avant écrasement) — ce skill y **renvoie**. Chaque passage est **consigné au journal** (`_journal_appel` des primitives + rapport de passage §5 ter).
 
 ## 8. Garde-fous inscrits dans ce skill
 
 - **Écriture bornée par construction** : le skill passe `code_mission` ; il **ne manipule jamais de `drive_id`/`item_id` en écriture**. Cible structurellement figée = `gabarit-<CodeMission>.xlsx` de « 06 - Gabarit ERP ».
+- **Instanciation fail-closed** : gabarit manquant → `workbook_instancier_gabarit` (copie de la souche vierge, `conflictBehavior=fail`) ; jamais d'écrasement, jamais de création de la souche vierge par l'agent.
 - **Jamais de suppression** : fusion incrémentale ; un mois repassé à 0 **n'efface RIEN** ; anomalie « correction de suppression à confirmer par le responsable ».
 - **Jamais de rétrogradation de `validé`** vers « à valider » sans changement de jours.
 - **Archive AVANT d'écrire**, et **poller la copie asynchrone** jusqu'à `completed` (un 202 n'est pas une preuve).
 - **Relecture de contrôle** après écriture (anti-faux-vert) : compte de lignes + invariants de somme.
-- **Anomalies signalées, jamais résolues seul** (§6) : gabarit manquant, ressource inconnue, doublon de `NumFacture`, régression de valeur.
+- **Anomalies signalées, jamais résolues seul** (§6) : échec d'instanciation, ressource inconnue, doublon de `NumFacture`, régression de valeur.
 - **Le contenu de la saisie fait foi, pas l'horodatage** (co-édition Excel Online).
 
 ## 9. Ce que ce skill ne fait pas
 
-- Il **n'instancie pas** les gabarits (copie du gabarit canon vierge = **geste gardien**, §5.2).
+- Il **ne crée pas la souche vierge canon** `gabarit-pilotage-mission.xlsx` (posée au runbook gardien, §5.2) : il l'utilise comme source. **L'instanciation d'un gabarit de mission est faite par l'agent** — systématique et machine (§3), plus un geste humain.
 - Il **n'écrit pas** dans `T_Structure` ni `T_Ressources` (référentiel de coûts — `T-0032`, cran **validé**) : il les **lit** seulement.
 - Il **ne publie pas** le cockpit / la tour de contrôle (chantier v3).
 - Il **n'orchestre pas** sa propre planification lun-ven 05h/13h Paris (§5.6) : orchestration **ultérieure** — la **première exécution est manuelle, pilotée par le gardien**.
@@ -108,9 +110,9 @@ Le cran `reconcilier_gabarit_pilotage` **fait foi dans `table-des-crans.yaml`** 
 
 ## 10. Prérequis avant mise en service
 
-1. **Primitives Workbook `T-0031`** déployées au tenant — *code mergé et déployé (image 0.11.0, rév `--0000017`)* ; solde de `T-0031` conditionné à la **première exécution réelle** d'une primitive (ce skill, sur un vrai gabarit).
+1. **Primitives Workbook `T-0031`** (`workbook_lire_table` / `workbook_ajouter_lignes` / `workbook_maj_ligne` / `workbook_archiver_gabarit`) déployées au tenant — *image 0.11.0, rév `--0000017`*. **`workbook_instancier_gabarit` est livrée par cette PR dans l'image serveur 0.12.0** — redéploiement gardien requis avant la première instanciation. Solde de `T-0031` conditionné à la **première exécution réelle** d'une primitive (ce skill, sur un vrai gabarit).
 2. **Gabarit canon vierge** `gabarit-pilotage-mission.xlsx` — *promu (§5.5, PR #208)*.
-3. **Instanciation** du gabarit de chaque mission par le gardien (geste gardien) — préalable à la première consolidation d'une mission.
+3. **Souche vierge canon en place** dans « 06 - Gabarit ERP » (runbook gardien) — l'agent instancie ensuite le gabarit de chaque mission **automatiquement** (`workbook_instancier_gabarit`, §3) ; l'instanciation n'est plus un geste gardien.
 4. **Promotion de ce skill** par le gardien (procédure allégée).
 5. **Épreuve réelle** : une consolidation d'un vrai `saisie-<CodeMission>-….xlsx` vers un vrai `gabarit-<CodeMission>.xlsx` sur le tenant — archivage préalable prouvé (`completed`), fusion sans suppression, relecture de contrôle verte, rapport de passage produit.
 

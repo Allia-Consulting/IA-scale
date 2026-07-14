@@ -49,3 +49,10 @@ cas:
     contient:
       - "mail Allia"
       - "mail du sous-traitant"
+  - id: instanciation-09
+    type: invariant
+    description: "Instanciation — saisie d'une mission SANS gabarit : l'agent instancie (workbook_instancier_gabarit), sans archivage préalable, puis écrit nominalement."
+    contient:
+      - "l'agent l'INSTANCIE, puis poursuit la consolidation"
+      - "workbook_instancier_gabarit"
+      - "ne subit PAS d'archivage préalable"
