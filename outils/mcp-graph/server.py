@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose HUIT opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose TREIZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -13,6 +13,14 @@ Ce serveur expose HUIT opérations à un agent, via le Model Context Protocol (t
     - lire_annuaire               : LIT l'annuaire Entra (lecture seule) — résout un UPN en objectId et/ou liste les membres d'un groupe borné aux listes blanches.
     - creer_espace_mission        : CRÉE l'espace de mission (arbre de dossiers FIGÉ) UNIQUEMENT sous la racine « Missions ».
     - deposer_document_mission    : DÉPOSE un brouillon interne UNIQUEMENT dans un sous-dossier FIGÉ d'un espace de mission.
+    - notifier_canal              : DÉPOSE une notification UNIQUEMENT dans la liste « Notifications » (relais vers Teams par flux M365).
+    - workbook_lire_table         : LIT (lecture seule, NON bornée) les lignes d'une table nommée d'un classeur Excel (saisie / gabarit / réf. coûts).
+    - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
+    - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
+    - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission dans « 00 - Old » (copie horodatée) avant régénération.
+
+(Compte des opérations = 13 outils réellement décorés ; un `grep` du décorateur d'outil retourne 14,
+car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
 
 Transport & santé :
 
@@ -127,6 +135,12 @@ CRAN_PAR_OUTIL = {
     "reconcilier_groupe_parc": "auto",
     "lire_annuaire": "auto",
     "notifier_canal": "notifie",
+    # Primitives Workbook/Tables (T-0031) : lecture non bornée = auto par nature ; écritures
+    # bornées au domicile gabarit = auto (type d'action reconcilier_gabarit_pilotage, table v1.10).
+    "workbook_lire_table": "auto",
+    "workbook_ajouter_lignes": "auto",
+    "workbook_maj_ligne": "auto",
+    "workbook_archiver_gabarit": "auto",
 }
 
 
@@ -182,6 +196,9 @@ ENV_GROUPES_PERIMETRE_AUTORISES = "GRAPH_GROUPES_PERIMETRE_AUTORISES"  # CSV d'o
 ENV_GROUPES_PARC_AUTORISES = "GRAPH_GROUPES_PARC_AUTORISES"  # CSV d'objectId des groupes de PARC gérables (liste blanche figée côté serveur, dédiée — séparée du périmètre)
 ENV_MISSION_DRIVE_ID = "GRAPH_MISSION_DRIVE_ID"    # bibliothèque hôte de la racine « Missions » (cible figée de l'espace de mission)
 ENV_MISSION_FOLDER_ID = "GRAPH_MISSION_FOLDER_ID"  # dossier racine « Missions » (seul parent des espaces de mission créés)
+ENV_GABARIT_DRIVE_ID     = "GRAPH_GABARIT_DRIVE_ID"      # drive du site Contrats-admin hébergeant les gabarits
+ENV_GABARIT_FOLDER_ID    = "GRAPH_GABARIT_FOLDER_ID"     # dossier « 06 - Gabarit ERP » (cible figée d'écriture gabarit)
+ENV_GABARIT_OLD_FOLDER_ID= "GRAPH_GABARIT_OLD_FOLDER_ID" # dossier « 00 - Old » (archivage avant régénération)
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
@@ -399,6 +416,81 @@ def _config_mission() -> dict[str, str]:
             f"{absentes}. Racine « Missions » posée au runbook T-0024-c. Voir outils/mcp-graph/README.md."
         )
     return valeurs
+
+
+def _config_gabarit() -> dict[str, str]:
+    """Lit la configuration du domicile GABARIT (cible figée des écritures Workbook/Tables).
+
+    Config DÉDIÉE, séparée de `_config()` et `_config_mission()` : les outils existants ne
+    dépendent PAS de ces variables (aucune régression de leur contrat). Sur le modèle des
+    listes blanches des réconciliateurs, les primitives gabarit lisent leur propre configuration
+    et échouent clairement (ConfigManquante) si l'une manque. Aucun secret (identité managée).
+
+    Trois cibles FIGÉES côté serveur (site Contrats-et-administratif) :
+        - gabarit_drive_id     : drive hébergeant les gabarits ;
+        - gabarit_folder_id    : dossier « 06 - Gabarit ERP » (seul parent des gabarits en écriture) ;
+        - gabarit_old_folder_id: dossier « 00 - Old » (archivage horodaté avant régénération).
+    """
+    valeurs = {
+        "gabarit_drive_id": os.environ.get(ENV_GABARIT_DRIVE_ID, ""),
+        "gabarit_folder_id": os.environ.get(ENV_GABARIT_FOLDER_ID, ""),
+        "gabarit_old_folder_id": os.environ.get(ENV_GABARIT_OLD_FOLDER_ID, ""),
+    }
+    manquantes = [k for k, v in valeurs.items() if not v]
+    if manquantes:
+        noms_env = {
+            "gabarit_drive_id": ENV_GABARIT_DRIVE_ID,
+            "gabarit_folder_id": ENV_GABARIT_FOLDER_ID,
+            "gabarit_old_folder_id": ENV_GABARIT_OLD_FOLDER_ID,
+        }
+        absentes = ", ".join(noms_env[k] for k in manquantes)
+        raise ConfigManquante(
+            "Configuration « Gabarit » incomplète. Variables d'environnement manquantes : "
+            f"{absentes}. Domicile GABARIT (06 - Gabarit ERP / 00 - Old) posé au runbook T-0031. "
+            "Voir outils/mcp-graph/README.md."
+        )
+    return valeurs
+
+
+def _resoudre_item_gabarit(client_http: httpx.Client, code_mission: str) -> str:
+    """Résout l'item_id du gabarit d'une mission SOUS le domicile FIGÉ « 06 - Gabarit ERP ».
+
+    Garde-fou structurel (décision S34) : l'appelant ne fournit JAMAIS d'item_id en écriture.
+    Seul ce helper résout la cible, par CHEMIN sous le dossier gabarit figé côté serveur — l'écriture
+    reste bornée par CONSTRUCTION : elle ne peut viser qu'un `gabarit-<CodeMission>.xlsx` de
+    « 06 - Gabarit ERP », jamais un item_id libre.
+
+    `code_mission` est assaini avec le MÊME vocabulaire que le nom de fichier de
+    deposer_document_mission (non vide, pas de « / » « \\ » « .. », pas de caractère de contrôle) —
+    la validation précède TOUT appel réseau (fail-closed).
+
+    Raises:
+        ValueError: code_mission vide ou contenant un motif interdit.
+        FileNotFoundError: aucun gabarit pour ce code_mission dans « 06 - Gabarit ERP » (404).
+        ConfigManquante: GRAPH_GABARIT_* absentes.
+    """
+    if not isinstance(code_mission, str) or not code_mission.strip():
+        raise ValueError("`code_mission` doit être une chaîne non vide.")
+    code = code_mission.strip()
+    if any(motif in code for motif in ("/", "\\", "..")) or any(ord(c) < 32 for c in code):
+        raise ValueError(
+            "`code_mission` invalide : il ne doit contenir ni « / », ni « \\ », ni « .. », "
+            "ni caractère de contrôle (la cible gabarit est figée sous « 06 - Gabarit ERP »)."
+        )
+    cfg = _config_gabarit()
+    drive_id = cfg["gabarit_drive_id"]
+    folder_id = cfg["gabarit_folder_id"]
+    nom = f"gabarit-{code}.xlsx"
+    # Adressage par CHEMIN relatif au dossier gabarit figé (…/items/{folder_id}:/{nom}).
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_id}:/{nom}"
+    reponse = client_http.get(url, headers=_entetes())
+    if reponse.status_code == 404:
+        raise FileNotFoundError(
+            f"aucun gabarit pour {code} dans « 06 - Gabarit ERP » (fichier attendu : {nom}). "
+            "Génération initiale requise avant toute écriture."
+        )
+    reponse.raise_for_status()
+    return reponse.json()["id"]
 
 
 def _config_notifications() -> dict[str, str]:
@@ -1289,6 +1381,195 @@ def notifier_canal(ctx: Context, titre: str, corps: str, reference: str = "") ->
         corps_reponse = reponse.json()
     logger.info("notification déposée — id=%s titre=%s", corps_reponse.get("id"), titre)
     return {"created_id": corps_reponse.get("id"), "titre": titre}
+
+
+@mcp.tool()
+@_journal_appel("workbook_lire_table")
+def workbook_lire_table(ctx: Context, drive_id: str, item_id: str, table: str) -> dict[str, Any]:
+    """LIT (lecture seule) les lignes d'une table nommée d'un classeur Excel, via l'API Workbook.
+
+    GET /drives/{drive_id}/items/{item_id}/workbook/tables/{table}/rows
+
+    LECTURE NON BORNÉE (à la différence des primitives d'écriture) : `drive_id` et `item_id` sont
+    fournis par l'appelant. Cette primitive peut donc lire aussi bien un classeur de SAISIE
+    (Management/Gestion), un gabarit de pilotage (« 06 - Gabarit ERP ») que le référentiel de coûts —
+    la cible n'est PAS bornée. La lecture ne modifie rien ; seules les écritures sont bornées au
+    domicile gabarit figé côté serveur (workbook_ajouter_lignes / workbook_maj_ligne).
+
+    Adressage Workbook par POSITION (Graph REST v1.0) : les lignes sont retournées dans l'ordre de la
+    table ; `workbook_maj_ligne` cible ensuite par index (itemAt).
+
+    Args:
+        drive_id: drive hébergeant le classeur (lecture non bornée — libre).
+        item_id: driveItem du classeur .xlsx à lire (lecture non bornée — libre).
+        table: nom (ou id) de la table nommée dans le classeur.
+
+    Returns:
+        dict {"table", "lignes": [[...valeurs...], ...], "count"} — valeurs brutes ligne à ligne.
+    """
+    _verifier_appelant(ctx)
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/workbook/tables/{table}/rows"
+    with httpx.Client(timeout=30) as client_http:
+        reponse = client_http.get(url, headers=_entetes())
+        reponse.raise_for_status()
+        corps = reponse.json()
+    lignes = [row["values"][0] for row in corps.get("value", [])]
+    return {"table": table, "lignes": lignes, "count": len(lignes)}
+
+
+@mcp.tool()
+@_journal_appel("workbook_ajouter_lignes")
+def workbook_ajouter_lignes(
+    ctx: Context, code_mission: str, table: str, lignes: list[list]
+) -> dict[str, Any]:
+    """AJOUTE des lignes à une table nommée du GABARIT d'une mission (écriture BORNÉE par construction).
+
+    POST /drives/{GABARIT_DRIVE_ID}/items/{item}/workbook/tables/{table}/rows  (index:null = append)
+
+    ÉCRITURE BORNÉE : l'appelant ne fournit AUCUN drive_id / item_id / folder_id. La cible est le
+    `gabarit-<code_mission>.xlsx` du dossier FIGÉ « 06 - Gabarit ERP » (GRAPH_GABARIT_*), résolu côté
+    serveur par `_resoudre_item_gabarit`. Il est structurellement impossible d'écrire ailleurs.
+
+    Primitive BÊTE (décision S34) : elle ajoute des lignes, rien d'autre. La régénération complète
+    d'un gabarit (cran auto « reconcilier_gabarit_pilotage ») est orchestrée par le SKILL consommateur
+    à venir, PAS par un outil MCP composite.
+
+    Args:
+        code_mission: code de la mission (assaini côté serveur ; sélectionne gabarit-<code>.xlsx).
+        table: nom (ou id) de la table nommée cible dans le gabarit.
+        lignes: liste NON VIDE de lignes, chaque ligne étant une liste de valeurs de cellules.
+
+    Returns:
+        dict {"code_mission", "table", "ajoutees": n}.
+
+    Raises:
+        ValueError: code_mission invalide, ou `lignes` n'est pas une liste non vide de listes.
+        FileNotFoundError: aucun gabarit pour ce code_mission dans « 06 - Gabarit ERP ».
+        ConfigManquante: GRAPH_GABARIT_* absentes.
+    """
+    _verifier_appelant(ctx)
+    if not isinstance(lignes, list) or not lignes or any(not isinstance(l, list) for l in lignes):
+        raise ValueError(
+            "`lignes` doit être une liste NON VIDE de listes (une liste de valeurs par ligne)."
+        )
+    cfg = _config_gabarit()
+    drive_id = cfg["gabarit_drive_id"]
+    with httpx.Client(timeout=30) as client_http:
+        item_id = _resoudre_item_gabarit(client_http, code_mission)
+        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/workbook/tables/{table}/rows"
+        reponse = client_http.post(
+            url,
+            headers={**_entetes(), "Content-Type": "application/json"},
+            json={"index": None, "values": lignes},
+        )
+        reponse.raise_for_status()
+    return {"code_mission": code_mission.strip(), "table": table, "ajoutees": len(lignes)}
+
+
+@mcp.tool()
+@_journal_appel("workbook_maj_ligne")
+def workbook_maj_ligne(
+    ctx: Context, code_mission: str, table: str, index: int, valeurs: list
+) -> dict[str, Any]:
+    """MET À JOUR une ligne par POSITION dans une table du GABARIT d'une mission (écriture BORNÉE).
+
+    PATCH /drives/{GABARIT_DRIVE_ID}/items/{item}/workbook/tables/{table}/rows/itemAt(index={index})
+
+    ÉCRITURE BORNÉE : aucun drive_id / item_id / folder_id exposé — la cible est le
+    `gabarit-<code_mission>.xlsx` de « 06 - Gabarit ERP », résolu côté serveur. Adressage par POSITION
+    (Graph REST v1.0 : itemAt(index=...)), 0-based ; l'ordre est celui de workbook_lire_table.
+
+    Args:
+        code_mission: code de la mission (assaini côté serveur).
+        table: nom (ou id) de la table nommée cible.
+        index: index 0-based de la ligne à mettre à jour (>= 0).
+        valeurs: liste NON VIDE des valeurs de cellules de la ligne.
+
+    Returns:
+        dict {"code_mission", "table", "index", "maj": True}.
+
+    Raises:
+        ValueError: code_mission invalide, index négatif/non entier, ou `valeurs` vide.
+        FileNotFoundError: aucun gabarit pour ce code_mission dans « 06 - Gabarit ERP ».
+        ConfigManquante: GRAPH_GABARIT_* absentes.
+    """
+    _verifier_appelant(ctx)
+    # bool est un sous-type de int en Python : True/False sont refusés explicitement.
+    if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+        raise ValueError("`index` doit être un entier >= 0 (adressage Workbook par position, 0-based).")
+    if not isinstance(valeurs, list) or not valeurs:
+        raise ValueError("`valeurs` doit être une liste non vide de valeurs de cellules.")
+    cfg = _config_gabarit()
+    drive_id = cfg["gabarit_drive_id"]
+    with httpx.Client(timeout=30) as client_http:
+        item_id = _resoudre_item_gabarit(client_http, code_mission)
+        url = (
+            f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}"
+            f"/workbook/tables/{table}/rows/itemAt(index={index})"
+        )
+        reponse = client_http.patch(
+            url,
+            headers={**_entetes(), "Content-Type": "application/json"},
+            json={"values": [valeurs]},
+        )
+        reponse.raise_for_status()
+    return {"code_mission": code_mission.strip(), "table": table, "index": index, "maj": True}
+
+
+@mcp.tool()
+@_journal_appel("workbook_archiver_gabarit")
+def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]:
+    """ARCHIVE le gabarit courant d'une mission dans « 00 - Old » avant régénération (copie horodatée).
+
+    POST /drives/{GABARIT_DRIVE_ID}/items/{item}/copy → « 00 - Old » (GRAPH_GABARIT_OLD_FOLDER_ID)
+
+    Écriture BORNÉE : source = `gabarit-<code_mission>.xlsx` de « 06 - Gabarit ERP » résolu côté
+    serveur ; destination = dossier « 00 - Old » figé (GRAPH_GABARIT_OLD_FOLDER_ID). L'appelant ne
+    choisit ni la source ni la destination. Réversible sans perte : la version précédente est conservée
+    sous un nom horodaté avant toute régénération.
+
+    NB : le cran auto « reconcilier_gabarit_pilotage » (régénération complète : archiver puis
+    réécrire) est porté par le SKILL consommateur à venir, PAS par un outil MCP composite — cette
+    primitive reste BÊTE (décision S34) : elle archive, rien d'autre.
+
+    Graph /copy est ASYNCHRONE : la réponse est un 202 Accepted + en-tête Location (URL de suivi) ;
+    cette primitive ne bloque PAS sur l'achèvement de la copie.
+
+    Args:
+        code_mission: code de la mission (assaini côté serveur ; sélectionne gabarit-<code>.xlsx).
+
+    Returns:
+        dict {"code_mission", "nom_archive", "accepted": bool, "emplacement": <Location|None>}.
+
+    Raises:
+        ValueError: code_mission invalide.
+        FileNotFoundError: aucun gabarit pour ce code_mission dans « 06 - Gabarit ERP ».
+        ConfigManquante: GRAPH_GABARIT_* absentes.
+    """
+    _verifier_appelant(ctx)
+    cfg = _config_gabarit()
+    drive_id = cfg["gabarit_drive_id"]
+    old_folder_id = cfg["gabarit_old_folder_id"]
+    horodatage = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")  # UTC compact
+    with httpx.Client(timeout=30) as client_http:
+        item_id = _resoudre_item_gabarit(client_http, code_mission)
+        nom_archive = f"gabarit-{code_mission.strip()}-{horodatage}.xlsx"
+        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/copy"
+        reponse = client_http.post(
+            url,
+            headers={**_entetes(), "Content-Type": "application/json"},
+            json={
+                "parentReference": {"driveId": drive_id, "id": old_folder_id},
+                "name": nom_archive,
+            },
+        )
+        reponse.raise_for_status()
+    return {
+        "code_mission": code_mission.strip(),
+        "nom_archive": nom_archive,
+        "accepted": reponse.status_code == 202,
+        "emplacement": reponse.headers.get("Location"),
+    }
 
 
 if __name__ == "__main__":

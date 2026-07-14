@@ -11,6 +11,7 @@ garde-fous testés s'exécutent avant `_config_mission()` et avant l'ouverture d
 
 import base64
 import hashlib
+import inspect
 import json
 import logging
 
@@ -301,3 +302,93 @@ def test_filtre_healthz_ne_touche_pas_le_journal():
         isinstance(f, server._FiltreSondesHealthz)
         for f in logging.getLogger("uvicorn.access").filters
     ), "le filtre /healthz doit être posé sur uvicorn.access"
+
+
+# --------------------------------------------------------------------------------------------
+# T-0031 — primitives Workbook/Tables : écriture BORNÉE par construction, lecture NON bornée
+# --------------------------------------------------------------------------------------------
+
+class _ClientReseauInterdit:
+    """Client httpx factice dont tout appel réseau échoue le test (prouve un refus AVANT réseau)."""
+
+    def get(self, *a, **k):
+        raise AssertionError("appel réseau tenté alors que le garde-fou aurait dû refuser avant.")
+
+    post = get
+    patch = get
+
+
+def _params(outil) -> set:
+    """Noms des paramètres de la fonction sous-jacente d'un outil (hors `ctx`)."""
+    fn = _sous_jacente(outil)
+    return set(inspect.signature(fn).parameters) - {"ctx"}
+
+
+@pytest.mark.parametrize("mauvais", ["a/b", "a\\b", "a..b", "..", "code\x01", "   "])
+def test_resoudre_item_gabarit_code_mission_evasion_refuse(mauvais):
+    """(19) _resoudre_item_gabarit refuse un code_mission vide / « / » « \\ » « .. » / caractère de
+    contrôle → ValueError, AVANT tout appel réseau (fail-closed : le client interdit reste intact)."""
+    with pytest.raises(ValueError):
+        server._resoudre_item_gabarit(_ClientReseauInterdit(), mauvais)
+
+
+def test_resoudre_item_gabarit_code_valide_franchit_validation():
+    """(20) CONTRE-PREUVE de (19) : un code_mission valide franchit l'assainissement ; sans config
+    GRAPH_GABARIT_* en CI, l'obstacle suivant est ConfigManquante (PAS le ValueError d'assainissement)."""
+    with pytest.raises(server.ConfigManquante):
+        server._resoudre_item_gabarit(_ClientReseauInterdit(), "MISSION-2")
+
+
+@pytest.mark.parametrize(
+    "outil", ["workbook_ajouter_lignes", "workbook_maj_ligne", "workbook_archiver_gabarit"]
+)
+def test_primitives_ecriture_gabarit_ne_prennent_aucune_cible_libre(outil):
+    """(21) Les primitives d'ÉCRITURE gabarit n'exposent AUCUN drive_id / item_id / folder_id : la
+    cible est FIGÉE côté serveur (domicile « 06 - Gabarit ERP ») — écriture bornée PAR CONSTRUCTION."""
+    params = _params(getattr(server, outil))
+    interdits = {"drive_id", "item_id", "folder_id", "drive", "item"}
+    assert not (params & interdits), (
+        f"{outil} ne doit exposer aucune cible libre ({params & interdits} présent) — "
+        "l'écriture est bornée au domicile gabarit résolu côté serveur."
+    )
+    assert "code_mission" in params, f"{outil} borne sa cible par code_mission (assaini serveur)."
+
+
+def test_workbook_lire_table_accepte_cible_libre():
+    """(22) CONTRASTE avec (21) : la LECTURE est NON bornée — workbook_lire_table accepte bien
+    drive_id + item_id (peut lire saisie / gabarit / réf. coûts) ; elle ne modifie rien."""
+    params = _params(server.workbook_lire_table)
+    assert {"drive_id", "item_id"} <= params, (
+        "workbook_lire_table doit accepter drive_id + item_id (lecture non bornée)."
+    )
+    assert "code_mission" not in params, "la lecture n'est pas bornée au domicile gabarit."
+
+
+@pytest.fixture
+def _sans_porte(monkeypatch):
+    """Neutralise la porte d'identité pour isoler les garde-fous métier des primitives d'écriture."""
+    monkeypatch.setattr(server, "_verifier_appelant", lambda ctx: None)
+
+
+@pytest.mark.parametrize("lignes", [[], "pas une liste", [1, 2], [["ok"], "pas une ligne"]])
+def test_workbook_ajouter_lignes_payload_invalide_refuse(_sans_porte, lignes):
+    """(23) workbook_ajouter_lignes exige une liste NON VIDE de listes → ValueError sinon
+    (refus AVANT _config_gabarit / réseau)."""
+    fn = _sous_jacente(server.workbook_ajouter_lignes)
+    with pytest.raises(ValueError):
+        fn(None, code_mission="MISSION-2", table="Saisie", lignes=lignes)
+
+
+@pytest.mark.parametrize("index", [-1, True, 1.5, "0"])
+def test_workbook_maj_ligne_index_invalide_refuse(_sans_porte, index):
+    """(24) workbook_maj_ligne exige un index entier >= 0 (bool exclu) → ValueError sinon."""
+    fn = _sous_jacente(server.workbook_maj_ligne)
+    with pytest.raises(ValueError):
+        fn(None, code_mission="MISSION-2", table="Saisie", index=index, valeurs=["x"])
+
+
+def test_workbook_maj_ligne_valeurs_vides_refuse(_sans_porte):
+    """(25) workbook_maj_ligne exige une liste de valeurs NON VIDE → ValueError."""
+    fn = _sous_jacente(server.workbook_maj_ligne)
+    with pytest.raises(ValueError):
+        fn(None, code_mission="MISSION-2", table="Saisie", index=0, valeurs=[])
