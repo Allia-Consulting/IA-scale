@@ -1,0 +1,35 @@
+---
+id: T-0035
+titre: "Cockpit v2 : construction des bandeaux restants et bascule hub"
+capacite: "Généralisation & cockpit utilisateur (Phase 4) / tour de contrôle — lecture économique"
+phase: 4
+type_action: infrastructure
+cran: notifie   # bascule de la page en point d'entrée unique du site : interne mais firme-visible ; réversible → notifié. Les gestes d'écriture guidée suivent leurs propres crans.
+produit:
+  - "(bandeau Staffing) conforme tour-de-controle.md §3 : sélecteur d'année, pourcentages DANS les barres, effectif actif au sommet"
+  - "(bandeau Rentabilité) tableau 12 mois Budget | Réalisé, lignes CA et EBITDA, « · » en cas d'absence de donnée (style sobre, aucun vert, aucune pastille)"
+  - "(bandeau Factures à émettre) liste des échéances au statut « à émettre », bouton « Émise » (écriture guidée), lien vers le PDF dans le dépôt Teams de la mission"
+  - "(gestes d'écriture guidée et cascades confirmées) conformes au §3 du contrat"
+  - "(bascule hub) la page Tour-de-contrôle devient le point d'entrée unique / la page d'accueil du site"
+depend_de: [T-0033, T-0031]   # T-0033 (souche/gabarits propres) puis solde de T-0031 (chaîne économique vivante) = préalables à la lecture économique du cockpit
+contrats_concernes:
+  - contrats/socle/tour-de-controle.md   # v2.1 (promu) — SPÉCIFICATION COMPLÈTE ET NORMATIVE, §3 fait foi
+  - contrats/socle/modele-donnees.md     # §5.4 — agrégats calculés à la volée (staffing, CA, EBITDA, factures à émettre)
+criteres_acceptation:
+  - "Les trois bandeaux restants (Staffing, Rentabilité, Factures à émettre) sont construits et vivants, conformes au §3 de tour-de-controle.md — AUCUNE re-conception (le §3 fait foi)"
+  - "Style sobre respecté : « · » sur absence de donnée, aucun code couleur d'alerte"
+  - "La page Tour-de-contrôle est le point d'entrée unique du site (bascule hub effectuée)"
+  - "Les gestes d'écriture guidée (ex. « Émise ») et les cascades sont confirmés et suivent les crans en vigueur"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S35 (14/07/2026). Le contrat tour-de-controle.md v2.1 (promu) est la SPÉCIFICATION
+  COMPLÈTE ET NORMATIVE : aucune re-conception n'est requise ni autorisée. État réel constaté le
+  14/07/2026 au soir sur SitePages/Tour-de-contrôle.aspx : construits et vivants = bandeaux Pipe
+  commercial pondéré + Recrutement (solution 1.2.0.0, PR #205/#206), sur la page v1 conservée (les KPI
+  d'organisation y sont encore présents). Restent à construire, conformément au §3 : Staffing,
+  Rentabilité, Factures à émettre, les gestes d'écriture guidée et cascades, et la bascule de la page
+  en point d'entrée unique. Une maquette v2 a été rendue en session S33 mais JAMAIS déposée — le §3 du
+  contrat fait foi, pas la maquette : pas de re-design. Dépendances : T-0033 (souche/gabarits propres)
+  puis solde de T-0031 (chaîne économique vivante) avant que la lecture Rentabilité/Factures ait un
+  substrat réel.
