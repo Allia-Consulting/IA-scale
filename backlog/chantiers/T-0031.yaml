@@ -1,0 +1,34 @@
+---
+id: T-0031
+titre: "Extension MCP Graph Workbook/Tables — primitives déléguées de lecture/écriture des classeurs de pilotage"
+capacite: "Socle d'exploitation & gouvernance / Orchestration des agents & missions — couture Graph"
+phase: 1
+type_action: infrastructure
+cran: notifie   # code sous outils/ : réversible (image redéployable), interne ; l'écriture réelle est bornée côté serveur (cible figée)
+produit:
+  - "(code) 3 primitives Workbook/Tables ajoutées à outils/mcp-graph/server.py, sur le pattern des outils existants (auth Bearer voie 1, _verifier_appelant, _journal_appel, httpx, _config) : lire une table nommée, ajouter des lignes en masse, mettre à jour une ligne par position"
+  - "(garde-fou) écriture bornée par CONSTRUCTION côté serveur — cible figée, jamais choisie par l'appelant, sur le modèle de deposer_document_mission : racine Missions figée (GRAPH_MISSION_DRIVE_ID / ENV_MISSION_DRIVE_ID via _config_mission), consolidé = item désigné (CONSOLIDE_ITEM_ID). Aucun bornage par simple motif de nom de fichier."
+  - "(tests) test_garde_fous.py : une écriture hors cible figée échoue fail-closed"
+depend_de: [T-0030]   # habilitant partagé : T-0030 (facturation) consomme ces primitives pour alimenter T_Echeancier
+contrats_concernes:
+  - contrats/socle/modele-donnees.md   # §5.5 état du câblage : Workbook/Tables passe de « à construire » à « construit »
+criteres_acceptation:
+  - "Les 3 primitives lisent/écrivent une table nommée d'un classeur via l'API Workbook/Tables (Graph REST v1.0), et non l'API Lists"
+  - "L'écriture cible EXCLUSIVEMENT la racine Missions figée côté serveur et le consolidé désigné ; toute autre cible est refusée fail-closed (éprouvé par test)"
+  - "La réconciliation par clé métier n'est PAS dans le MCP : les primitives restent bêtes (lire / ajouter / maj-par-position) ; la logique de clé vit dans le skill consommateur"
+  - "Le ciblage utilise le drive Missions (/drives/{mission_drive_id}), pas /sites/{site}/drive"
+  - "Éprouvé sur le tenant après redéploiement de l'image (runbook gardien Azure) — soldé seulement à ce moment"
+rayon_impact: local
+statut: à_faire
+note: >
+  Nommé en session S34 (14/07/2026). Ce chantier existait dans l'ordre de bataille S34
+  (point 2) mais n'était tracé dans AUCUNE fiche canon avant celle-ci — il ne vivait que
+  dans un document de session. Il est ici inscrit au backlog sur décision explicite du
+  gardien (14/07/2026), qui autorise aussi son lancement immédiat malgré le statut différé
+  de T-0030 : le MCP Workbook est l'habilitant partagé de la tuyauterie économique (gabarit
+  T-promu → MCP Workbook → consolidation → cockpit v3), utilisable par la consolidation
+  comme par la facturation. DÉCISION DE BORNAGE (gardien, 14/07/2026, tracée ici pour que
+  le code puisse la citer sans fabriquer de provenance) : l'écriture Workbook est bornée par
+  construction côté serveur (cible figée, jamais choisie par l'appelant), sur le modèle
+  éprouvé de deposer_document_mission ; le bornage par motif de nom de fichier envisagé en
+  discussion est ABANDONNÉ au profit de ce bornage structurel plus fort.
