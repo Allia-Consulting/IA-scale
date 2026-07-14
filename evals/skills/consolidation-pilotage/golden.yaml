@@ -1,0 +1,51 @@
+skill: consolidation-pilotage
+version_harnais: 1
+cas:
+  - id: nominal-01
+    type: invariant
+    description: "Cas nominal — grille prévue 2 ressources × 3 mois + 2 factures : transformation matriciel → long, une ligne par cellule renseignée, mois au 1er du mois."
+    contient:
+      - "matriciel → long"
+      - "(Ressource, Mois) dont la valeur > 0"
+      - "1er du mois"
+  - id: fusion-02
+    type: invariant
+    description: "Fusion — montant d'une facture existante modifié → 1 maj (workbook_maj_ligne), 0 ajout, 0 suppression ; clé (CodeMission, NumFacture)."
+    contient:
+      - "FUSION INCRÉMENTALE, JAMAIS DE SUPPRESSION"
+      - "workbook_maj_ligne"
+      - "(CodeMission, NumFacture)"
+  - id: garde-03
+    type: invariant
+    description: "Garde — un mois existant repassé à 0 : aucune écriture qui efface, la ligne est conservée + anomalie attendue."
+    contient:
+      - "n'efface RIEN au gabarit"
+      - "correction de suppression à confirmer par le responsable"
+  - id: archivage-04
+    type: invariant
+    description: "Garde-fou anti-faux-vert — archivage préalable via copie asynchrone : un 202 n'est pas une preuve, poller jusqu'à completed."
+    contient:
+      - "workbook_archiver_gabarit"
+      - "un 202 n'est pas une preuve"
+  - id: cran-05
+    type: invariant
+    description: "Cran — reconcilier_gabarit_pilotage = auto, réversible par archive systématique préalable + fusion sans suppression."
+    contient:
+      - "reconcilier_gabarit_pilotage"
+      - "archive systématique préalable"
+  - id: bornage-06
+    type: invariant
+    description: "Garde-fou structurel — écriture bornée par construction : le skill ne manipule jamais de drive_id/item_id en écriture."
+    contient:
+      - "ne manipule jamais de `drive_id`/`item_id` en écriture"
+  - id: statut-validation-07
+    type: invariant
+    description: "Garde-fou — jamais de rétrogradation d'un StatutValidation validé vers à valider sans changement de jours."
+    contient:
+      - "Ne JAMAIS rétrograder un `StatutValidation` « validé » vers « à valider »"
+  - id: anomalies-08
+    type: invariant
+    description: "Anomalies signalées jamais résolues seul — convention d'identifiant ressource (mail Allia / mail du sous-traitant)."
+    contient:
+      - "mail Allia"
+      - "mail du sous-traitant"
