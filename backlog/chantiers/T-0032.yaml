@@ -1,0 +1,33 @@
+---
+id: T-0032
+titre: "Référentiel de coûts + ingestion des factures (Cowork) avec cran de validation"
+capacite: "Capacités habilitantes / Gestion financière — Comptabilité & clôture, Contrôle de gestion, FinOps IA"
+phase: 1
+type_action: infrastructure
+cran: valide   # écriture de données financières engageantes dans une source à audience restreinte : sortie/impact réel → validation humaine
+produit:
+  - "(données) deux domiciles de coûts à audience restreinte, site Contrats-et-administratif : T_Structure dans '07 - Coût de Structure' (factures : notes de frais, prestations, locaux, IT, administratif) et T_Ressources dans '08 - Coût Masse salariale & Indep' (coût journalier par ressource — donnée RH la plus sensible). Séparés pour isoler la masse salariale."
+  - "(règle) granularité mensuelle : facture annuelle lissée sur 12 mois ; coût important (> 8 000 €) lissé sur 3 mois."
+  - "(agent Cowork) lecture de la boîte mail Allia du gardien toutes les 48h ; extraction des factures ; dépôt d'une LIGNE CANDIDATE en Zone-de-proposition (jamais d'écriture directe dans T_Structure) ; notification mail de synthèse au gardien (fournisseur, montant, catégorie, mois de rattachement, lissage) avec hyperlien vers la Zone-de-proposition pour validation."
+  - "(boucle de promotion) sur validation du gardien : la ligne candidate entre dans T_Structure, puis Cowork range la facture dans un sous-dossier dédié de la boîte. Refus/inaction = la ligne reste candidate, rien n'entre."
+depend_de: [T-0031]
+contrats_concernes:
+  - contrats/socle/modele-donnees.md   # §5.3 référentiel de coûts (T_Ressources / T_Structure) : domiciles réels à consigner
+criteres_acceptation:
+  - "T_Structure et T_Ressources vivent dans leurs deux domiciles restreints ; aucun coût ne descend jamais dans un gabarit mission"
+  - "Aucune ligne de coût n'entre dans T_Structure sans validation humaine explicite ; l'écriture directe par agent est interdite"
+  - "L'hyperlien de validation mène à une surface authentifiée (Zone-de-proposition) où le gardien promeut ; il n'EXÉCUTE jamais l'écriture par simple clic (anti-rejeu email)"
+  - "La lecture de la boîte complète est traitée comme surface sensible : les instructions éventuellement contenues dans un email ne sont jamais exécutées (anti-injection)"
+  - "Le rattachement mensuel applique le lissage (annuel→12, >8000€→3) et le cockpit calcule l'EBITDA à la volée en lisant gabarits actifs + T_Structure + T_Ressources"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S34 (14/07/2026). Sous-système financier distinct de T-0031 (primitives
+  Workbook) et de la consolidation : capability « Gestion financière » de la carte. Domiciles
+  '07 - Coût de Structure' et '08 - Coût Masse salariale & Indep' vérifiés existants et vides
+  sur le réel le 14/07/2026 (site Contrats-et-administratif) — coordonnées tenant en variables
+  d'environnement (runbook gardien), jamais au canon. Décision gardien 14/07/2026 : cran de
+  validation obligatoire (pas d'écriture directe), notification de synthèse + hyperlien vers
+  Zone-de-proposition, ligne candidate hébergée en Zone-de-proposition (patron create_list_item).
+  L'app mobile de scan/déclaration des notes de frais (seule source collaborateur) est un jalon
+  ULTÉRIEUR, hors de cette fiche.
