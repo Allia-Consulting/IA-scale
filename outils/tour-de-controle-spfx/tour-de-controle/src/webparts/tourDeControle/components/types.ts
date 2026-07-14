@@ -46,6 +46,18 @@ export interface Zone {
 }
 
 /**
+ * Résultat d'une écriture guidée (symétrique de `Lecture` de listes-reelles.ts) :
+ *  - ok           : l'écriture a abouti ;
+ *  - refuse       : écriture interdite (403) — fail-VISIBLE, jamais silencieux ;
+ *  - indisponible : tout autre échec (réseau, 4xx/5xx).
+ * Ne porte jamais d'exception : le geste d'écriture ne casse pas le cockpit.
+ */
+export type Ecriture =
+  | { readonly etat: 'ok' }
+  | { readonly etat: 'refuse' }
+  | { readonly etat: 'indisponible' };
+
+/**
  * Compte les lignes appelant une décision irréversible, sur l'ensemble des zones.
  * Le compteur d'en-tête en découle (dérivé) — il n'est écrit nulle part en dur.
  * Sur données réelles vides, retourne 0 (honnête).
