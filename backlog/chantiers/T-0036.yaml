@@ -1,0 +1,56 @@
+---
+id: T-0036
+titre: "Claude Desktop macOS : reconditionnement en ~/Applications + auto-update natif (runbook humain)"
+capacite: "Socle d'exploitation / Parc & gestion de poste"
+phase: 1
+type_action: runbook_humain
+cran: valide   # reconditionnement Intune + migration de tout grp-parc-collaborateur : paramétrage du tenant/MDM, rayon parc global → PROSCRIT à un agent, geste exclusif du gardien (table-des-crans.yaml ; garde-fous CLAUDE.md). Réversible (re-push .pkg /Applications), mais firme-large → validé.
+produit:
+  - "app LOB Claude Desktop reconditionnée dans Intune pour cibler ~/Applications (dossier utilisateur), « Ignorer la version = Oui » conservé"
+  - "aucun profil de configuration com.anthropic.claudefordesktop (aucune clé gérée disableAutoUpdates posée)"
+  - "script Intune de détection/nettoyage des doubles installations (/Applications ET ~/Applications sur un même poste)"
+  - "télémétrie de version Claude Desktop via Intune (CFBundleShortVersionString) + seuil de version minimale et alerte de dérive"
+  - "généralisation à grp-parc-collaborateur après validation pilote verte"
+depend_de: ["RUNBOOK-HUMAIN"]
+# RUNBOOK-HUMAIN : sentinelle de garde-fou (cf. T-0006). Reconditionner une app LOB, poser/retirer
+#   un profil MDM, migrer l'emplacement d'installation sur tout le parc, configurer une télémétrie
+#   Intune sont des actions PROSCRITES à un agent et à Claude (table-des-crans.yaml :
+#   parametrer_tenant_m365_securite_residence_donnees). C'est le runbook du gardien. La tâche est donc
+#   NON sélectionnable en autonomie (statut de la sentinelle jamais « promu », plan §4).
+contrats_concernes:
+  - "contrats/socle/parc-collaborateur.md"   # v1.4 §4 — politique d'emplacement + auto-update de Claude Desktop
+criteres_acceptation:
+  - "Sur poste pilote : le clic « relancer pour mettre à jour » ABOUTIT, SANS aucune invite de mot de passe, version incrémentée après MAJ"
+  - "Sur poste pilote : Cowork fonctionnel et NON grisé « géré par l'organisation »"
+  - "Sur poste pilote : les 3 connecteurs MCP (allia-graph-proposition, Microsoft 365, Microsoft Learn) se reconnectent après install ~/Applications ET après un cycle d'auto-update"
+  - "Aucune double installation résiduelle (/Applications/Claude.app absent) sur les postes traités"
+  - "Généralisation à grp-parc-collaborateur uniquement (jamais « tous les appareils »)"
+  - "Aucune clé gérée com.anthropic.claudefordesktop posée (piste A pure) ; aucun paramètre saisi par un agent"
+echeance: "dès la fenêtre de reconditionnement Intune disponible"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S35 (15 juillet 2026), sur décision du gardien du 15/07/2026 validant la piste A
+  de l'analyse d'impact « Claude Desktop macOS — mise à jour sans invite de mot de passe ». Solde une
+  décision restée ouverte depuis le 13 juin 2026 : l'entre-deux install /Applications + auto-update
+  actif produit une invite admin à chaque MAJ sur compte Standard (l'updater réécrit le bundle
+  Claude.app, non-inscriptible en /Applications par un Standard). Piste retenue = ~/Applications +
+  auto-update natif conservé + ZÉRO clé gérée (donc zéro risque de griser Cowork / inférence 3P).
+  Renoncement explicite et borné au contrôle de version de la flotte Claude Desktop (Anthropic pilote
+  le rythme des MAJ) — compensé par télémétrie Intune + seuil/alerte de dérive. Pistes B (MDM possède
+  les versions) et C (hybride avec clé gérée) écartées dans l'analyse. Réversible par re-push .pkg
+  /Applications. Postes réels concernés au minimum : Guillaume Dan, Sarah Shaiek, Yousra Boukiaou
+  (grp-parc-collaborateur). RÈGLE GARDIEN S35 : si l'épreuve pilote exige des retouches manuelles
+  répétées → STOP au 1er incident, reprise documentée (pas d'allers-retours de micro-corrections).
+  L'épreuve pilote (clic MAJ sans invite + Cowork + 3 MCP verts + zéro double install) solde T-0036.
+
+avancement:
+  journal:
+    - date: 2026-07-15
+      fait: "Fiche nommée. Analyse d'impact + décision gardien (piste A) rédigées ; runbook préparé (reconditionnement Intune, script anti-doublons, validation pilote, télémétrie, généralisation). Aucun geste tenant exécuté par le projet — le livrable candidat est parc-collaborateur.md v1.4 (§4) + cette fiche."
+  reste_pour_solder:
+    - "Reconditionnement Intune de l'app LOB vers ~/Applications (contexte utilisateur ou wrapper d'install — à confirmer sur la doc de déploiement Anthropic au moment du geste)"
+    - "Script de détection/nettoyage des doubles installations, testé en pilote"
+    - "Validation sur poste pilote : tous les critères d'acceptation verts (MAJ sans invite, Cowork non grisé, 3 MCP reconnectés, zéro double install)"
+    - "Télémétrie de version + seuil/alerte de dérive en service"
+    - "Généralisation à grp-parc-collaborateur + passage du script anti-doublons sur les postes déjà enrôlés"
