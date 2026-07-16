@@ -53,3 +53,22 @@ avancement:
         prérequis durs (déposer la souche propre ; libérer les noms gabarit-1/2) n'ont pas de geste
         machine. Reprise proposée (A/B/C) dans docs/epreuves/2026-07-16-t-0033-assainissement-tenant.md.
         Statut inchangé (à_faire) : critères d'acceptation non satisfaits (pas de count:0 × 6).
+    - date: 2026-07-16
+      fait: >
+        Reprise tenant — le copilote de gouvernance (surface déléguée, identité gardien, AUCUN geste
+        manuel) a exécuté les gestes fichier manquants : archivage 3× MoveToUsingPath (HTTP 200) vers
+        « 00 - Old » (gabarit-1/2 pollués + souche polluée ; « 06 » relu vide, « 00 - Old » = 67737 o =
+        22592+22551+22594) et dépôt AddUsingPath (HTTP 200) de la souche canon 9886 o. STOP n°1 de reprise
+        à l'ÉTAPE 0 (preuve d'intégrité) : la souche déposée (Length réécrite par SharePoint 9886→17656 o)
+        est ILLISIBLE par l'API Workbook — workbook_lire_table renvoie 501 Not Implemented sur les 3 tables
+        (T_Affectations/T_Imputations/T_Echeancier). Intégrité non prouvée (infirmée) → ré-instanciation
+        NON exécutée (instancier depuis une souche cassée aurait fabriqué 2 gabarits cassés) ; tenant
+        inchangé, aucune écriture machine. Diagnostic local : le binaire canon utilise des chaînes en ligne
+        sans sharedStrings.xml et définit chaque table avec ref = en-tête seul (A1:D1/A1:E1/A1:G1,
+        headerRowCount=1, 0 ligne de corps) — la forme « count:0 » de T-0033 1/2 est justement celle que
+        l'API Workbook n'ouvre pas (contraste : une ligne de corps vide donne count:1, STOP n°3 S35).
+        Isolation H1 réécriture-SharePoint / H2 défaut-générateur non tranchable sans chemin d'écriture
+        Graph délégué côté agent (1re tâche de reprise). Leçon durable : le count:0 doit venir d'une table
+        VIDE mais valide au sens Graph (round-trip Excel ou création via API Workbook), et toute promotion
+        future de la souche doit être gardée par une épreuve de LECTURE Graph, pas seulement openpyxl local.
+        Détail : docs/epreuves/2026-07-16-t-0033-reprise-tenant.md. Statut inchangé (à_faire).
