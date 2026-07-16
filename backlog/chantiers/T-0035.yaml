@@ -57,6 +57,16 @@ avancement:
         (HTTP 204), vérifié : WelcomePage = SitePages/Tour-de-contrôle.aspx, la racine du site atterrit
         sur la tour. Réversible en une action (re-MERGE vers Home.aspx). Épreuve détaillée :
         docs/epreuves/2026-07-16-t-0035-diffusion-cockpit-v2.md.
+    - date: 2026-07-16
+      fait: >
+        Diffusion Teams (geste gardien, soir du 16/07). Un onglet de canal Teams (lien
+        SharePoint) pointant vers SitePages/Tour-de-contrôle.aspx a été posé dans l'équipe
+        « Management et Gestion » — audience restreinte managers et plus. La tour (accueil
+        unique du site depuis PR #222/#223) est ainsi atteignable depuis Teams pour cette
+        audience ; la diffusion à toute la firme suivra une fois les bandeaux économiques
+        câblés (point 2). Cohérence : les données économiques restent en états vides honnêtes
+        (« aucun gabarit actif lu ») tant que T-0033/T-0031 ne sont pas soldés — l'onglet
+        n'expose rien d'inventé.
 
   reste_pour_solder:
     - "Point 2 — câblage réel des bandeaux économiques (staffing, rentabilité, factures) après T-0033 puis solde de T-0031 ; les 3 props de coordonnées gabarits du property pane seront posées par le gardien à ce moment-là"
