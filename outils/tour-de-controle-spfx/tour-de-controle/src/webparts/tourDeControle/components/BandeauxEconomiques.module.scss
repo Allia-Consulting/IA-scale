@@ -1,0 +1,289 @@
+@import 'design-tokens';
+
+/* Styles des bandeaux économiques (staffing, rentabilité, factures) + fraîcheur.
+   Sobriété du design system : bordures fines, aucun vert, aucune pastille d'état.
+   L'ambre reste un SIGNAL rare (anomalies), jamais un décor. */
+
+/* ------------------------------------------------------------------ */
+/* Bandeau 1 — Staffing : douze barres mensuelles                      */
+/* ------------------------------------------------------------------ */
+.staffingHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.anneePicker {
+  display: flex;
+  gap: 4px;
+}
+
+.anneeBtn {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  border: 0.5px solid var(--color-stone-border);
+  color: var(--color-stone-text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-blue-wash);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-blue-bright);
+    outline-offset: 2px;
+  }
+}
+
+.anneeBtnActif {
+  background: var(--color-blue-wash);
+  border-color: var(--color-blue-light-border);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.legende {
+  font-size: var(--text-label);
+  color: var(--color-stone-muted);
+  display: flex;
+  gap: 12px;
+}
+
+.legendeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendeSwatch {
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  border: 0.5px solid var(--color-stone-border);
+}
+
+.legendeRealise {
+  background: var(--color-blue-wash);
+}
+
+.legendePrevisionnel {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    var(--color-stone-border) 3px,
+    var(--color-stone-border) 4px
+  );
+}
+
+.barres {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+  align-items: end;
+}
+
+.barreCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.barreEffectif {
+  font-family: var(--font-structure);
+  font-size: var(--text-label);
+  font-weight: 700;
+  color: var(--color-stone-text);
+  line-height: 1;
+}
+
+.barreTrack {
+  position: relative;
+  width: 100%;
+  height: 84px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid var(--color-stone-border);
+  background: var(--color-ivory);
+}
+
+/* Prévisionnel : contour hachuré discret (à venir, hypothétique) */
+.trackPrevisionnel {
+  border-style: dashed;
+  background: transparent;
+}
+
+.barreFill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-blue-wash);
+  border-top: 1px solid var(--color-blue-light-border);
+  border-radius: 0 0 var(--radius-xs) var(--radius-xs);
+}
+
+.barrePct {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  color: var(--color-stone-muted);
+}
+
+.barreMois {
+  font-size: 10px;
+  color: var(--color-stone-muted);
+  text-transform: lowercase;
+  line-height: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bandeau 4 — Rentabilité : tableau 12 mois × (Budget|Réalisé) + Total */
+/* ------------------------------------------------------------------ */
+.tableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rentaTable {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+  font-size: var(--text-label);
+}
+
+.rentaTable th,
+.rentaTable td {
+  border: 0.5px solid var(--color-stone-border);
+  padding: 5px 7px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rentaMoisTh {
+  font-family: var(--font-structure);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.rentaSubTh {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  color: var(--color-stone-muted);
+  font-size: 10px;
+}
+
+.rentaLabel {
+  font-family: var(--font-structure);
+  font-weight: 700;
+  color: var(--color-ink);
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: #ffffff;
+}
+
+.rentaTotalCol {
+  background: var(--color-blue-wash);
+}
+
+.rentaCell {
+  font-family: var(--font-mono);
+  color: var(--color-stone-muted);
+}
+
+.rentaMention {
+  font-size: var(--text-label);
+  font-style: italic;
+  color: var(--color-stone-muted);
+  margin: 8px 0 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bandeau 5 — Factures à émettre : liste                              */
+/* ------------------------------------------------------------------ */
+.factureRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: var(--text-body-sm);
+  border-bottom: 0.5px solid var(--color-stone-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.factureNum {
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+}
+
+.factureMeta {
+  color: var(--color-stone-text);
+}
+
+.factureMontant {
+  margin-left: auto;
+  font-family: var(--font-structure);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.factureLien {
+  font-size: var(--text-label);
+  color: var(--color-blue-mid);
+}
+
+.videText {
+  font-size: var(--text-body-sm);
+  color: var(--color-stone-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bandeau de fraîcheur commun (§3 — honnêteté des données)            */
+/* ------------------------------------------------------------------ */
+.fraicheur {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  padding: 8px 20px;
+  font-size: var(--text-meta);
+  color: var(--color-stone-muted);
+}
+
+.fraicheurLu {
+  font-style: italic;
+}
+
+/* Anomalies : signal ambre discret (texte, jamais une pastille) */
+.fraicheurAnomalies {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  color: var(--color-amber-deep);
+}
+
+/* Colonnes étroites de SharePoint : barres en pile plus compacte */
+@media (max-width: 600px) {
+  .barres {
+    gap: 3px;
+  }
+
+  .barreTrack {
+    height: 60px;
+  }
+}
