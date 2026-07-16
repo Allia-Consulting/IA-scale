@@ -72,3 +72,22 @@ avancement:
         VIDE mais valide au sens Graph (round-trip Excel ou création via API Workbook), et toute promotion
         future de la souche doit être gardée par une épreuve de LECTURE Graph, pas seulement openpyxl local.
         Détail : docs/epreuves/2026-07-16-t-0033-reprise-tenant.md. Statut inchangé (à_faire).
+    - date: 2026-07-16
+      fait: >
+        Isolation H1/H2 menée par le copilote (REST SharePoint délégué, post-STOP ; aucun geste agent) —
+        H2 CONFIRMÉ. Test A (fidélité octets) : fichier déposé 17656 o sha256[0:16] 2ee570bdc051447a ≠ canon
+        9886 o sha256[0:16] 48b875a192dd5a6c → SharePoint réécrit le paquet openpyxl à l'ingestion. Test B
+        (innocence du chemin) : gabarit-1 archivé Excel-authored (22592 o) redéposé par le MÊME AddUsingPath
+        → 22592 o strictement identique, non réécrit (fichier d'essai _test-lecture-excel-authored.xlsx
+        recyclé). Verdict : le chemin de dépôt et l'ingestion des fichiers Excel canoniques sont innocentés ;
+        c'est le binaire openpyxl (tables sans ligne de corps + packaging non canonique) qui déclenche la
+        normalisation SharePoint et finit 501. Fait de fond : Excel ne produit pas de table à zéro ligne ->
+        le count:0 fiable doit être FABRIQUÉ PAR LE SERVICE (API Workbook), pas par un binaire tiers. Tenant
+        assaini et relu : « 06 - Gabarit ERP » VIDE ; « 00 - Old » = 4 archives (gabarit-1 22592, gabarit-2
+        22551, souche polluée 22594, souche openpyxl illisible 17656). Décision d'architecture (porte gardien
+        à la PR) : instanciation API-native — primitive d'instanciation v2 du serveur MCP (outils/mcp-graph)
+        créant les 3 tables via tables/add (plage d'en-têtes §5.2, hasHeaders) sur base service-authored ->
+        tables à 0 ligne lisibles par construction ; la souche openpyxl cesse d'être le vecteur des tables.
+        À instruire en S37 : conception lue du code réel du serveur, amendement fiche T-0033
+        (produit/critères), retouche éventuelle modele-donnees.md §5.6 (rôle de la souche), build+déploiement
+        (runbook gardien), golden gardé par une épreuve de LECTURE Graph. Statut inchangé (à_faire).
