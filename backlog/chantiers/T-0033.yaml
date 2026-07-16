@@ -30,3 +30,26 @@ note: >
   l'agent livre des artefacts finis (souche + gabarits régénérés), jamais des instructions d'édition
   cellule par cellule. Coordonnées tenant (drive-id/folder-id de « 06 - Gabarit ERP » et « 00 - Old »)
   en variables d'environnement (runbook gardien), jamais au canon.
+avancement:
+  journal:
+    - date: 2026-07-16
+      fait: >
+        Temps 1/2 SOLDÉ (PR #224, merge a428665f) : générateur openpyxl + souche propre régénérée
+        (9 886 o, 3 tables nommées en-têtes seuls, statuts accentués) promue au canon
+        contrats/socle/gabarit-pilotage-mission.xlsx. Souche pré-vérifiée localement pour cette épreuve :
+        T_Affectations ref A1:D1 / T_Imputations A1:E1 / T_Echeancier A1:G1, 0 ligne de corps.
+    - date: 2026-07-16
+      fait: >
+        Temps 2/2 (tenant) — STOP n°1 AVANT toute écriture, tenant strictement inchangé, zéro geste
+        gardien. Coordonnées tenant découvertes (site Contrats-et-administratif, drive « Documents
+        partages », dossiers « 06 - Gabarit ERP » et « 00 - Old » — consignées dans le journal d'épreuve).
+        Preuve de vie MCP allia-graph OK (workbook_lire_table lecture seule sur gabarit-1, pas de 401 ;
+        count:1 ligne vide = état résiduel STOP n°3 de S35, confirmé). Blocage : AUCUN chemin d'écriture-
+        fichier machine disponible — (1) jeton Graph Azure CLI sans scope Sites/Files (drives vides) ;
+        (2) outils d'écriture du connecteur M365 verrouillés (« This tool is not available ») ;
+        (3) primitives allia-graph sans téléversement de souche ni retrait/déplacement de gabarit
+        (workbook_archiver_gabarit COPIE sans libérer le nom ; instancier fail-closed → 409 sur nom
+        occupé, et instancier par-dessus la souche polluée en place rejouerait STOP n°2 de S35). Les deux
+        prérequis durs (déposer la souche propre ; libérer les noms gabarit-1/2) n'ont pas de geste
+        machine. Reprise proposée (A/B/C) dans docs/epreuves/2026-07-16-t-0033-assainissement-tenant.md.
+        Statut inchangé (à_faire) : critères d'acceptation non satisfaits (pas de count:0 × 6).
