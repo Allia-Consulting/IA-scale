@@ -13,4 +13,13 @@ export interface ITourDeControleProps {
    * appels `_api/web/lists`. Peut différer du site de la page (défaut = site courant).
    */
   dataSiteUrl: string;
+  /**
+   * URL absolue du site des gabarits de pilotage (Contrats et administratif,
+   * modele-donnees §5.2). Vide = découverte non câblée (états vides honnêtes).
+   */
+  gabaritsSiteUrl: string;
+  /** Chemin server-relative du dossier des gabarits actifs (`06 - Gabarit ERP`). Vide = non câblé. */
+  gabaritsFolderPath: string;
+  /** Chemin server-relative du référentiel de coûts (audience restreinte, §5.3). Vide = non câblé. */
+  referentielCoutsPath: string;
 }

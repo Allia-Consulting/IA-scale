@@ -14,6 +14,15 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import type { Zone, Compteur, DetailItem, Ecriture } from './types';
 import {
+  decouvrirGabarits,
+  type EtatGabarits,
+  type LecteurDossier,
+  type SondeReferentiel,
+  type ResultatDossier,
+  type EtatAcces,
+  type FichierDossier
+} from './gabarits';
+import {
   COLONNE_STATUT_MISSION,
   compterMissionsActives,
   compterCreesDepuis,
@@ -50,7 +59,23 @@ export interface CockpitData {
   readonly indicateurs: Zone;
   readonly pipeCommercial: Zone;
   readonly recrutement: Zone;
-  readonly activite: Zone;
+  /** Cockpit v2 — présence/absence des sources économiques (gabarits actifs + référentiel). */
+  readonly gabarits: EtatGabarits;
+}
+
+/**
+ * Coordonnées de découverte des gabarits (cockpit v2) — posées par le gardien (runbook,
+ * point 2), jamais au canon. Champs vides = découverte « non câblée » → états vides
+ * honnêtes (aucun chemin inventé). Les gabarits vivent sur un AUTRE site que les listes
+ * (Contrats et administratif, `06 - Gabarit ERP`), d'où une base `_api` distincte.
+ */
+export interface ConfigGabarits {
+  /** URL absolue du site des gabarits (base `_api`, ex. .../sites/Contratsetadministratif). */
+  readonly siteUrl: string;
+  /** Chemin server-relative du dossier des gabarits actifs (`06 - Gabarit ERP`). */
+  readonly dossierGabarits: string;
+  /** Chemin server-relative du référentiel de coûts (audience restreinte). */
+  readonly referentielCouts: string;
 }
 
 const NOTE_NON_CABLE = 'Liste non câblée sur ce site.';
@@ -146,29 +171,6 @@ export function changerEtapeOpportunite(
   etape: string
 ): Promise<Ecriture> {
   return changerEtapeOpportunitePure(ecrivainPour(sp, dataSiteUrl), id, etape);
-}
-
-/** Compteur « nombre d'éléments » d'une liste, fail-visible, vide assumé. */
-function compteurCompte(
-  id: string,
-  libelle: string,
-  lecture: Lecture,
-  libelleUnite: string
-): Compteur {
-  if (lecture.etat === 'non_cable') {
-    return { id, libelle, valeur: '—', items: [], note: NOTE_NON_CABLE };
-  }
-  if (lecture.etat === 'indisponible') {
-    return { id, libelle, valeur: '—', items: [], note: NOTE_INDISPONIBLE };
-  }
-  const n = lecture.valeurs.length;
-  return {
-    id,
-    libelle,
-    valeur: String(n),
-    items: [],
-    note: n === 0 ? `Aucun ${libelleUnite} pour l'instant.` : undefined
-  };
 }
 
 /** Compteur « — » sobre pour une source non lisible (non câblé / indisponible). */
@@ -277,48 +279,66 @@ async function chargerRecrutement(sp: SPHttpClient, dataSiteUrl: string): Promis
   };
 }
 
-/** Zone 4 — Activité : Zone-de-proposition (dérivés récents) + Imputations. */
-async function chargerActivite(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
-  const [zone, imputations] = await Promise.all([
-    lireListe(
-      sp,
-      dataSiteUrl,
-      'Zone-de-proposition',
-      '$select=Title,Origine,Created&$orderby=Created desc&$top=5'
-    ),
-    lireListe(sp, dataSiteUrl, 'Imputations', '$select=Id&$top=2000')
-  ]);
+// ---------------------------------------------------------------------------
+// Découverte des gabarits (cockpit v2) — primitives réseau liées à `sp`, sous
+// l'identité de l'utilisateur (SSO, zéro secret, aucune élévation). Les gabarits
+// vivent sur un AUTRE site (Contrats et administratif) : lecture REST cross-site par
+// URL absolue. Symétriques de `lireListe`/`ecrivainPour` : ne lèvent JAMAIS.
+//   - config vide → 'non_cable' (état légitime : le gardien câble au point 2) ;
+//   - 404 → 'non_cable' ; référentiel 403/404 → 'restreint' ; autre échec → 'indisponible'.
+// ---------------------------------------------------------------------------
+/**
+ * Échappe une apostrophe pour un littéral chaîne OData (doublement). On cible la forme
+ * moderne `...ByServerRelativePath(decodedUrl='…')` : elle prend le chemin DÉCODÉ (slashes
+ * et espaces intacts, ex. « 06 - Gabarit ERP »), sans encoder les slashes — le transport
+ * est encodé par SPHttpClient. Robuste pour les chemins avec espaces (leçon vs encodeURIComponent).
+ */
+function litteralOData(v: string): string {
+  return v.replace(/'/g, "''");
+}
 
-  let compteurZone: Compteur;
-  if (zone.etat === 'ok') {
-    const items: ReadonlyArray<DetailItem> = zone.valeurs.map(v => ({
-      libelle: typeof v.Title === 'string' && v.Title ? v.Title : '(sans titre)',
-      statut: typeof v.Origine === 'string' && v.Origine ? v.Origine : '—',
-      signal: 'neutral' as const
-    }));
-    compteurZone = {
-      id: 'act-zone',
-      libelle: 'Dérivés récents (Zone-de-proposition)',
-      valeur: String(zone.valeurs.length),
-      items,
-      note: zone.valeurs.length === 0 ? 'Aucun dérivé récent.' : undefined
-    };
-  } else {
-    compteurZone = {
-      id: 'act-zone',
-      libelle: 'Dérivés récents (Zone-de-proposition)',
-      valeur: '—',
-      items: [],
-      note: zone.etat === 'non_cable' ? NOTE_NON_CABLE : NOTE_INDISPONIBLE
-    };
-  }
-
-  return {
-    compteurs: [
-      compteurZone,
-      compteurCompte('act-imput', 'Imputations', imputations, 'imputation')
-    ]
+function lecteurGabaritsPour(sp: SPHttpClient, cfg: ConfigGabarits): LecteurDossier {
+  return async (): Promise<ResultatDossier> => {
+    if (!cfg.siteUrl || !cfg.dossierGabarits) { return { etat: 'non_cable' }; }
+    const url = `${cfg.siteUrl}/_api/web/GetFolderByServerRelativePath(decodedUrl='${litteralOData(cfg.dossierGabarits)}')`
+      + `/Files?$select=Name,ServerRelativeUrl,TimeLastModified&$top=2000`;
+    try {
+      const res: SPHttpClientResponse = await sp.get(url, SPHttpClient.configurations.v1);
+      if (res.status === 404) { return { etat: 'non_cable' }; }
+      if (!res.ok) { return { etat: 'indisponible' }; }
+      const body: { value?: ReadonlyArray<Record<string, unknown>> } = await res.json();
+      const fichiers: ReadonlyArray<FichierDossier> = (body.value ?? []).map(f => ({
+        nom: typeof f.Name === 'string' ? f.Name : '',
+        url: typeof f.ServerRelativeUrl === 'string' ? f.ServerRelativeUrl : '',
+        modifieLe: typeof f.TimeLastModified === 'string' ? f.TimeLastModified : undefined
+      }));
+      return { etat: 'ok', fichiers };
+    } catch {
+      return { etat: 'indisponible' };
+    }
   };
+}
+
+function sondeReferentielPour(sp: SPHttpClient, cfg: ConfigGabarits): SondeReferentiel {
+  return async (): Promise<EtatAcces> => {
+    // Non configuré : l'utilisateur courant n'a pas (encore) de vue sur le référentiel →
+    // 'restreint' (flag false, non bloquant), état légitime pour la plupart des collaborateurs.
+    if (!cfg.siteUrl || !cfg.referentielCouts) { return 'restreint'; }
+    const url = `${cfg.siteUrl}/_api/web/GetFileByServerRelativePath(decodedUrl='${litteralOData(cfg.referentielCouts)}')?$select=Exists`;
+    try {
+      const res: SPHttpClientResponse = await sp.get(url, SPHttpClient.configurations.v1);
+      if (res.ok) { return 'accessible'; }
+      if (res.status === 403 || res.status === 404) { return 'restreint'; }
+      return 'indisponible';
+    } catch {
+      return 'indisponible';
+    }
+  };
+}
+
+/** Découvre l'état des gabarits actifs + référentiel de coûts (cockpit v2). Ne lève jamais. */
+async function chargerGabarits(sp: SPHttpClient, cfg: ConfigGabarits): Promise<EtatGabarits> {
+  return decouvrirGabarits(lecteurGabaritsPour(sp, cfg), sondeReferentielPour(sp, cfg), new Date());
 }
 
 /**
@@ -432,13 +452,17 @@ async function chargerIndicateursOrganisation(sp: SPHttpClient, dataSiteUrl: str
   return { compteurs: [kpiMissions, kpiPromus, kpiDelai] };
 }
 
-/** Charge l'ensemble du cockpit. Chaque zone échoue indépendamment (fail-visible). */
-export async function chargerCockpit(sp: SPHttpClient, dataSiteUrl: string): Promise<CockpitData> {
-  const [indicateurs, pipeCommercial, recrutement, activite] = await Promise.all([
+/** Charge l'ensemble du cockpit. Chaque source échoue indépendamment (fail-visible). */
+export async function chargerCockpit(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  cfgGabarits: ConfigGabarits
+): Promise<CockpitData> {
+  const [indicateurs, pipeCommercial, recrutement, gabarits] = await Promise.all([
     chargerIndicateursOrganisation(sp, dataSiteUrl),
     chargerPipeCommercial(sp, dataSiteUrl),
     chargerRecrutement(sp, dataSiteUrl),
-    chargerActivite(sp, dataSiteUrl)
+    chargerGabarits(sp, cfgGabarits)
   ]);
-  return { indicateurs, pipeCommercial, recrutement, activite };
+  return { indicateurs, pipeCommercial, recrutement, gabarits };
 }

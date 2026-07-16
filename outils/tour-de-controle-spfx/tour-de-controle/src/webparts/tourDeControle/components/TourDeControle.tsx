@@ -4,8 +4,12 @@ import type { ITourDeControleProps } from './ITourDeControleProps';
 import type { Compteur, DetailItem, Zone } from './types';
 import { compterDecisions } from './types';
 import { chargerCockpit, CockpitData } from './listes-reelles';
+import BandeauStaffing from './BandeauStaffing';
+import BandeauRentabilite from './BandeauRentabilite';
+import BandeauFactures from './BandeauFactures';
+import BandeauFraicheur from './BandeauFraicheur';
 
-const { useState, useCallback, useEffect } = React;
+const { useState, useCallback, useEffect, useMemo } = React;
 
 // La couleur de la pastille est portée par le « signal » : bleu = info/structurel ;
 // ambre = signal rare (à surveiller / ta décision) ; neutre = texte sobre, sans pastille.
@@ -20,21 +24,30 @@ function statutNode(item: DetailItem): React.ReactElement {
 
 export default function TourDeControle(props: ITourDeControleProps): React.ReactElement {
   const { userDisplayName, spHttpClient, dataSiteUrl } = props;
+  const { gabaritsSiteUrl, gabaritsFolderPath, referentielCoutsPath } = props;
 
   // Un seul état, l'ensemble des panneaux ouverts (clé = id de compteur).
   // Modèle voir → creuser → agir : un compteur déplie/replie SON détail dans le cockpit.
   const [ouverts, setOuverts] = useState<ReadonlySet<string>>(() => new Set<string>());
 
-  // Données réelles des listes M365. `null` tant que la première lecture n'a pas répondu.
+  // Données réelles des listes M365 + découverte des gabarits. `null` tant que la
+  // première lecture n'a pas répondu.
   const [data, setData] = useState<CockpitData | null>(null);
+
+  // Config de découverte des gabarits — posée par le gardien (property pane, point 2) ;
+  // vide = non câblée → états vides honnêtes.
+  const cfgGabarits = useMemo(
+    () => ({ siteUrl: gabaritsSiteUrl, dossierGabarits: gabaritsFolderPath, referentielCouts: referentielCoutsPath }),
+    [gabaritsSiteUrl, gabaritsFolderPath, referentielCoutsPath]
+  );
 
   useEffect(() => {
     let vivant = true;
-    chargerCockpit(spHttpClient, dataSiteUrl)
+    chargerCockpit(spHttpClient, dataSiteUrl, cfgGabarits)
       .then(d => { if (vivant) { setData(d); } })
       .catch(() => { /* fail-visible : data reste null → zones en « lecture indisponible » */ });
     return () => { vivant = false; };
-  }, [spHttpClient, dataSiteUrl]);
+  }, [spHttpClient, dataSiteUrl, cfgGabarits]);
 
   const basculer = useCallback((id: string): void => {
     setOuverts(prev => {
@@ -45,8 +58,11 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
   }, []);
 
   // Compteur d'en-tête : DÉRIVÉ des données réelles, jamais codé en dur. 0 est honnête.
-  const zones: ReadonlyArray<Zone> = data ? [data.pipeCommercial, data.recrutement, data.activite] : [];
+  const zones: ReadonlyArray<Zone> = data ? [data.pipeCommercial, data.recrutement] : [];
   const nbDecisions = compterDecisions(zones);
+
+  // Année courante pour la rentabilité (le staffing porte son propre sélecteur).
+  const anneeCourante = useMemo(() => new Date().getFullYear(), []);
 
   const renderCompteurs = (compteurs: ReadonlyArray<Compteur>): React.ReactElement => (
     <>
@@ -123,23 +139,26 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
         </span>
       </div>
 
-      {/* Indicateurs d'organisation (T-0020-d) — la valeur, en trois mesures.
-          Bande sobre au-dessus des zones d'exploration ; se fond dans le style
-          existant (mêmes compteurs, aucun vert, aucune pastille). Lecture seule. */}
-      <div className={styles.zone}>
-        <div className={styles.zoneHead}>
-          <div>
-            <p className={styles.zoneTitle}>Indicateurs d&rsquo;organisation</p>
-            <p className={styles.zoneSub}>La valeur, en trois mesures</p>
-          </div>
-        </div>
-        {data ? renderCompteurs(data.indicateurs.compteurs) : chargement}
-      </div>
+      {/* Hiérarchie figée des cinq bandeaux (tour-de-controle.md v2.1 §3, priorité
+          décroissante) : 1 staffing · 2 pipe commercial · 3 recrutement · 4 rentabilité ·
+          5 factures à émettre. */}
 
-      {/* 1 — Pipe commercial */}
+      {/* 1 — Staffing (lecture seule ; source gabarits actifs, §4) */}
       <div className={styles.zone}>
         <div className={styles.zoneHead}>
           <span className={styles.zoneNum}>1</span>
+          <div>
+            <p className={styles.zoneTitle}>Staffing</p>
+            <p className={styles.zoneSub}>Taux mensuel des salariés (hors sous-traitance), lecture seule</p>
+          </div>
+        </div>
+        {data ? <BandeauStaffing etat={data.gabarits} /> : chargement}
+      </div>
+
+      {/* 2 — Pipe commercial */}
+      <div className={styles.zone}>
+        <div className={styles.zoneHead}>
+          <span className={styles.zoneNum}>2</span>
           <div>
             <p className={styles.zoneTitle}>Pipe commercial</p>
             <p className={styles.zoneSub}>Comptes actifs, propositions, pipe pondéré</p>
@@ -149,10 +168,10 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
         {actionInerte('Nouvelle opportunité')}
       </div>
 
-      {/* 2 — Recrutement (agrégats par étape uniquement — page tenant-wide, RGPD) */}
+      {/* 3 — Recrutement (agrégats par étape uniquement — page tenant-wide, RGPD) */}
       <div className={styles.zone}>
         <div className={styles.zoneHead}>
-          <span className={styles.zoneNum}>2</span>
+          <span className={styles.zoneNum}>3</span>
           <div>
             <p className={styles.zoneTitle}>Recrutement</p>
             <p className={styles.zoneSub}>Entretiens en cours par étape (agrégat)</p>
@@ -162,53 +181,44 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
         {actionInerte('Ajouter un candidat')}
       </div>
 
-      {/* 3 & 4 — états réels */}
-      <div className={styles.twoCol}>
-        <div className={styles.zone}>
-          <div className={styles.zoneHead}>
-            <span className={styles.zoneNum}>3</span>
-            <p className={styles.zoneTitleSm}>Rentabilité &amp; résultats</p>
+      {/* 4 — Rentabilité et résultats (lecture seule ; gabarits actifs + référentiel, §4) */}
+      <div className={styles.zone}>
+        <div className={styles.zoneHead}>
+          <span className={styles.zoneNum}>4</span>
+          <div>
+            <p className={styles.zoneTitle}>Rentabilité &amp; résultats</p>
+            <p className={styles.zoneSub}>Budget vs réalisé — CA total, EBITDA (lecture seule)</p>
           </div>
-          <button
-            type="button"
-            className={`${styles.counter} ${styles.counterWide}`}
-            aria-expanded={ouverts.has('rent')}
-            aria-controls="panneau-rent"
-            onClick={() => basculer('rent')}
-          >
-            <span className={styles.counterLabel}>Missions à surveiller</span>
-            <span className={styles.counterVal}>—</span>
-          </button>
-          {ouverts.has('rent') && (
-            <div id="panneau-rent" className={styles.detail}>
-              <p className={styles.emptyText}>
-                Aucune mission active facturée. La marge et le TACE s&rsquo;afficheront dès que les temps et imputations seront saisis.
-              </p>
-            </div>
-          )}
-          {actionInerte('Comprendre le calcul')}
         </div>
-
-        {/* 4 — Activité des équipes : Zone-de-proposition + Imputations (réel) */}
-        <div className={styles.zone}>
-          <div className={styles.zoneHead}>
-            <span className={styles.zoneNum}>4</span>
-            <p className={styles.zoneTitleSm}>Activité des équipes</p>
-          </div>
-          {data ? renderCompteurs(data.activite.compteurs) : chargement}
-          {actionInerte('Relancer la saisie')}
-        </div>
+        {data ? <BandeauRentabilite etat={data.gabarits} annee={anneeCourante} /> : chargement}
       </div>
 
-      {/* Demande à ton SI — la face « action » */}
-      <div className={styles.footer}>
-        <p className={styles.footerTitle}>Demande à ton SI</p>
-        <p className={styles.footerNote}>L&rsquo;agent exécute en Zone-de-proposition ; tu valides l&rsquo;irréversible.</p>
-        <div className={styles.askRow}>
-          {actionInerte('Affecter')}
-          {actionInerte('Synthèse')}
-          {actionInerte('Vue d\'ensemble')}
+      {/* 5 — Factures à émettre (lecture seule ; échéanciers des gabarits actifs, §4) */}
+      <div className={styles.zone}>
+        <div className={styles.zoneHead}>
+          <span className={styles.zoneNum}>5</span>
+          <div>
+            <p className={styles.zoneTitle}>Factures à émettre</p>
+            <p className={styles.zoneSub}>Échéances « à émettre » des missions (lecture seule)</p>
+          </div>
         </div>
+        {data ? <BandeauFactures etat={data.gabarits} /> : chargement}
+      </div>
+
+      {/* Fraîcheur commune (§3 — honnêteté des données) : « lu le J à H » + anomalies */}
+      {data ? <BandeauFraicheur etat={data.gabarits} /> : null}
+
+      {/* Indicateurs d'organisation (T-0020-d) — les 3 KPI v1, conservés en bande compacte
+          SOUS les cinq bandeaux (décision gardien-copilote : le contrat fige l'ordre des
+          bandeaux, il n'abroge pas les KPI). Lecture seule, aucun vert, aucune pastille. */}
+      <div className={styles.zone}>
+        <div className={styles.zoneHead}>
+          <div>
+            <p className={styles.zoneTitle}>Indicateurs d&rsquo;organisation</p>
+            <p className={styles.zoneSub}>La valeur, en trois mesures</p>
+          </div>
+        </div>
+        {data ? renderCompteurs(data.indicateurs.compteurs) : chargement}
       </div>
     </section>
   );

@@ -16,6 +16,12 @@ export interface ITourDeControleWebPartProps {
   description: string;
   /** Site SharePoint où vivent les listes (modele-donnees §2 bis). Vide = site courant. */
   dataSiteUrl: string;
+  /** Site SharePoint des gabarits de pilotage (Contrats et administratif, §5.2). Vide = non câblé. */
+  gabaritsSiteUrl: string;
+  /** Chemin server-relative du dossier des gabarits actifs (`06 - Gabarit ERP`). Vide = non câblé. */
+  gabaritsFolderPath: string;
+  /** Chemin server-relative du référentiel de coûts (audience restreinte, §5.3). Vide = non câblé. */
+  referentielCoutsPath: string;
 }
 
 export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDeControleWebPartProps> {
@@ -37,7 +43,12 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
         // /sites/AlliaConsuling (modele-donnees §2 bis), la page cockpit peut être
         // ailleurs. Propriété configurée par le gardien ; vide = site courant.
         dataSiteUrl: (this.properties.dataSiteUrl && this.properties.dataSiteUrl.trim())
-          || this.context.pageContext.web.absoluteUrl
+          || this.context.pageContext.web.absoluteUrl,
+        // Coordonnées des gabarits (site Contrats et administratif, §5.2/§5.3) — posées
+        // par le gardien (runbook, point 2). Vide = découverte non câblée → états vides honnêtes.
+        gabaritsSiteUrl: (this.properties.gabaritsSiteUrl && this.properties.gabaritsSiteUrl.trim()) || '',
+        gabaritsFolderPath: (this.properties.gabaritsFolderPath && this.properties.gabaritsFolderPath.trim()) || '',
+        referentielCoutsPath: (this.properties.referentielCoutsPath && this.properties.referentielCoutsPath.trim()) || ''
       }
     );
 
@@ -122,6 +133,18 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
                 PropertyPaneTextField('dataSiteUrl', {
                   label: 'URL du site de données',
                   description: 'Site SharePoint où vivent les listes (modele-donnees §2 bis). Vide = site courant.'
+                }),
+                PropertyPaneTextField('gabaritsSiteUrl', {
+                  label: 'URL du site des gabarits',
+                  description: 'Site des gabarits de pilotage (Contrats et administratif, §5.2). Vide = non câblé.'
+                }),
+                PropertyPaneTextField('gabaritsFolderPath', {
+                  label: 'Dossier des gabarits actifs (server-relative)',
+                  description: 'Chemin du dossier « 06 - Gabarit ERP ». Vide = non câblé.'
+                }),
+                PropertyPaneTextField('referentielCoutsPath', {
+                  label: 'Référentiel de coûts (server-relative)',
+                  description: 'Chemin du classeur de référentiel de coûts (audience restreinte, §5.3). Vide = non câblé.'
                 })
               ]
             }
