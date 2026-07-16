@@ -21,7 +21,7 @@ criteres_acceptation:
   - "La page Tour-de-contrôle est le point d'entrée unique du site (bascule hub effectuée)"
   - "Les gestes d'écriture guidée (ex. « Émise ») et les cascades sont confirmés et suivent les crans en vigueur"
 rayon_impact: firme
-statut: à_faire
+statut: en_cours
 note: >
   Nommé en session S35 (14/07/2026). Le contrat tour-de-controle.md v2.1 (promu) est la SPÉCIFICATION
   COMPLÈTE ET NORMATIVE : aucune re-conception n'est requise ni autorisée. État réel constaté le
@@ -33,3 +33,33 @@ note: >
   contrat fait foi, pas la maquette : pas de re-design. Dépendances : T-0033 (souche/gabarits propres)
   puis solde de T-0031 (chaîne économique vivante) avant que la lecture Rentabilité/Factures ait un
   substrat réel.
+
+avancement:
+  journal:
+    - date: 2026-07-16
+      fait: >
+        Point 1 de l'ordre de bataille S36 (DIFFUSION) éprouvé sur le réel. PR #222 (solution SPFx
+        1.2.0.0 -> 1.3.0.0) : trois bandeaux économiques restants construits en ÉTATS VIDES HONNÊTES
+        (câblage des calculs = point 2) — Staffing (sélecteur d'année ±2, 12 barres, effectif/pct en
+        « · », réalisé/prévisionnel), Rentabilité (12 mois Budget|Réalisé + Total, CA/EBITDA en « · »,
+        mention « référentiel à audience restreinte » sur EBITDA), Factures à émettre (état vide
+        honnête, PAS de bouton « Émise » — v2.1). Fraîcheur commune + 3 KPI d'organisation conservés
+        en bande compacte SOUS les cinq bandeaux. Couche pure gabarits.ts + bandeaux-economiques.ts
+        (50 tests verts). Ordre figé §3 respecté ; retrait de la zone « Activité » et du pied
+        « Demande à ton SI » (hors §3 v2.1). PR AUTO-APPROUVÉE et mergée par app/agent-gardien le
+        16/07 13:47Z (merge f5d91ecc, faible risque / verdict pass / non délégué) — première
+        promotion auto-approuvée d'une évolution du cockpit. Mise en service gardien : .sppkg 1.3.0.0
+        déployé à l'App Catalog en remplacement de 1.2.0.0. Vérification navigateur sur
+        SitePages/Tour-de-contrôle.aspx : cinq bandeaux dans l'ordre §3, fraîcheur « lu le 16/07/2026
+        à 15:56 », aucun zéro inventé, lecture seule sur l'économique, conforme v2.1. BASCULE HUB : le
+        geste UI « Promouvoir » n'a pas persisté (WelcomePage restait SitePages/Home.aspx, vérifié par
+        GET _api/web/rootfolder) ; posé par MERGE REST sur _api/web/rootfolder sous identité gardien
+        (HTTP 204), vérifié : WelcomePage = SitePages/Tour-de-contrôle.aspx, la racine du site atterrit
+        sur la tour. Réversible en une action (re-MERGE vers Home.aspx). Épreuve détaillée :
+        docs/epreuves/2026-07-16-t-0035-diffusion-cockpit-v2.md.
+
+  reste_pour_solder:
+    - "Point 2 — câblage réel des bandeaux économiques (staffing, rentabilité, factures) après T-0033 puis solde de T-0031 ; les 3 props de coordonnées gabarits du property pane seront posées par le gardien à ce moment-là"
+    - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
+    - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
+    - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
