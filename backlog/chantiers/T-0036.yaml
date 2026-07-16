@@ -26,9 +26,9 @@ criteres_acceptation:
   - "Aucune double installation résiduelle (/Applications/Claude.app absent) sur les postes traités"
   - "Généralisation à grp-parc-collaborateur uniquement (jamais « tous les appareils »)"
   - "Aucune clé gérée com.anthropic.claudefordesktop posée (piste A pure) ; aucun paramètre saisi par un agent"
-echeance: "dès la fenêtre de reconditionnement Intune disponible"
+echeance: différé — dernière priorité, en attente de convergence du parc et de satisfaction de l'usage (revue à froid)
 rayon_impact: firme
-statut: à_faire
+statut: en_cours
 note: >
   Nommé en session S35 (15 juillet 2026), sur décision du gardien du 15/07/2026 validant la piste A
   de l'analyse d'impact « Claude Desktop macOS — mise à jour sans invite de mot de passe ». Solde une
@@ -64,6 +64,36 @@ avancement:
       fait: "Fiche nommée. Analyse d'impact + décision gardien (piste A) rédigées ; runbook préparé (reconditionnement Intune, script anti-doublons, validation pilote, télémétrie, généralisation). Aucun geste tenant exécuté par le projet — le livrable candidat est parc-collaborateur.md v1.4 (§4) + cette fiche."
     - date: 2026-07-15
       fait: "Soirée d'exécution complète. VOIE TECHNIQUE tranchée : aucune clé d'emplacement parmi les 9 clés entreprise (com.anthropic.claudefordesktop) — abandon du recours à l'app LOB au profit d'un script shell Intune root (pattern socle-cli-collaborateur) : extraction du payload du .pkg officiel (pkgutil --expand-full), dépôt en ~/Applications propriété de l'utilisateur console (ditto+chown), suppression de la copie /Applications (absorbe l'anti-doublons), idempotent. Créés dans Intune : script socle-claude-desktop-userapps v1.0 + attribut personnalisé telemetrie-claude-desktop-version v1.0 (ok:/anomalie:double-installation/anomalie:emplacement-systeme/absent). INCIDENT de séquence : script d'abord affecté à grp-parc-collaborateur entier sans pilote ; détecté le soir même, affectation retirée, État de l'appareil vide = zéro exécution, sans impact. ÉCART réel/canon découvert PUIS RÉSORBÉ : le Mac du gardien n'était pas enrôlé (DEP No, MDM No) alors que la politique dit gardien inclus — enrôlé le soir même (User Approved, Portail d'entreprise) ; constat : grp-parc-collaborateur est un groupe d'UTILISATEURS (4 membres dont le gardien). ARBITRAGE GARDIEN : pilote formel abandonné (parc de 4, script idempotent, le poste gardien fait pilote de facto par timing de sync) ; app LOB Claude Desktop DÉSAFFECTÉE de grp-parc-collaborateur (conservée dans Intune non affectée = voie de réversibilité v1.4 §4) ; script affecté à grp-parc-collaborateur. ÉTAT fin de soirée : agent Intune sain sur le poste gardien (label durable : com.microsoft.intuneMDMAgent.daemon), attribut télémétrie exécuté (terminationStatus=0), mais réponse serveur shellScript Count:0 = propagation de l'affectation en cours côté service ; AUCUNE migration constatée encore sur aucun poste. Le cycle agent (8h) livrera ; la télémétrie cartographie les 4 postes. Fait outillage durable : blades Intune/Entra = iframes cross-origin (reactblade.portal.azure.net) illisibles par l'extension ; menus top-frame lisibles ; lectures de grilles = yeux du gardien."
+    - date: 2026-07-16
+      fait: >
+        Épreuve S36. Diagnostic : le script v1.0 échouait au curl du .pkg — endpoint public
+        protégé par challenge Cloudflare (HTTP 403 + en-tête cf-mitigated: challenge, avant
+        toute redirection, HEAD comme GET, avec/sans User-Agent). Correctif v1.1 : suppression
+        du téléchargement runtime, script réduit à migration LOCALE /Applications -> ~/Applications
+        + nettoyage anti-doublon + télémétrie, ZÉRO réseau ; .sh versionné au canon
+        (contrats/socle/scripts/socle-claude-desktop-userapps.sh) via PR #220 mergée (HEAD 991a4f00).
+        CAUSE RACINE du non-rejeu après upload : fréquence du script Intune « non configuré »
+        (one-shot) — les 3 postes étaient figés au résultat du v1.0 (curl 403) d'hier. Correction :
+        fréquence passée à 1h le temps de l'épreuve, puis « chaque jour » en régime permanent.
+        ÉPREUVE RÉUSSIE sur le poste gardien : État de l'appareil = Réussi,
+        « ok:1.21459.0 (emplacement-utilisateur, /Applications propre) ». Migration + nettoyage
+        anti-doublon prouvés sur le réel. Postes Sarah et Yousra en attente de leur prochain
+        check-in (bascule attendue sans intervention).
+        CRITÈRE DE SOLDE (décision gardien 16/07) : emplacement conforme (~/Applications, système
+        propre) sur les 3 postes. La VERSION est laissée à l'auto-update natif (esprit §4
+        parc-collaborateur v1.4) — le numéro 42.4.0 n'est PAS un critère de solde.
+        POINTS OUVERTS, non traités ce jour : (a) le PKG Intune 42.4.0 ne s'est pas déposé —
+        seule la migration d'un bundle préexistant (1.21459.0) est prouvée ; la branche
+        « installation par .pkg » reste non éprouvée, à vérifier à froid (affectation du .pkg
+        Claude à grp-parc-collaborateur effective ?). (b) Le poste gardien est enrôlé en
+        « Personnel » (Entra registered) alors que les 3 postes collaborateurs sont en
+        « Entreprise » — anomalie de posture pour le poste qui pilote la gouvernance ;
+        re-enrôlement corporate à planifier à froid.
+        PRIORITÉ : chantier repriorisé en DERNIER — en attente de temps/usage. Ne pas relancer
+        avant convergence naturelle du parc (catégorie « non-essentiel jusqu'à satisfaction
+        de l'usage »). Vérifications de clôture à faire ultérieurement : 3 postes en « Réussi »
+        + emplacement conforme constaté.
+
   reste_pour_solder:
     - "Constater la migration ~/Applications sur les 4 postes (télémétrie ok:<version> partout, zéro anomalie)"
     - "Constater une mise à jour sans invite après publication d'une version par Anthropic (critère central du solde)"
