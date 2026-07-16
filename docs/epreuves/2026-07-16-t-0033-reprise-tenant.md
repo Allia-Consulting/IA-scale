@@ -145,3 +145,59 @@ Le `count:0` visé doit donc être produit par une table **vide mais valide au s
 future de la souche doit être **gardée par une épreuve de lecture Graph** (`workbook_lire_table` →
 `count:0`), pas seulement par une vérification openpyxl locale. Journalisé comme fait nouveau ; aucune
 entrée existante réécrite.
+
+## 7. Isolation H1/H2 (post-STOP, copilote) — 2026-07-16
+
+Après le STOP de §3, le copilote de gouvernance (surface déléguée, REST SharePoint depuis Chrome) a mené
+l'isolation H1 (réécriture SharePoint) / H2 (défaut du binaire canon) que l'agent ne pouvait pas trancher
+faute de chemin d'écriture Graph délégué. **Aucun nouveau geste tenant demandé à l'agent** : les faits
+ci-dessous sont **relus sur l'état persisté** et consignés ici (les sections §1–§6 ne sont pas réécrites).
+
+**Test A — fidélité des octets à l'ingestion.** Le fichier déposé (17 656 o, `sha256[0:16] =
+2ee570bdc051447a`) **diffère** du binaire canon (9 886 o, `sha256[0:16] = 48b875a192dd5a6c`). → SharePoint
+**réécrit** le paquet openpyxl à l'ingestion (le dépôt n'est pas octet-fidèle pour ce binaire).
+
+**Test B — innocence du chemin de dépôt.** Le `gabarit-1` archivé (**Excel-authored**, 22 592 o) a été
+**redéposé par le MÊME chemin** (`AddUsingPath`) → ressort **22 592 o, strictement identique**, non
+réécrit. Le fichier d'essai `_test-lecture-excel-authored.xlsx` a été **recyclé après test**.
+
+**Verdict — H2 CONFIRMÉ.** Le chemin de dépôt et l'ingestion des fichiers **Excel canoniques** sont
+**innocentés** (Test B) ; c'est le **binaire openpyxl** (tables **sans ligne de corps** + packaging non
+canonique) qui **déclenche la normalisation SharePoint** et finit **501**. Contre-preuve directe de H1.
+**Fait de fond** : **Excel lui-même ne produit pas de table à zéro ligne** — un `count:0` fiable doit être
+**FABRIQUÉ PAR LE SERVICE** (API Workbook), **pas** par un binaire tiers déposé.
+
+**État final du tenant (relu).** « 06 - Gabarit ERP » : **VIDE** (aucun gabarit actif — cohérent avec
+l'honnêteté du cockpit, « aucun gabarit actif lu »). « 00 - Old » contient :
+
+| Fichier archivé | Length (o) |
+|---|---|
+| `gabarit-1-pollue-s35-archive-2026-07-16.xlsx` | 22 592 |
+| `gabarit-2-pollue-s35-archive-2026-07-16.xlsx` | 22 551 |
+| `gabarit-pilotage-mission-pollue-s35-archive-2026-07-16.xlsx` | 22 594 |
+| `gabarit-pilotage-mission-openpyxl-illisible-501-2026-07-16.xlsx` | 17 656 |
+
+(La souche cassée déposée a donc été elle-même archivée sous un nom parlant ; le domicile actif est propre
+et vide, prêt pour une instanciation saine.)
+
+## 8. Décision d'architecture retenue (arbitrage copilote — porte gardien à la PR)
+
+**Instanciation API-native.** Faire **évoluer le serveur MCP** (`outils/mcp-graph`) pour que la primitive
+d'instanciation **v2** crée les **3 tables via l'API Workbook** (`tables/add` sur la plage d'en-têtes
+§5.2, `hasHeaders=true`) sur une **base service-authored**, garantissant par construction des **tables à
+0 ligne lisibles** (`count:0`). Le **binaire souche openpyxl cesse d'être le vecteur des tables** — il ne
+porte plus (au mieux) que la mise en forme / les en-têtes, la structure de tables étant matérialisée par
+le service Excel lui-même.
+
+**À instruire en S37** (aucune écriture ce jour) :
+- conception **lue du code réel** du serveur (`outils/mcp-graph/server.py` — signatures/docstrings des
+  primitives Workbook), avant tout amendement ;
+- amendement de la **fiche T-0033** (produit / critères d'acceptation : l'instanciation API-native
+  remplace le « instancier par copie de souche » comme voie du `count:0`) ;
+- retouche éventuelle de **`modele-donnees.md` §5.6** (rôle exact de la souche une fois les tables
+  service-authored) ;
+- **build + déploiement** de l'image serveur (runbook gardien) ;
+- **golden gardé par une épreuve de LECTURE Graph** (`workbook_lire_table → count:0`) pour interdire tout
+  retour d'un binaire illisible.
+
+Journalisé comme fait nouveau ; aucune entrée existante réécrite.
