@@ -6,7 +6,7 @@ phase: 1
 type_action: runbook_humain
 cran: valide   # reconditionnement Intune + migration de tout grp-parc-collaborateur : paramétrage du tenant/MDM, rayon parc global → PROSCRIT à un agent, geste exclusif du gardien (table-des-crans.yaml ; garde-fous CLAUDE.md). Réversible (re-push .pkg /Applications), mais firme-large → validé.
 produit:
-  - "app LOB Claude Desktop reconditionnée dans Intune pour cibler ~/Applications (dossier utilisateur), « Ignorer la version = Oui » conservé"
+  - "app PKG Anthropic standard (Claude.pkg v42.4.0, appId a8103bba-2856-4944-91e9-7b7989777657, type « Application macOS (PKG) », créée le 13/06/2026, NON reconditionnée) poussée par Intune et installant en /Applications ; la migration vers ~/Applications (dossier utilisateur) est assurée par le script socle-claude-desktop-userapps.sh v1.1 (versionné au canon)"
   - "aucun profil de configuration com.anthropic.claudefordesktop (aucune clé gérée disableAutoUpdates posée)"
   - "script Intune de détection/nettoyage des doubles installations (/Applications ET ~/Applications sur un même poste)"
   - "télémétrie de version Claude Desktop via Intune (CFBundleShortVersionString) + seuil de version minimale et alerte de dérive"
@@ -43,6 +43,20 @@ note: >
   (grp-parc-collaborateur). RÈGLE GARDIEN S35 : si l'épreuve pilote exige des retouches manuelles
   répétées → STOP au 1er incident, reprise documentée (pas d'allers-retours de micro-corrections).
   L'épreuve pilote (clic MAJ sans invite + Cowork + 3 MCP verts + zéro double install) solde T-0036.
+
+  [16/07/2026 — correctif v1.1, session S36] Diagnostic éprouvé : le script v1.0 échouait sur les 3
+  postes (Adrien, Sarah, Yousra) au « curl -fsSL » de l'endpoint public de download Claude Desktop.
+  Cause racine certaine : cet endpoint est protégé par un challenge anti-bot Cloudflare (réponse
+  HTTP 403 + en-tête « cf-mitigated: challenge », avant toute redirection, en HEAD comme en GET, avec
+  ou sans User-Agent) — un curl scripté ne peut pas passer, par conception (ni réseau, ni contexte
+  root, ni méthode en cause). Décision d'architecture (gardien, 16/07) : abandon du téléchargement
+  runtime, bascule Option 1 — l'installation du bundle repasse par l'app PKG Intune (Claude.pkg
+  v42.4.0) installant en /Applications ; le script est réduit à un déplacement LOCAL /Applications
+  -> ~/Applications + nettoyage anti-doublon + télémétrie, ZÉRO réseau. Écart réel/canon rectifié
+  ci-dessus (produit) : l'app n'est PAS une LOB reconditionnée mais un PKG Anthropic standard. Dette
+  de canon soldée : le .sh, jusque-là présent seulement dans Intune, est désormais versionné au
+  canon (contrats/socle/scripts/socle-claude-desktop-userapps.sh) — le canon fait foi, Intune en est
+  le consommateur (corps à recopier à l'identique).
 
 avancement:
   journal:
