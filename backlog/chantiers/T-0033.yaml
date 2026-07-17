@@ -4,7 +4,7 @@ titre: "Assainissement souche et gabarits de pilotage"
 capacite: "Socle d'exploitation & gouvernance / Orchestration des agents & missions — couture Graph"
 phase: 1
 type_action: infrastructure
-cran: valide   # promotion d'un binaire canon SOCLE (gabarit-pilotage-mission.xlsx) + remplacement tenant : irréversible/sortie de firme → porte gardien
+cran: valide   # amendement d'un contrat socle (modele-donnees v1.20) + évolution du serveur MCP à déployer : porte gardien
 produit:
   - "(serveur) primitive workbook_instancier_gabarit v2 API-NATIVE : création du classeur gabarit-<CodeMission>.xlsx par écriture service (PUT contenu vide, conflictBehavior=fail) puis fabrication des 3 tables via l'API Workbook (feuilles nommées, en-têtes §5.2 par PATCH range, tables/add hasHeaders, renommage T_*) — tables à 0 ligne lisibles PAR CONSTRUCTION, plus aucun binaire tiers dans la chaîne"
   - "(serveur) preuve interne count:0 ×3 avant retour + rollback borné (suppression de l'item créé par l'appel en cas d'échec) ; session Workbook persistChanges"
@@ -13,7 +13,7 @@ produit:
 depend_de: [T-0031]   # consomme les primitives Workbook ; T-0033 DÉBLOQUE le solde de T-0031 (souche propre = préalable à la consolidation réelle)
 contrats_concernes:
   - contrats/socle/modele-donnees.md          # §5.2 : schéma normatif des 3 tables du gabarit (en-têtes figés)
-  - contrats/socle/gabarit-pilotage-mission.xlsx  # le binaire souche à régénérer et re-promouvoir
+  - contrats/socle/gabarit-pilotage-mission.xlsx  # trace historique (temps 1/2, PR #224) — retiré du rôle de souche par la reprise v2, non modifié ici
 criteres_acceptation:
   - "workbook_lire_table renvoie count 0 sur les 6 tables des deux gabarits ré-instanciés (3 tables × gabarit-1/gabarit-2)"
   - "Chaîne service-authored de bout en bout : aucun binaire produit hors service Excel n'entre dans la fabrication des gabarits ; chaque instanciation porte sa preuve interne count:0 ×3"
