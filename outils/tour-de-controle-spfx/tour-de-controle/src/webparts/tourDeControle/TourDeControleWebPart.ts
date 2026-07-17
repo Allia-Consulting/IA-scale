@@ -20,8 +20,10 @@ export interface ITourDeControleWebPartProps {
   gabaritsSiteUrl: string;
   /** Chemin server-relative du dossier des gabarits actifs (`06 - Gabarit ERP`). Vide = non câblé. */
   gabaritsFolderPath: string;
-  /** Chemin server-relative du référentiel de coûts (audience restreinte, §5.3). Vide = non câblé. */
-  referentielCoutsPath: string;
+  /** Chemin server-relative du classeur référentiel `T_Ressources` (audience restreinte, §5.3). Vide = non câblé. */
+  referentielRessourcesPath: string;
+  /** Chemin server-relative du classeur référentiel `T_Structure` (audience restreinte, §5.3). Vide = non câblé. */
+  referentielStructurePath: string;
 }
 
 export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDeControleWebPartProps> {
@@ -39,6 +41,8 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
         userDisplayName: this.context.pageContext.user.displayName,
         spHttpClient: this.context.spHttpClient,
+        // Fabrique de client Graph (délégué, SSO) — lecture du contenu des tables (point 2).
+        msGraphClientFactory: this.context.msGraphClientFactory,
         // Domicile des listes ≠ site de la page : les listes vivent sur
         // /sites/AlliaConsuling (modele-donnees §2 bis), la page cockpit peut être
         // ailleurs. Propriété configurée par le gardien ; vide = site courant.
@@ -48,7 +52,8 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
         // par le gardien (runbook, point 2). Vide = découverte non câblée → états vides honnêtes.
         gabaritsSiteUrl: (this.properties.gabaritsSiteUrl && this.properties.gabaritsSiteUrl.trim()) || '',
         gabaritsFolderPath: (this.properties.gabaritsFolderPath && this.properties.gabaritsFolderPath.trim()) || '',
-        referentielCoutsPath: (this.properties.referentielCoutsPath && this.properties.referentielCoutsPath.trim()) || ''
+        referentielRessourcesPath: (this.properties.referentielRessourcesPath && this.properties.referentielRessourcesPath.trim()) || '',
+        referentielStructurePath: (this.properties.referentielStructurePath && this.properties.referentielStructurePath.trim()) || ''
       }
     );
 
@@ -142,9 +147,13 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
                   label: 'Dossier des gabarits actifs (server-relative)',
                   description: 'Chemin du dossier « 06 - Gabarit ERP ». Vide = non câblé.'
                 }),
-                PropertyPaneTextField('referentielCoutsPath', {
-                  label: 'Référentiel de coûts (server-relative)',
-                  description: 'Chemin du classeur de référentiel de coûts (audience restreinte, §5.3). Vide = non câblé.'
+                PropertyPaneTextField('referentielRessourcesPath', {
+                  label: 'Référentiel T_Ressources (server-relative)',
+                  description: 'Chemin du classeur referentiel-ressources.xlsx (audience restreinte, §5.3). Vide = non câblé.'
+                }),
+                PropertyPaneTextField('referentielStructurePath', {
+                  label: 'Référentiel T_Structure (server-relative)',
+                  description: 'Chemin du classeur referentiel-structure.xlsx (audience restreinte, §5.3). Vide = non câblé.'
                 })
               ]
             }

@@ -8,10 +8,12 @@
 // Isolé de React et de `@microsoft/sp-http` à dessein : le rendu et les tests unitaires le
 // consomment sans charger le runtime du web part.
 //
-// PÉRIMÈTRE (point 1 — états vides honnêtes) : ce module expose la PRÉSENCE/ABSENCE des
-// sources (gabarits actifs, référentiel de coûts), leur fraîcheur et leurs anomalies. Il ne
-// calcule AUCUN agrégat économique — le câblage des calculs (ouverture des classeurs,
-// tables T_Affectations / T_Imputations / T_Echeancier, référentiel de coûts) est le point 2.
+// PÉRIMÈTRE : ce module DÉCOUVRE la présence/absence des sources (gabarits actifs, référentiel
+// de coûts), leur fraîcheur et leurs anomalies. La LECTURE du contenu des tables (point 2, T-0035)
+// est faite par workbook-graph.ts (Graph Workbook) puis ATTACHÉE ici via `fusionnerContenus` —
+// `EtatGabarits` porte alors les contenus, sans que la découverte/fraîcheur en dépende.
+
+import type { ContenuGabarit, ContenuReferentiel, ResultatContenus } from './workbook-graph';
 
 // ---------------------------------------------------------------------------
 // Convention de dépôt — modele-donnees.md §5.2 / §5.5 (fait foi).
@@ -92,7 +94,7 @@ export interface AnomalieGabarit {
 export interface EtatGabarits {
   /** Gabarits de pilotage ACTIFS découverts (racine de `06 - Gabarit ERP`). */
   readonly gabarits: ReadonlyArray<GabaritActif>;
-  /** Anomalies signalées (source inaccessible, nom non conforme…). */
+  /** Anomalies signalées (source inaccessible, nom non conforme, schéma de table cassé…). */
   readonly anomalies: ReadonlyArray<AnomalieGabarit>;
   /** État de la lecture du dossier des gabarits (fail-visible). */
   readonly source: 'ok' | 'non_cable' | 'indisponible';
@@ -102,6 +104,13 @@ export interface EtatGabarits {
   readonly referentielCoutsAccessible: boolean;
   /** État détaillé d'accès au référentiel (pour la mention discrète du bandeau 4). */
   readonly referentielEtat: EtatAcces;
+  /**
+   * Contenus des tables lus par workbook-graph.ts (point 2), attachés par `fusionnerContenus`.
+   * `undefined` tant que la lecture Graph n'a pas eu lieu (découverte seule) → bandeaux en « · ».
+   */
+  readonly contenus?: ReadonlyArray<ContenuGabarit>;
+  /** Contenu du référentiel de coûts (§5.3) si accessible ; `undefined` sinon (restreint). */
+  readonly referentiel?: ContenuReferentiel;
 }
 
 // ---------------------------------------------------------------------------
@@ -210,4 +219,21 @@ export function formaterFraicheur(etat: EtatGabarits): Fraicheur {
   const liste = etat.anomalies.map(a => a.source).join(', ');
   const mot = n > 1 ? 'gabarits en anomalie' : 'gabarit en anomalie';
   return { luLe: etat.luLe, anomalies: `${n} ${mot} : ${liste}` };
+}
+
+// ---------------------------------------------------------------------------
+// Fusion découverte + contenus (point 2) — PURE.
+// Attache les tables lues (workbook-graph.ts) à l'état découvert, cumule les anomalies (schémas
+// cassés) et adopte l'état d'accès référentiel OBSERVÉ à la lecture (plus autoritaire que la sonde
+// de découverte, qui ne sondait qu'un `Exists`). Ne réordonne rien, ne supprime aucun gabarit.
+// ---------------------------------------------------------------------------
+export function fusionnerContenus(etat: EtatGabarits, res: ResultatContenus): EtatGabarits {
+  return {
+    ...etat,
+    anomalies: [...etat.anomalies, ...res.anomalies],
+    contenus: res.gabarits,
+    referentiel: res.referentiel,
+    referentielEtat: res.referentielEtat,
+    referentielCoutsAccessible: res.referentielEtat === 'accessible'
+  };
 }

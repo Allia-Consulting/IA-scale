@@ -11,10 +11,11 @@
 // aucun champ nominatif candidat n'est lu ni affiché (RGPD, rgpd-recrutement-candidats.md,
 // option A). La lecture ne sélectionne que la colonne `Etape` (cf. QUERY_RECRUTEMENT).
 
-import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
+import { SPHttpClient, SPHttpClientResponse, MSGraphClientFactory, MSGraphClientV3 } from '@microsoft/sp-http';
 import type { Zone, Compteur, DetailItem, Ecriture } from './types';
 import {
   decouvrirGabarits,
+  fusionnerContenus,
   type EtatGabarits,
   type LecteurDossier,
   type SondeReferentiel,
@@ -22,6 +23,7 @@ import {
   type EtatAcces,
   type FichierDossier
 } from './gabarits';
+import { lireContenus, type GrapheGet, type CibleGabarit, type CiblesReferentiel } from './workbook-graph';
 import {
   COLONNE_STATUT_MISSION,
   compterMissionsActives,
@@ -74,8 +76,10 @@ export interface ConfigGabarits {
   readonly siteUrl: string;
   /** Chemin server-relative du dossier des gabarits actifs (`06 - Gabarit ERP`). */
   readonly dossierGabarits: string;
-  /** Chemin server-relative du référentiel de coûts (audience restreinte). */
-  readonly referentielCouts: string;
+  /** Chemin server-relative du classeur référentiel `T_Ressources` (audience restreinte, §5.3). */
+  readonly referentielRessources: string;
+  /** Chemin server-relative du classeur référentiel `T_Structure` (audience restreinte, §5.3). */
+  readonly referentielStructure: string;
 }
 
 const NOTE_NON_CABLE = 'Liste non câblée sur ce site.';
@@ -323,8 +327,10 @@ function sondeReferentielPour(sp: SPHttpClient, cfg: ConfigGabarits): SondeRefer
   return async (): Promise<EtatAcces> => {
     // Non configuré : l'utilisateur courant n'a pas (encore) de vue sur le référentiel →
     // 'restreint' (flag false, non bloquant), état légitime pour la plupart des collaborateurs.
-    if (!cfg.siteUrl || !cfg.referentielCouts) { return 'restreint'; }
-    const url = `${cfg.siteUrl}/_api/web/GetFileByServerRelativePath(decodedUrl='${litteralOData(cfg.referentielCouts)}')?$select=Exists`;
+    // NB : sonde de DÉCOUVERTE (présence du classeur ressources) ; l'état d'accès AUTORITAIRE
+    // vient ensuite de la lecture Graph des tables (workbook-graph.ts, fusionnerContenus).
+    if (!cfg.siteUrl || !cfg.referentielRessources) { return 'restreint'; }
+    const url = `${cfg.siteUrl}/_api/web/GetFileByServerRelativePath(decodedUrl='${litteralOData(cfg.referentielRessources)}')?$select=Exists`;
     try {
       const res: SPHttpClientResponse = await sp.get(url, SPHttpClient.configurations.v1);
       if (res.ok) { return 'accessible'; }
@@ -336,9 +342,49 @@ function sondeReferentielPour(sp: SPHttpClient, cfg: ConfigGabarits): SondeRefer
   };
 }
 
-/** Découvre l'état des gabarits actifs + référentiel de coûts (cockpit v2). Ne lève jamais. */
-async function chargerGabarits(sp: SPHttpClient, cfg: ConfigGabarits): Promise<EtatGabarits> {
-  return decouvrirGabarits(lecteurGabaritsPour(sp, cfg), sondeReferentielPour(sp, cfg), new Date());
+/**
+ * Adaptateur GET Graph lié à MSGraphClientV3 (Graph DÉLÉGUÉ — SSO SPFx, permission Sites.Read.All
+ * approuvée par le gardien). Ne lève JAMAIS : une GraphError porte `statusCode` (403/404…) que l'on
+ * remonte pour distinguer restreint/indisponible côté workbook-graph.
+ */
+function grapheGetPour(client: MSGraphClientV3): GrapheGet {
+  return async (cheminApi: string) => {
+    try {
+      const corps: unknown = await client.api(cheminApi).get();
+      return { ok: true, status: 200, corps };
+    } catch (e) {
+      const brut = (e && typeof e === 'object' && 'statusCode' in e) ? Number((e as { statusCode?: unknown }).statusCode) : 0;
+      return { ok: false, status: isFinite(brut) ? brut : 0 };
+    }
+  };
+}
+
+/**
+ * Découvre les gabarits actifs (REST, listing/fraîcheur) PUIS lit le contenu de leurs tables +
+ * du référentiel de coûts via Graph Workbook délégué (point 2). Ne lève jamais : sans câblage /
+ * hors état 'ok', on retourne la découverte seule (contenus `undefined` → bandeaux en « · »).
+ */
+async function chargerGabarits(
+  sp: SPHttpClient,
+  cfg: ConfigGabarits,
+  graphFactory?: MSGraphClientFactory
+): Promise<EtatGabarits> {
+  const etat = await decouvrirGabarits(lecteurGabaritsPour(sp, cfg), sondeReferentielPour(sp, cfg), new Date());
+  // Pas de lecture de contenu si la découverte n'est pas 'ok', si le site n'est pas câblé, ou si
+  // le client Graph est indisponible : la découverte (présence/fraîcheur) suffit, contenus « · ».
+  if (etat.source !== 'ok' || !cfg.siteUrl || !graphFactory) { return etat; }
+  let grapheGet: GrapheGet;
+  try {
+    grapheGet = grapheGetPour(await graphFactory.getClient('3'));
+  } catch {
+    return etat; // client Graph non résolu → découverte seule (fail-visible, jamais de crash).
+  }
+  const cibles: ReadonlyArray<CibleGabarit> = etat.gabarits.map(g => ({ codeMission: g.codeMission, url: g.url }));
+  const referentiel: CiblesReferentiel | undefined = (cfg.referentielRessources && cfg.referentielStructure)
+    ? { ressources: cfg.referentielRessources, structure: cfg.referentielStructure }
+    : undefined;
+  const contenus = await lireContenus(grapheGet, cfg.siteUrl, cibles, referentiel);
+  return fusionnerContenus(etat, contenus);
 }
 
 /**
@@ -456,13 +502,14 @@ async function chargerIndicateursOrganisation(sp: SPHttpClient, dataSiteUrl: str
 export async function chargerCockpit(
   sp: SPHttpClient,
   dataSiteUrl: string,
-  cfgGabarits: ConfigGabarits
+  cfgGabarits: ConfigGabarits,
+  graphFactory?: MSGraphClientFactory
 ): Promise<CockpitData> {
   const [indicateurs, pipeCommercial, recrutement, gabarits] = await Promise.all([
     chargerIndicateursOrganisation(sp, dataSiteUrl),
     chargerPipeCommercial(sp, dataSiteUrl),
     chargerRecrutement(sp, dataSiteUrl),
-    chargerGabarits(sp, cfgGabarits)
+    chargerGabarits(sp, cfgGabarits, graphFactory)
   ]);
   return { indicateurs, pipeCommercial, recrutement, gabarits };
 }

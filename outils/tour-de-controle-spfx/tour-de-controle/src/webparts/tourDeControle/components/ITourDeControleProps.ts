@@ -1,4 +1,4 @@
-import type { SPHttpClient } from '@microsoft/sp-http';
+import type { SPHttpClient, MSGraphClientFactory } from '@microsoft/sp-http';
 
 export interface ITourDeControleProps {
   description: string;
@@ -8,6 +8,11 @@ export interface ITourDeControleProps {
   userDisplayName: string;
   /** Client REST du contexte SPFx — lecture des listes du site (SSO, zéro secret). */
   spHttpClient: SPHttpClient;
+  /**
+   * Fabrique de client Microsoft Graph (délégué, SSO SPFx) — lecture du CONTENU des tables des
+   * gabarits + référentiel via l'API Workbook (point 2, permission Sites.Read.All). Zéro secret.
+   */
+  msGraphClientFactory: MSGraphClientFactory;
   /**
    * URL absolue du site où vivent les listes (modele-donnees §2 bis) — base des
    * appels `_api/web/lists`. Peut différer du site de la page (défaut = site courant).
@@ -20,6 +25,8 @@ export interface ITourDeControleProps {
   gabaritsSiteUrl: string;
   /** Chemin server-relative du dossier des gabarits actifs (`06 - Gabarit ERP`). Vide = non câblé. */
   gabaritsFolderPath: string;
-  /** Chemin server-relative du référentiel de coûts (audience restreinte, §5.3). Vide = non câblé. */
-  referentielCoutsPath: string;
+  /** Chemin server-relative du classeur référentiel `T_Ressources` (audience restreinte, §5.3). Vide = non câblé. */
+  referentielRessourcesPath: string;
+  /** Chemin server-relative du classeur référentiel `T_Structure` (audience restreinte, §5.3). Vide = non câblé. */
+  referentielStructurePath: string;
 }
