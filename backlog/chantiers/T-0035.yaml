@@ -181,6 +181,39 @@ avancement:
         les originaux gabarit-1/2.xlsx restent actifs à la racine. RIEN mergé/déployé, tenant intact.
         Détails : docs/epreuves/2026-07-17-t-0035-reprise-4-reconciliation-skill.md (+ jumelée T-0033).
         PR de reprise n°4 (non mergée).
+    - date: 2026-07-17
+      fait: >
+        Point 2 — REPRISE n°5 (RECALIBRAGE DE LA PREUVE « VIERGE » + ROLLBACK VÉRIFIÉ ; fabrication
+        service CONSERVÉE). L'épreuve tenant du soir (régénération machine des 2 gabarits via le skill
+        v1.3) a été ROUGE sur deux symptômes : (A) workbook_instancier_gabarit a échoué la PREUVE FROIDE
+        — verbatim « preuve FROIDE : la table T_Affectations porte 1 ligne(s) de corps (count:0 attendu
+        à froid). Instanciation avortée — l'item créé est supprimé. » ; (B) le ROLLBACK A MENTI —
+        l'erreur annonçait l'item supprimé, or le listing « 06 - Gabarit ERP » pris juste après montrait
+        gabarit-1.xlsx TOUJOURS présent, item NOUVEAU 01BWFCBZHMHXN46WR2EFDJQFBLFKT7NXNP, 16878 o.
+        Le prompt de reprise concluait à un binaire de fabrication non canonique et prescrivait le retour
+        à une SOUCHE BINAIRE copiée (/copy). TROIS FAITS MESURÉS invalident cette prémisse : (1) binaire
+        fabrication service (gabarit-1.xlsx) inspecté = tables ref='A1:X2' + insertRow='1' — la ligne vue
+        à froid est la LIGNE D'INSERTION standard d'une table vide, pas un défaut de sérialisation ;
+        (2) binaire Excel AUTHENTIQUE (test-table-vide.xlsx, Macintosh Excel, table créée sans données)
+        = ref='A1:D3' — DEUX lignes de corps vides ; Excel non plus ne produit pas de table header-only,
+        la voie souche échouerait count:0 À L'IDENTIQUE ; (3) la preuve froide de la reprise n°4 a LU les
+        colonnes à froid SANS 403 (fabrication 0.14+ déjà ouvrable à froid) et les gabarits PEUPLÉS
+        relisent juste (8/2/8, 6/0/6) — le peuplement résorbe la ligne d'insertion. DÉCISION D'ARCHITECTURE
+        (gardien, 17/07) : ABANDON du retour à la souche /copy (évaluée puis ÉCARTÉE sur mesure des
+        binaires) ; fabrication service CONSERVÉE ; le vrai défaut était le PRÉDICAT trop strict.
+        CORRECTIF MINIMAL (serveur 0.15.0 -> 0.16.0) : (A) preuve « vierge » RECALIBRÉE (interne §5 ET
+        FROIDE §8) = en-têtes §5.2 + AUCUNE ligne de corps PLEINE (lignes entièrement vides tolérées) ;
+        retour tables[*] = {lignes_vides:N} (au lieu d'exiger count:0). (B) ROLLBACK VÉRIFIÉ : DELETE
+        puis GET (404 attendu) ; suppression annoncée SEULEMENT si prouvée, sinon « rollback incomplet,
+        item X à retirer par le gardien » — jamais d'annonce non vérifiée. Canon aligné (nouvelles entrées,
+        jamais réécrites) : modele-donnees v1.22 (§5.6), skill consolidation-pilotage v1.4 (§3/§5/§8),
+        table-des-crans v1.12 (cran INCHANGÉ), README. 76 tests verts (insertion vide = PASS ; ligne
+        portant une valeur = FAIL en froid ET en session ; rollback vérifié ; rollback incomplet honnête ;
+        collision ; retry 504). ÉTAT TENANT (réversible, à traiter par le gardien) : gabarit-1.xlsx
+        DÉFECTUEUX en racine (item 01BWFCBZHMHXN46WR2EFDJQFBLFKT7NXNP, 16878 o, cold-proof rouge) à
+        remplacer à la mise en service ; bonne version dans « 00 - Old » (gabarit-1-20260717T135949Z.xlsx,
+        18977 o) ; gabarit-2.xlsx intact. RIEN mergé/déployé, tenant intact. Détail :
+        docs/epreuves/2026-07-17-t-0035-reprise-5-recalibration-preuve.md. PR de reprise n°5 (non mergée).
 
   reste_pour_solder:
     - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"

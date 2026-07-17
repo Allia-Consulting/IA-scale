@@ -497,9 +497,13 @@ def test_workbook_archiver_gabarit_absent_leve_filenotfound_sans_patch(_sans_por
 
 
 # --------------------------------------------------------------------------------------------
-# workbook_instancier_gabarit v2 — FABRICATION SERVICE (API-native), cible figée fail-closed
-# (création service-authored 0 octet + tables/add sur les en-têtes §5.2, preuve interne count:0 ×3,
-#  rollback borné). Plus aucune souche binaire dans la chaîne.
+# workbook_instancier_gabarit v2 — FABRICATION SERVICE (API-native), cible figée fail-closed.
+# T-0035 reprise n°5 : le PRÉDICAT « vierge » est RECALIBRÉ (preuves interne §5 ET froide §8). Fait
+# mesuré : une table Excel vide porte une LIGNE D'INSERTION standard (fabrication `ref=A1:X2` ; Excel
+# authentique `ref=A1:D3`) — donc « vierge » = en-têtes §5.2 + AUCUNE ligne de corps PLEINE (les lignes
+# entièrement vides sont TOLÉRÉES), et non un count:0 strict. La voie « souche binaire copiée » a été
+# évaluée puis écartée (Excel écrit aussi des lignes vides). Le rollback est VÉRIFIÉ (DELETE puis GET →
+# 404 ; un GET 200 = annonce honnête d'incomplet, jamais de suppression non prouvée — défaut B).
 # --------------------------------------------------------------------------------------------
 
 class _RepWb:
@@ -532,25 +536,34 @@ class _FauxClientWorkbook:
       - statut_creation  : code du PUT de création (201 nominal ; 409 = collision fail-closed) ;
       - codes_tables_add : codes renvoyés par POST tables/add, consommés dans l'ordre (permet de
                            simuler un 504 puis un 201) ; défaut 201 quand la liste est épuisée ;
-      - rows_counts      : {nom_table: nb_lignes} pilotant la preuve EN SESSION §5 (/rows ; 0 = vert) ;
+      - lignes_insertion : nb de lignes de corps ENTIÈREMENT VIDES que chaque table montre — miroir de
+                           la LIGNE D'INSERTION Excel (défaut 1), en /rows (chaud) ET /columns (froid) ;
+      - pollue_rows      : {nom_table: n} nb de lignes PLEINES (1re cellule non vide) en /rows —
+                           table NON vierge vue par la PREUVE INTERNE §5 (chaude) ;
+      - pollue_columns   : {nom_table: n} nb de lignes PLEINES en /columns — table NON vierge vue par la
+                           PREUVE FROIDE §8 (le cas d'une pollution visible SEULEMENT à froid) ;
       - columns_status   : code HTTP de la PREUVE FROIDE §8 (/columns ; 200 nominal, 403 = non ouvrable
                            à froid — le cas du cockpit T-0035) ;
-      - cold_counts      : {nom_table: nb_lignes_corps} pilotant la PREUVE FROIDE §8 (0 = vert).
+      - verify_get_status: GET de contrôle du rollback (404 = suppression PROUVÉE ; 200 = incomplet).
     """
 
     def __init__(
         self,
         statut_creation=201,
         codes_tables_add=None,
-        rows_counts=None,
+        lignes_insertion=1,
+        pollue_rows=None,
+        pollue_columns=None,
         columns_status=200,
-        cold_counts=None,
+        verify_get_status=404,
     ):
         self._statut_creation = statut_creation
         self._codes_tables_add = list(codes_tables_add) if codes_tables_add else []
-        self._rows_counts = rows_counts or {}
+        self._lignes_insertion = lignes_insertion
+        self._pollue_rows = pollue_rows or {}
+        self._pollue_columns = pollue_columns or {}
         self._columns_status = columns_status
-        self._cold_counts = cold_counts or {}
+        self._verify_get_status = verify_get_status
         self._table_seq = 0
         self._nb_sessions = 0
         self.appels = []
@@ -592,20 +605,30 @@ class _FauxClientWorkbook:
         if url.endswith("/worksheets"):
             return _RepWb(200, {"value": [{"id": "{00000000-0001-0000-0000-000000000000}", "name": "Feuil1"}]})
         if url.endswith("/rows"):
+            # PREUVE INTERNE §5 : lignes de corps. `lignes_insertion` lignes VIDES (tolérées) + `pleines`
+            # lignes portant une valeur (1re cellule non vide) → table non vierge si pleines > 0.
             nom_table = url.split("/tables/")[1].split("/rows")[0]
-            n = self._rows_counts.get(nom_table, 0)
-            return _RepWb(200, {"value": [{"values": [["x"]]} for _ in range(n)]})
+            pleines = self._pollue_rows.get(nom_table, 0)
+            rows = [{"values": [["", "", "", ""]]} for _ in range(self._lignes_insertion)]
+            rows += [{"values": [["x", "", "", ""]]} for _ in range(pleines)]
+            return _RepWb(200, {"value": rows})
         if url.endswith("/columns"):
             # PREUVE FROIDE §8 : réponse au format /columns (une colonne par en-tête, en-tête + corps).
             if self._columns_status != 200:
                 return _RepWb(self._columns_status, {})
             nom_table = url.split("/tables/")[1].split("/columns")[0]
             entetes = _ENTETES_PAR_TABLE.get(nom_table, ())
-            n_corps = self._cold_counts.get(nom_table, 0)
-            colonnes = [
-                {"name": e, "values": [[e]] + [[f"c{r}"] for r in range(n_corps)]} for e in entetes
-            ]
+            pleines = self._pollue_columns.get(nom_table, 0)
+            colonnes = []
+            for j, e in enumerate(entetes):
+                body = [[""] for _ in range(self._lignes_insertion)]  # lignes d'insertion (vides)
+                # lignes pleines : seule la 1re colonne porte une valeur (suffit à « pleine »).
+                body += [[("x" if j == 0 else "")] for _ in range(pleines)]
+                colonnes.append({"name": e, "values": [[e]] + body})
             return _RepWb(200, {"value": colonnes})
+        if "/workbook" not in url and url.endswith("ITEM-CREE"):
+            # GET de contrôle du rollback (…/items/ITEM-CREE) — 404 = suppression prouvée, 200 = incomplet.
+            return _RepWb(self._verify_get_status, {})
         return _RepWb(200, {})
 
     def patch(self, url, headers=None, json=None):
@@ -663,10 +686,10 @@ def test_workbook_instancier_gabarit_code_invalide_aucun_appel_reseau(_sans_port
 
 def test_workbook_instancier_gabarit_nominal_fabrication_service(_sans_porte, _config_gabarit_factice, monkeypatch):
     """(27) NOMINAL v2 : PUT vide (fail-closed) → session → feuilles (rename + 2 add) → 3×(range +
-    tables/add + rename T_*) → preuve EN SESSION count:0 ×3 → closeSession → RÉ-ÉMISSION (2e session +
-    range inerte) → PREUVE FROIDE count:0 ×3 (/columns, sans session). Cible FIGÉE (dossier gabarit
-    résolu côté serveur), nom `gabarit-<code>.xlsx`, retour portant item_id + les 3 tables à 0. Aucun rollback."""
-    client = _FauxClientWorkbook()
+    tables/add + rename T_*) → preuve EN SESSION vierge → closeSession → RÉ-ÉMISSION (2e session +
+    range inerte) → PREUVE FROIDE vierge ×3 (/columns, sans session). Une table fraîche porte 1 ligne
+    d'insertion VIDE : elle est VIERGE (tolérée). Retour : `lignes_vides` par table. Aucun rollback."""
+    client = _FauxClientWorkbook()  # lignes_insertion=1 par défaut : la ligne d'insertion Excel
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
 
@@ -675,7 +698,12 @@ def test_workbook_instancier_gabarit_nominal_fabrication_service(_sans_porte, _c
     assert resultat["code_mission"] == "MISSION-2"
     assert resultat["nom_gabarit"] == "gabarit-MISSION-2.xlsx"
     assert resultat["item_id"] == "ITEM-CREE"
-    assert resultat["tables"] == {"T_Affectations": 0, "T_Imputations": 0, "T_Echeancier": 0}
+    # PRÉDICAT RECALIBRÉ : le retour porte `lignes_vides` (la ligne d'insertion tolérée), pas un count:0.
+    assert resultat["tables"] == {
+        "T_Affectations": {"lignes_vides": 1},
+        "T_Imputations": {"lignes_vides": 1},
+        "T_Echeancier": {"lignes_vides": 1},
+    }
 
     methodes = [(m, u) for (m, u, _c) in client.appels]
     # 1) création service-authored fail-closed : PUT vide (0 octet), conflictBehavior=fail, dossier figé.
@@ -689,19 +717,46 @@ def test_workbook_instancier_gabarit_nominal_fabrication_service(_sans_porte, _c
     assert {"T_Affectations", "T_Imputations", "T_Echeancier"} <= noms_tables
     assert sum(1 for (_m, u) in methodes if u.endswith("/rows")) == 3
     # 2+7) DEUX sessions : fabrication puis RÉ-ÉMISSION (« Ouvrir + Enregistrer » machine) ; 2 fermetures.
-    assert sum(1 for (_m, u) in methodes if u.endswith("/createSession")) == 2, (
-        "la fabrication (§2) ET la ré-émission froide (§7) ouvrent chacune une session."
-    )
+    assert sum(1 for (_m, u) in methodes if u.endswith("/createSession")) == 2
     assert sum(1 for (_m, u) in methodes if u.endswith("/closeSession")) == 2
-    # 8) PREUVE FROIDE : 3 lectures /columns (le chemin du cockpit), postérieures au 1er closeSession.
+    # 8) PREUVE FROIDE : 3 lectures /columns (le chemin du cockpit).
     assert sum(1 for (_m, u) in methodes if u.endswith("/columns")) == 3
     assert not any(m == "DELETE" for (m, _u) in methodes), "instanciation réussie → aucun rollback."
 
 
+def test_workbook_instancier_gabarit_ligne_insertion_vide_est_vierge(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 bis) RECALIBRATION : une table portant UNIQUEMENT des lignes de corps entièrement VIDES
+    (ligne d'insertion Excel) est VIERGE — l'instanciation aboutit. Fait mesuré : Excel matérialise une
+    telle ligne dans toute table vide (fabrication `A1:X2`, Excel authentique `A1:D3`)."""
+    client = _FauxClientWorkbook(lignes_insertion=2)  # deux lignes vides (cas Excel authentique)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    resultat = fn(None, code_mission="MISSION-2")
+    assert resultat["tables"] == {
+        "T_Affectations": {"lignes_vides": 2},
+        "T_Imputations": {"lignes_vides": 2},
+        "T_Echeancier": {"lignes_vides": 2},
+    }
+    assert not any(m == "DELETE" for (m, _u, _c) in client.appels), "table vierge → aucun rollback."
+
+
+def test_workbook_instancier_gabarit_zero_ligne_est_vierge(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 ter) Une table SANS aucune ligne de corps (0 ligne) reste vierge (rétro-compatible avec le
+    cas count:0 strict)."""
+    client = _FauxClientWorkbook(lignes_insertion=0)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    resultat = fn(None, code_mission="MISSION-2")
+    assert resultat["tables"]["T_Affectations"] == {"lignes_vides": 0}
+    assert not any(m == "DELETE" for (m, _u, _c) in client.appels)
+
+
 def test_workbook_instancier_gabarit_preuve_froide_est_sans_session(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(27 bis) La PREUVE FROIDE §8 reproduit le chemin EXACT du cockpit : les lectures /columns portent
-    le jeton MAIS AUCUN `workbook-session-id` (lecture à froid). C'est précisément ce que la preuve
-    chaude §5 (/rows AVEC session) ne testait pas — l'angle mort qui a produit le faux-vert T-0033."""
+    """(27 quater) La PREUVE FROIDE §8 reproduit le chemin EXACT du cockpit : les lectures /columns
+    portent le jeton MAIS AUCUN `workbook-session-id` (lecture à froid). Contraste : la preuve EN
+    SESSION §5 (/rows) porte bien, elle, un workbook-session-id."""
     client = _FauxClientWorkbook()
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
@@ -714,48 +769,83 @@ def test_workbook_instancier_gabarit_preuve_froide_est_sans_session(_sans_porte,
         assert "workbook-session-id" not in headers, (
             "la preuve FROIDE doit lire SANS session (chemin du cockpit) ; un id de session la rendrait chaude."
         )
-    # Contraste : la preuve EN SESSION §5 (/rows) porte bien, elle, un workbook-session-id.
     lectures_rows = [(u, h) for (m, u, h) in client.entetes_appels if m == "GET" and u.endswith("/rows")]
     assert lectures_rows and all("workbook-session-id" in h for _u, h in lectures_rows)
 
 
-def test_workbook_instancier_gabarit_preuve_froide_403_supprime_item(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(27 ter) PREUVE FROIDE anti-faux-vert : si la lecture SANS session (/columns) renvoie 403 —
-    classeur NON ouvrable à froid par l'API Workbook, le cas exact du cockpit T-0035 —, l'instanciation
-    LÈVE et l'item créé est SUPPRIMÉ (rollback borné). C'est le garde-fou qui aurait attrapé le 403
-    AVANT qu'il n'atteigne le cockpit."""
-    client = _FauxClientWorkbook(columns_status=403)
+def test_workbook_instancier_gabarit_ligne_pleine_froide_echoue_rollback_verifie(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 quinquies) RECALIBRATION — le juge n'est PAS affaibli : une table portant une ligne de corps
+    PLEINE (une valeur) À FROID échoue, et l'item créé est supprimé PUIS le rollback est VÉRIFIÉ
+    (GET → 404). Le message porte la preuve de la suppression, jamais une annonce non prouvée."""
+    # pollution visible SEULEMENT à froid (/columns) → passe la preuve §5, échoue la preuve froide §8.
+    client = _FauxClientWorkbook(pollue_columns={"T_Echeancier": 1}, verify_get_status=404)
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
 
     with pytest.raises(RuntimeError) as excinfo:
         fn(None, code_mission="MISSION-2")
-    assert "FROIDE" in str(excinfo.value)
+    msg = str(excinfo.value)
+    assert "FROIDE" in msg and "NON VIDE" in msg
+    assert "rollback vérifié" in msg and "404" in msg, "la suppression doit être PROUVÉE, pas annoncée."
 
     suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
-    assert len(suppressions) == 1 and "ITEM-CREE" in suppressions[0], (
-        "un échec de la preuve froide doit supprimer exactement l'item créé (rollback borné)."
-    )
+    assert len(suppressions) == 1 and "ITEM-CREE" in suppressions[0]
+    idx_delete = next(i for i, (m, _u, _c) in enumerate(client.appels) if m == "DELETE")
+    gets_apres = [u for (m, u, _c) in client.appels[idx_delete + 1:] if m == "GET"]
+    assert any(u.endswith("ITEM-CREE") for u in gets_apres), "un GET de contrôle doit suivre le DELETE."
 
 
-def test_workbook_instancier_gabarit_preuve_froide_lignes_corps_supprime_item(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(27 quater) PREUVE FROIDE : une table ouvrable à froid MAIS portant une ligne de corps
-    (count ≠ 0 vu à froid) échoue aussi → rollback borné. Le count:0 doit être vrai À FROID, pas
-    seulement en session chaude."""
-    client = _FauxClientWorkbook(cold_counts={"T_Echeancier": 1})
+def test_workbook_instancier_gabarit_ligne_pleine_interne_echoue_rollback_verifie(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 sexies) MÊME prédicat recalibré côté PREUVE INTERNE §5 (/rows) : une ligne PLEINE vue en
+    session chaude fait échouer dès la preuve §5, en amont de la preuve froide, avec rollback vérifié."""
+    client = _FauxClientWorkbook(pollue_rows={"T_Affectations": 1}, verify_get_status=404)
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
 
     with pytest.raises(RuntimeError) as excinfo:
         fn(None, code_mission="MISSION-2")
-    assert "FROIDE" in str(excinfo.value)
+    msg = str(excinfo.value)
+    assert "session" in msg and "NON VIDE" in msg
+    assert "rollback vérifié" in msg
     suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
     assert len(suppressions) == 1 and "ITEM-CREE" in suppressions[0]
 
 
+def test_workbook_instancier_gabarit_preuve_froide_403_rollback_verifie(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 septies) PREUVE FROIDE anti-faux-vert : si /columns renvoie 403 (classeur non ouvrable à
+    froid, le cas du cockpit T-0035), l'instanciation LÈVE et l'item est supprimé PUIS vérifié (GET → 404)."""
+    client = _FauxClientWorkbook(columns_status=403, verify_get_status=404)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        fn(None, code_mission="MISSION-2")
+    msg = str(excinfo.value)
+    assert "FROIDE" in msg and "rollback vérifié" in msg
+    suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
+    assert len(suppressions) == 1 and "ITEM-CREE" in suppressions[0]
+
+
+def test_workbook_instancier_gabarit_rollback_incomplet_annonce_honnete(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 octies — DÉFAUT B) Si, APRÈS le DELETE, l'item est TOUJOURS présent (GET → 200), l'échec est
+    annoncé HONNÊTEMENT (« ROLLBACK INCOMPLET … à retirer par le gardien ») — JAMAIS une suppression
+    prouvée. C'est la correction du rollback menteur de l'épreuve tenant du 17/07 (item réputé supprimé
+    resté en racine, `01BWFCBZHMHXN46WR2EFDJQFBLFKT7NXNP`)."""
+    client = _FauxClientWorkbook(columns_status=403, verify_get_status=200)  # 200 = item encore présent
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        fn(None, code_mission="MISSION-2")
+    msg = str(excinfo.value)
+    assert "ROLLBACK INCOMPLET" in msg and "gardien" in msg
+    assert "rollback vérifié" not in msg, "surtout PAS d'annonce de suppression prouvée quand elle ne l'est pas."
+    assert any(m == "DELETE" for (m, _u, _c) in client.appels), "le DELETE est bien tenté (best effort)."
+
+
 def test_workbook_instancier_gabarit_collision_refuse_sans_autre_appel(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(28) FAIL-CLOSED : le PUT de création renvoie 409 (gabarit déjà présent) → FileExistsError, et
-    AUCUN autre appel — pas de session, pas de rollback (rien n'a été créé par cet appel)."""
+    """(28) FAIL-CLOSED (INCHANGÉ) : le PUT de création renvoie 409 (gabarit déjà présent) →
+    FileExistsError, et AUCUN autre appel — pas de session, pas de rollback (rien n'a été créé)."""
     client = _FauxClientWorkbook(statut_creation=409)
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
@@ -770,33 +860,21 @@ def test_workbook_instancier_gabarit_collision_refuse_sans_autre_appel(_sans_por
 
 def test_workbook_instancier_gabarit_retry_504_sur_tables_add(_sans_porte, _config_gabarit_factice, _sans_sleep, monkeypatch):
     """(29) RETRY borné : le 1er POST tables/add renvoie 504, le réessai renvoie 201 → l'instanciation
-    aboutit (3 tables créées, preuve count:0 ×3, retour nominal), sans rollback."""
-    # 1re table : 504 puis 201 ; les deux suivantes : 201 (liste épuisée → défaut 201).
+    aboutit (3 tables créées, preuve vierge, retour nominal), sans rollback."""
     client = _FauxClientWorkbook(codes_tables_add=[504, 201])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
 
     resultat = fn(None, code_mission="MISSION-2")
 
-    assert resultat["tables"] == {"T_Affectations": 0, "T_Imputations": 0, "T_Echeancier": 0}
+    assert resultat["tables"] == {
+        "T_Affectations": {"lignes_vides": 1},
+        "T_Imputations": {"lignes_vides": 1},
+        "T_Echeancier": {"lignes_vides": 1},
+    }
     # 4 POST tables/add au total : 2 pour la 1re table (504 + 201), 1 + 1 pour les deux autres.
     assert sum(1 for (m, u, _c) in client.appels if m == "POST" and u.endswith("/tables/add")) == 4
     assert not any(m == "DELETE" for (m, _u, _c) in client.appels), "un 504 rattrapé ne déclenche pas de rollback."
-
-
-def test_workbook_instancier_gabarit_preuve_interne_rouge_supprime_item(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(30) PREUVE INTERNE anti-faux-vert : si une table relue porte une ligne de corps (count≠0),
-    l'instanciation lève ET l'item créé par l'appel est SUPPRIMÉ (rollback borné sur ce SEUL item)."""
-    client = _FauxClientWorkbook(rows_counts={"T_Imputations": 1})  # une table relue à 1 ligne → preuve rouge
-    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
-    fn = _sous_jacente(server.workbook_instancier_gabarit)
-
-    with pytest.raises(RuntimeError):
-        fn(None, code_mission="MISSION-2")
-
-    suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
-    assert len(suppressions) == 1, "l'échec après création doit supprimer exactement l'item créé."
-    assert "ITEM-CREE" in suppressions[0], "le rollback vise le SEUL item créé par cet appel."
 
 
 # --------------------------------------------------------------------------------------------

@@ -18,7 +18,7 @@ Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protoco
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
-    - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve interne count:0 ×3, rollback borné. Plus aucune souche binaire.
+    - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve FROIDE « vierge » (en-têtes §5.2 + lignes de corps VIDES tolérées, la ligne d'insertion Excel — T-0035 reprise n°5), rollback borné ET VÉRIFIÉ. Plus aucune souche binaire.
 
 (Compte des opérations = 14 outils réellement décorés ; un `grep` du décorateur d'outil retourne 15,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
@@ -577,6 +577,68 @@ def _resoudre_item_gabarit(client_http: httpx.Client, code_mission: str) -> str:
         )
     reponse.raise_for_status()
     return reponse.json()["id"]
+
+
+def _cellule_vide(valeur: Any) -> bool:
+    """Vrai si une cellule Excel est VIDE : None, ou chaîne blanche (« », espaces).
+
+    Sert au prédicat « table vierge » (T-0035 reprise n°5) : une table fraîchement fabriquée porte la
+    LIGNE D'INSERTION standard d'une table Excel vide (mesuré : fabrication `ref=A1:X2`/insertRow=1 ;
+    Excel authentique `ref=A1:D3`, deux lignes vides) — ces cellules sont vides. Un 0 numérique ou tout
+    autre littéral compte comme une VALEUR (non vide) : une donnée métier ne doit jamais passer pour vierge.
+    """
+    if valeur is None:
+        return True
+    if isinstance(valeur, str):
+        return valeur.strip() == ""
+    return False
+
+
+def _ligne_pleine(cellules: list) -> bool:
+    """Vrai si AU MOINS une cellule de la ligne porte une valeur (ligne NON vide).
+
+    Le prédicat « vierge » tolère les lignes ENTIÈREMENT vides (ligne d'insertion) mais rejette toute
+    ligne pleine — c'est le juge recalibré des preuves interne (§5) et FROIDE (§8)."""
+    return any(not _cellule_vide(c) for c in cellules)
+
+
+def _rollback_verifie(client_http: httpx.Client, drive_id: str, item_id: str) -> str:
+    """Supprime l'item créé par l'appel PUIS VÉRIFIE la suppression (GET → 404 attendu).
+
+    DÉFAUT B (T-0035 reprise n°5) : l'ancien rollback « best effort » annonçait « l'item créé est
+    supprimé » SANS le vérifier — l'épreuve tenant du 17/07 a laissé en racine un item réputé
+    supprimé (item `01BWFCBZHMHXN46WR2EFDJQFBLFKT7NXNP`). On ne fait plus JAMAIS d'annonce non
+    prouvée : après le DELETE, on relit l'item ; seul un `404` prouve la suppression. Sinon le statut
+    le dit honnêtement (« rollback incomplet, item à retirer par le gardien »).
+
+    Ne SUPPRIME QUE l'item passé (celui créé par cet appel) — jamais un item que l'appel n'a pas créé.
+
+    Returns:
+        Un statut HONNÊTE (chaîne), à joindre à l'erreur remontée — jamais une suppression non prouvée.
+    """
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}"
+    try:
+        client_http.delete(url, headers=_entetes())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("rollback : DELETE de l'item %s en échec (%s).", item_id, exc)
+        return (
+            f"rollback NON VÉRIFIÉ : DELETE de l'item {item_id} en erreur ({exc}) — item "
+            "potentiellement présent en racine, à contrôler/retirer par le gardien."
+        )
+    # Vérification : relire l'item. 404 = suppression PROUVÉE ; toute autre réponse = non prouvée.
+    try:
+        rep = client_http.get(url, headers=_entetes())
+    except Exception as exc:  # noqa: BLE001
+        return (
+            f"rollback NON VÉRIFIÉ : GET de contrôle de l'item {item_id} en erreur ({exc}) — "
+            "à contrôler par le gardien."
+        )
+    if rep.status_code == 404:
+        return f"rollback vérifié : item {item_id} supprimé (GET → 404)."
+    return (
+        f"ROLLBACK INCOMPLET : item {item_id} toujours présent (GET → {rep.status_code}) — "
+        "à retirer par le gardien."
+    )
 
 
 def _config_notifications() -> dict[str, str]:
@@ -1681,7 +1743,7 @@ def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]
 def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]:
     """INSTANCIE le gabarit d'une mission par FABRICATION SERVICE de bout en bout (écriture BORNÉE, fail-closed).
 
-    FABRICATION 100 % SERVICE (v2, API-native) : la primitive ne copie plus AUCUNE souche binaire et ne
+    FABRICATION 100 % SERVICE (v2, API-native) : la primitive ne copie AUCUNE souche binaire et ne
     dépend d'AUCUN artefact produit hors du service Excel (leçon T-0033 — un binaire openpyxl à tables
     sans ligne de corps est normalisé par SharePoint et finit illisible 501). La chaîne est :
 
@@ -1694,16 +1756,25 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
       4. PAR TABLE (TABLES_GABARIT) : écriture des en-têtes §5.2 (PATCH range), création de la table
          (`tables/add`, hasHeaders — RETRY borné sur 504), renommage `T_*` ;
       5. PREUVE EN SESSION (sanity chaude) : chacune des 3 tables est relue (`/rows`, session chaude) et
-         DOIT porter 0 ligne de corps (count:0 ×3) — nécessaire mais NON suffisant (cf. §8) ;
+         DOIT être VIERGE (cf. prédicat ci-dessous) — nécessaire mais NON suffisant (cf. §8) ;
       6. closeSession de la session de fabrication (best effort) ;
       7. RÉ-ÉMISSION PAR LE SERVICE (« Ouvrir + Enregistrer » machine) : 2e session FROIDE + réécriture
          INERTE des en-têtes de la 1re table (même valeurs) → le service re-sérialise un binaire canonique.
          Un classeur amorcé depuis 0 octet est lisible en session CHAUDE mais son binaire AU REPOS n'est
          pas canonique : l'API Workbook refuse son ouverture FROIDE ultérieure (403 — épreuve T-0035) ;
       8. PREUVE FROIDE, SANS SESSION (le chemin EXACT du cockpit — `/columns`, aucun workbook-session-id) :
-         chacune des 3 tables DOIT s'ouvrir à froid (HTTP 200), porter ses en-têtes §5.2 et 0 ligne de
-         corps. C'EST cette preuve qui atteste l'ouvrabilité dont le cockpit a besoin ; un échec froid
-         (403/404/500) déclenche le rollback borné — plus jamais de faux-vert.
+         chacune des 3 tables DOIT s'ouvrir à froid (HTTP 200), porter ses en-têtes §5.2 et être VIERGE.
+         C'EST cette preuve qui atteste l'ouvrabilité dont le cockpit a besoin ; un échec froid
+         (403/404/500 ou table NON vierge) déclenche le rollback borné ET VÉRIFIÉ — plus jamais de faux-vert.
+
+    PRÉDICAT « VIERGE » (recalibré, T-0035 reprise n°5). Une table fraîchement fabriquée est VIERGE si
+    elle porte ses en-têtes §5.2 exacts ET **aucune ligne de corps ne porte de valeur** — les lignes
+    ENTIÈREMENT VIDES sont TOLÉRÉES. Fait mesuré (17/07) : une table Excel vide porte une LIGNE
+    D'INSERTION standard (fabrication service `ref=A1:X2`/insertRow=1 ; Excel authentique `ref=A1:D3`,
+    deux lignes vides) — ce n'est PAS un binaire défectueux, et le peuplement la résorbe. Exiger un
+    `count:0` STRICT était donc trop strict (faux-négatif de l'épreuve tenant du soir) ; le juge vérifie
+    désormais l'absence de ligne PLEINE, jamais l'absence de ligne. La voie « souche binaire copiée »
+    (`/copy`) a été évaluée puis écartée : Excel écrit aussi des lignes vides, elle échouerait à l'identique.
 
     Écriture BORNÉE par construction : destination = `gabarit-<code_mission>.xlsx` sous le dossier FIGÉ
     « 06 - Gabarit ERP » (GRAPH_GABARIT_DRIVE_ID + GRAPH_GABARIT_FOLDER_ID) résolu côté serveur.
@@ -1711,34 +1782,35 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
     MÊME routine (`_assainir_code_mission`) que les autres primitives gabarit. Instancier ailleurs est
     structurellement impossible.
 
-    ROLLBACK BORNÉ : toute exception survenant APRÈS la création réussie (étape 1) déclenche, avant de
-    relever l'erreur, la suppression (best effort → corbeille) du SEUL item créé par CET appel. Jamais de
-    suppression d'un item que cet appel n'a pas créé. Un échec en cours de fabrication ne laisse donc
-    pas de coquille à demi-formée.
+    ROLLBACK BORNÉ ET VÉRIFIÉ (défaut B, T-0035 reprise n°5) : toute exception survenant APRÈS la création
+    (étape 1) déclenche la suppression du SEUL item créé par CET appel, PUIS une relecture (GET → 404
+    attendu). On n'annonce JAMAIS une suppression non prouvée (l'ancien rollback « best effort » avait
+    menti — item réputé supprimé resté en racine, épreuve tenant du 17/07). Le statut de rollback,
+    HONNÊTE, est joint à l'erreur remontée (`_rollback_verifie`).
 
     Le schéma des 3 tables (feuilles, tables nommées, en-têtes) DÉRIVE de
     `contrats/socle/modele-donnees.md` §5.2 — le contrat FAIT FOI ; TABLES_GABARIT en est la projection.
 
     NB : la primitive reste BÊTE — elle instancie, rien d'autre. L'instanciation SYSTÉMATIQUE d'un
-    gabarit manquant (décision gardien 14/07/2026 : plus jamais un geste humain) est orchestrée par le
-    SKILL consommateur `consolidation-pilotage`, PAS par cet outil.
+    gabarit manquant est orchestrée par le SKILL consommateur `consolidation-pilotage`, PAS par cet outil.
 
     Args:
         code_mission: code de la mission (assaini côté serveur ; compose gabarit-<code>.xlsx).
 
     Returns:
-        dict {"code_mission", "nom_gabarit", "item_id", "tables": {"T_Affectations": 0,
-        "T_Imputations": 0, "T_Echeancier": 0}} — les comptes prouvés count:0 par la PREUVE FROIDE
-        (§8, lecture sans session), qui atteste aussi l'ouvrabilité à froid par l'API Workbook.
+        dict {"code_mission", "nom_gabarit", "item_id", "tables": {"T_Affectations": {"lignes_vides": N},
+        …}} — pour chaque table, le nombre de lignes de corps VIDES tolérées (ligne d'insertion), prouvé
+        VIERGE (aucune ligne pleine) à FROID par la PREUVE §8, qui atteste aussi l'ouvrabilité à froid.
 
     Raises:
         ValueError: code_mission invalide.
         FileExistsError: un gabarit existe déjà pour ce code_mission (conflictBehavior=fail → 409).
         ConfigManquante: GRAPH_GABARIT_* absentes.
-        HTTPStatusError: échec Graph non intercepté (session, feuilles, tables, ré-émission) — l'item
-            créé par l'appel est alors supprimé (rollback borné) avant que l'erreur ne remonte.
-        RuntimeError: preuve EN SESSION ou preuve FROIDE en échec (count ≠ 0, en-têtes manquants, ou
-            classeur non ouvrable à froid) — même rollback borné.
+        RuntimeError: preuve EN SESSION ou preuve FROIDE en échec (table NON vierge — ligne pleine —,
+            en-têtes manquants, ou classeur non ouvrable à froid) — rollback borné ET VÉRIFIÉ, dont le
+            statut honnête est joint au message.
+        HTTPStatusError: échec Graph non intercepté (session, feuilles, tables, ré-émission) — même
+            rollback borné et vérifié.
     """
     _verifier_appelant(ctx)
     code = _assainir_code_mission(code_mission)
@@ -1765,7 +1837,7 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
         reponse_creation.raise_for_status()
         item_id = reponse_creation.json()["id"]
 
-        # À partir d'ici l'item EXISTE : tout échec déclenche le rollback borné (suppression de CET item).
+        # À partir d'ici l'item EXISTE : tout échec déclenche le rollback borné ET VÉRIFIÉ (§9).
         try:
             base_wb = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/workbook"
 
@@ -1841,21 +1913,24 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 )
                 reponse_nom_table.raise_for_status()
 
-            # --- 5) PREUVE INTERNE EN SESSION (sanity chaude) : count:0 exigé sur les 3 tables ---
-            # Lecture DANS la session de fabrication (jeton + workbook-session-id) : garantit que la
-            # structure vient d'être posée correctement. NÉCESSAIRE mais PAS SUFFISANTE — une lecture
-            # chaude réussit même quand la lecture FROIDE échoue (c'est le faux-vert de T-0033, cf. §8).
+            # --- 5) PREUVE INTERNE EN SESSION (sanity chaude) : les 3 tables doivent être VIERGES ---
+            # Lecture DANS la session de fabrication (jeton + workbook-session-id). NÉCESSAIRE mais PAS
+            # SUFFISANTE — une lecture chaude réussit même quand la lecture FROIDE échoue (faux-vert
+            # T-0033, cf. §8). MÊME prédicat qu'en §8 : une ligne d'insertion vide est tolérée ; seule
+            # une ligne PLEINE (portant une valeur) fait échouer.
             for _feuille_nom, table_nom, _entetes_table in TABLES_GABARIT:
                 reponse_rows = client_http.get(
                     f"{base_wb}/tables/{table_nom}/rows",
                     headers=_wb_entetes(avec_json=False),
                 )
                 reponse_rows.raise_for_status()
-                nb_lignes = len(reponse_rows.json().get("value", []))
-                if nb_lignes != 0:
+                lignes = reponse_rows.json().get("value", [])
+                pleines = sum(1 for ligne in lignes if _ligne_pleine((ligne.get("values") or [[]])[0]))
+                if pleines != 0:
                     raise RuntimeError(
-                        f"preuve interne (session) échouée : la table {table_nom} porte {nb_lignes} "
-                        "ligne(s) de corps (count:0 attendu). Instanciation avortée — l'item créé est supprimé."
+                        f"preuve interne (session) échouée : la table {table_nom} porte {pleines} "
+                        "ligne(s) de corps NON VIDE(S) (une table vierge n'en porte aucune ; la ligne "
+                        "d'insertion vide est tolérée). Instanciation avortée."
                     )
 
             # --- 6) closeSession de la session de FABRICATION (best effort) ---
@@ -1868,13 +1943,11 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
 
             # --- 7) RÉ-ÉMISSION PAR LE SERVICE (« Ouvrir + Enregistrer » machine) ---
             # Un classeur amorcé depuis un contenu 0 octet est lisible en session CHAUDE juste après sa
-            # fabrication (la preuve §5 et l'épreuve tenant T-0033 du 17/07 étaient toutes deux chaudes),
-            # mais son binaire AU REPOS n'est PAS canonique : l'API Workbook REFUSE son ouverture FROIDE
-            # ultérieure (403 sur /workbook/tables — épreuve T-0035 du 17/07, cockpit en Graph délégué). Un
-            # simple Ouvrir + Enregistrer du fichier dans Excel réémet un classeur propre et lève le 403. On
-            # reproduit ce geste PAR LE SERVICE : ré-ouverture FROIDE (2e session) + réécriture INERTE des
-            # en-têtes de la 1re table (mêmes valeurs : sémantiquement neutre, mais « dirtie » le classeur →
-            # le service le re-sérialise entièrement à la fermeture, sans binaire tiers dans la chaîne).
+            # fabrication, mais son binaire AU REPOS n'est PAS canonique : l'API Workbook REFUSE son
+            # ouverture FROIDE ultérieure (403 sur /workbook/tables — épreuve T-0035 du 17/07, cockpit en
+            # Graph délégué). Un simple Ouvrir + Enregistrer réémet un classeur propre et lève le 403. On
+            # reproduit ce geste PAR LE SERVICE : 2e session froide + réécriture INERTE des en-têtes de la
+            # 1re table (mêmes valeurs → « dirtie » le classeur → re-sérialisation à la fermeture).
             reponse_session2 = client_http.post(
                 f"{base_wb}/createSession",
                 headers={**_entetes(), "Content-Type": "application/json"},
@@ -1905,10 +1978,11 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
             # --- 8) PREUVE FROIDE, SANS SESSION : le chemin EXACT du cockpit (/columns) ---
             # AUCUN workbook-session-id ici : on lit à FROID, comme la tour de contrôle (workbook-graph.ts,
             # `.../workbook/tables/{name}/columns`). C'est la lecture qui échouait en 403. Si le classeur
-            # reste non ouvrable à froid MALGRÉ la ré-émission (§7), l'échec survient ICI et déclenche le
-            # rollback borné — plus jamais de faux-vert (une preuve chaude qui masque un 403 froid). C'est
-            # cette preuve-ci, et non la §5, qui atteste l'ouvrabilité dont le cockpit a besoin.
-            comptes: dict[str, int] = {}
+            # reste non ouvrable à froid MALGRÉ la ré-émission (§7), ou si une table n'est pas VIERGE,
+            # l'échec survient ICI et déclenche le rollback borné et VÉRIFIÉ — plus jamais de faux-vert.
+            # PRÉDICAT VIERGE : en-têtes §5.2 présents + aucune ligne de corps PLEINE (lignes d'insertion
+            # entièrement vides tolérées). Le compte-rendu porte `lignes_vides` (et non un count:0 strict).
+            comptes: dict[str, dict[str, int]] = {}
             for _feuille_nom, table_nom, entetes_table in TABLES_GABARIT:
                 reponse_froide = client_http.get(
                     f"{base_wb}/tables/{table_nom}/columns",
@@ -1918,7 +1992,7 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                     raise RuntimeError(
                         f"preuve FROIDE échouée : lecture SANS session de {table_nom}/columns → HTTP "
                         f"{reponse_froide.status_code}. Le classeur n'est pas ouvrable à froid par l'API "
-                        "Workbook (le 403 du cockpit, T-0035). Instanciation avortée — l'item créé est supprimé."
+                        "Workbook (le 403 du cockpit, T-0035). Instanciation avortée."
                     )
                 colonnes = reponse_froide.json().get("value", [])
                 noms_colonnes = {c.get("name") for c in colonnes}
@@ -1926,27 +2000,32 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 if manquants:
                     raise RuntimeError(
                         f"preuve FROIDE : en-têtes manquants dans {table_nom} ({', '.join(manquants)}). "
-                        "Instanciation avortée — l'item créé est supprimé."
+                        "Instanciation avortée."
                     )
-                # Hauteur de colonne − 1 (l'en-tête) = lignes de corps ; 0 attendu.
+                # Reconstruire les lignes de CORPS par index (valeurs[0] = en-tête, valeurs[i+1] = corps),
+                # puis compter les lignes PLEINES (≥1 cellule non vide) et VIDES (ligne d'insertion tolérée).
                 nb_corps = max((max(0, len(c.get("values", [])) - 1) for c in colonnes), default=0)
-                if nb_corps != 0:
+                lignes_pleines = 0
+                for i in range(nb_corps):
+                    cellules = []
+                    for c in colonnes:
+                        valeurs = c.get("values", [])
+                        cellule = valeurs[i + 1] if i + 1 < len(valeurs) else None
+                        cellules.append(cellule[0] if isinstance(cellule, list) and cellule else cellule)
+                    if _ligne_pleine(cellules):
+                        lignes_pleines += 1
+                if lignes_pleines != 0:
                     raise RuntimeError(
-                        f"preuve FROIDE : la table {table_nom} porte {nb_corps} ligne(s) de corps "
-                        "(count:0 attendu à froid). Instanciation avortée — l'item créé est supprimé."
+                        f"preuve FROIDE : la table {table_nom} porte {lignes_pleines} ligne(s) de corps "
+                        "NON VIDE(S) à froid (une table vierge n'en porte aucune ; la ligne d'insertion "
+                        "vide est tolérée). Instanciation avortée."
                     )
-                comptes[table_nom] = 0
+                comptes[table_nom] = {"lignes_vides": nb_corps}
 
-        except BaseException:
-            # --- 9) ROLLBACK BORNÉ : suppression du SEUL item créé par CET appel (best effort) ---
-            try:
-                client_http.delete(
-                    f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}",
-                    headers=_entetes(),
-                )
-            except Exception:  # noqa: BLE001
-                logger.warning("rollback (suppression de l'item %s) en échec — best effort.", item_id)
-            raise
+        except BaseException as exc:
+            # --- 9) ROLLBACK BORNÉ ET VÉRIFIÉ : DELETE puis GET 404 ; jamais d'annonce non prouvée. ---
+            statut_rollback = _rollback_verifie(client_http, drive_id, item_id)
+            raise RuntimeError(f"{exc} [{statut_rollback}]") from exc
 
     return {
         "code_mission": code,
