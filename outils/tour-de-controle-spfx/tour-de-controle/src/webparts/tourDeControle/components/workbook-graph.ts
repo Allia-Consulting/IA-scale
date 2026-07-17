@@ -306,7 +306,7 @@ async function lireTable(
 ): Promise<LectureTable> {
   const loc = localiserDansDrive(drives, fichierServerRelative);
   if (!loc) {
-    return { lignes: [], acces: 'indisponible', anomalie: { source: libelleSource, raison: 'classeur hors des bibliothèques du site' } };
+    return { lignes: [], acces: 'indisponible', anomalie: { source: libelleSource, raison: 'classeur hors des bibliothèques du site', cause: 'chemin hors des drives du site' } };
   }
   const chemin = `/drives/${loc.driveId}/root:${encoderChemin(loc.cheminDansDrive)}:/workbook/tables/${encodeURIComponent(table)}/columns`;
   const rep = await grapheGet(chemin);
@@ -315,11 +315,11 @@ async function lireTable(
     return { lignes: [], acces: 'restreint' };
   }
   if (!rep.ok) {
-    return { lignes: [], acces: 'indisponible', anomalie: { source: libelleSource, raison: `lecture de « ${table} » indisponible (HTTP ${rep.status})` } };
+    return { lignes: [], acces: 'indisponible', anomalie: { source: libelleSource, raison: `lecture de « ${table} » indisponible (HTTP ${rep.status})`, cause: `${table} : HTTP ${rep.status}` } };
   }
   const parsee = parserTableColonnes(rep.corps, entetesAttendus);
   if (parsee.entetesManquants.length > 0) {
-    return { lignes: [], acces: 'accessible', anomalie: { source: libelleSource, raison: `table « ${table} » au schéma inattendu (en-têtes manquants : ${parsee.entetesManquants.join(', ')})` } };
+    return { lignes: [], acces: 'accessible', anomalie: { source: libelleSource, raison: `table « ${table} » au schéma inattendu (en-têtes manquants : ${parsee.entetesManquants.join(', ')})`, cause: `${table} : en-têtes manquants ${parsee.entetesManquants.join(', ')}` } };
   }
   return { lignes: parsee.lignes, acces: 'accessible' };
 }
@@ -360,7 +360,7 @@ export async function lireContenus(
     // Résolution échouée : chaque gabarit devient une anomalie (jamais un zéro tu) ; référentiel
     // 'indisponible' s'il était demandé (échec réseau, pas un refus de droits).
     for (const cible of cibles) {
-      anomalies.push({ source: `gabarit-${cible.codeMission}.xlsx`, raison: 'site/drive introuvable (résolution Graph échouée)' });
+      anomalies.push({ source: `gabarit-${cible.codeMission}.xlsx`, raison: 'site/drive introuvable (résolution Graph échouée)', cause: 'résolution site→drive Graph échouée' });
       gabarits.push({ codeMission: cible.codeMission, affectations: [], imputations: [], echeancier: [] });
     }
     return { gabarits, referentiel: undefined, referentielEtat: referentiel ? 'indisponible' : 'restreint', anomalies };

@@ -3,7 +3,7 @@
   "solution": {
     "name": "tour-de-controle-client-side-solution",
     "id": "2fde3b3c-8586-4a4f-836d-95537dfb501b",
-    "version": "1.4.0.0",
+    "version": "1.4.1.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,

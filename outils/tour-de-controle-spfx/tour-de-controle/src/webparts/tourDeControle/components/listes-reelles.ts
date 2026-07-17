@@ -17,6 +17,7 @@ import {
   decouvrirGabarits,
   fusionnerContenus,
   type EtatGabarits,
+  type AnomalieGabarit,
   type LecteurDossier,
   type SondeReferentiel,
   type ResultatDossier,
@@ -354,15 +355,34 @@ function grapheGetPour(client: MSGraphClientV3): GrapheGet {
       return { ok: true, status: 200, corps };
     } catch (e) {
       const brut = (e && typeof e === 'object' && 'statusCode' in e) ? Number((e as { statusCode?: unknown }).statusCode) : 0;
-      return { ok: false, status: isFinite(brut) ? brut : 0 };
+      const status = isFinite(brut) ? brut : 0;
+      // Jamais d'échec muet (point 3) : chaque GET Graph en échec est journalisé avec son statut et
+      // son chemin. Un status 0 = échec AVANT réponse HTTP (jeton refusé, réseau, client non résolu).
+      console.error('[tour-de-controle] échec GET Graph', { chemin: cheminApi, status, erreur: e instanceof Error ? e.message : String(e) });
+      return { ok: false, status };
     }
   };
 }
 
 /**
+ * Surface un SAUT ou un ÉCHEC de la lecture du CONTENU (Graph Workbook) comme anomalie VISIBLE
+ * (portant sa cause) + `console.error` — JAMAIS muet. Retourne la découverte enrichie de l'anomalie.
+ *
+ * Cause racine de l'épreuve ÉCHOUÉE du 17/07 (T-0035 reprise) : le code retournait la découverte
+ * seule en SILENCE (guard « non câblé », `catch` autour de `getClient` avalant l'erreur) et le
+ * bandeau de fraîcheur n'affichait pas la cause → aucun appel Graph, aucune anomalie explicite,
+ * console vide : échec indiagnosticable. On ne saute/n'échoue plus jamais sans le dire.
+ */
+function diagnostiquer(etat: EtatGabarits, source: string, raison: string, cause: string): EtatGabarits {
+  console.error('[tour-de-controle] lecture du contenu des gabarits ignorée', { raison, cause });
+  const anomalie: AnomalieGabarit = { source, raison, cause };
+  return { ...etat, anomalies: [...etat.anomalies, anomalie] };
+}
+
+/**
  * Découvre les gabarits actifs (REST, listing/fraîcheur) PUIS lit le contenu de leurs tables +
- * du référentiel de coûts via Graph Workbook délégué (point 2). Ne lève jamais : sans câblage /
- * hors état 'ok', on retourne la découverte seule (contenus `undefined` → bandeaux en « · »).
+ * du référentiel de coûts via Graph Workbook délégué (point 2). Ne lève jamais. TOUT saut ou échec
+ * de la lecture de contenu est SURFACÉ (anomalie + `console.error`) — jamais muet (point 3).
  */
 async function chargerGabarits(
   sp: SPHttpClient,
@@ -370,20 +390,43 @@ async function chargerGabarits(
   graphFactory?: MSGraphClientFactory
 ): Promise<EtatGabarits> {
   const etat = await decouvrirGabarits(lecteurGabaritsPour(sp, cfg), sondeReferentielPour(sp, cfg), new Date());
-  // Pas de lecture de contenu si la découverte n'est pas 'ok', si le site n'est pas câblé, ou si
-  // le client Graph est indisponible : la découverte (présence/fraîcheur) suffit, contenus « · ».
-  if (etat.source !== 'ok' || !cfg.siteUrl || !graphFactory) { return etat; }
+
+  // Découverte non 'ok' : 'non_cable' = état LÉGITIME (rien n'est câblé → aucun bruit) ; 'indisponible'
+  // = échec RÉEL du listing → déjà porté en anomalie par decouvrirGabarits, on le journalise aussi.
+  if (etat.source !== 'ok') {
+    if (etat.source === 'indisponible') {
+      console.error('[tour-de-controle] découverte des gabarits indisponible', { siteUrl: cfg.siteUrl });
+    }
+    return etat;
+  }
+  // Dossier découvert mais site non câblé (incohérence : source 'ok' implique normalement siteUrl) :
+  // défensif, surfacé plutôt que tu.
+  if (!cfg.siteUrl) {
+    return diagnostiquer(etat, 'contenu des gabarits', 'site des gabarits non câblé', 'gabaritsSiteUrl vide');
+  }
+  // Fabrique Graph absente : le contenu ne sera pas lu → on le DIT (au lieu de retourner en silence).
+  if (!graphFactory) {
+    return diagnostiquer(etat, 'contenu des gabarits', 'fabrique de client Graph indisponible', 'msGraphClientFactory absente');
+  }
+
   let grapheGet: GrapheGet;
   try {
     grapheGet = grapheGetPour(await graphFactory.getClient('3'));
-  } catch {
-    return etat; // client Graph non résolu → découverte seule (fail-visible, jamais de crash).
+  } catch (e) {
+    // getClient('3') a échoué (jeton, permission, résolution) : SURFACÉ, plus jamais avalé.
+    const msg = e instanceof Error ? e.message : String(e);
+    return diagnostiquer(etat, 'contenu des gabarits', "client Graph non résolu (getClient('3') a échoué)", `getClient('3') : ${msg}`);
   }
+
   const cibles: ReadonlyArray<CibleGabarit> = etat.gabarits.map(g => ({ codeMission: g.codeMission, url: g.url }));
   const referentiel: CiblesReferentiel | undefined = (cfg.referentielRessources && cfg.referentielStructure)
     ? { ressources: cfg.referentielRessources, structure: cfg.referentielStructure }
     : undefined;
   const contenus = await lireContenus(grapheGet, cfg.siteUrl, cibles, referentiel);
+  // Un `console.error` par échec de contenu (point 3) — la fraîcheur affiche déjà source + cause.
+  for (const a of contenus.anomalies) {
+    console.error('[tour-de-controle] anomalie gabarit', a.source, '—', a.cause ?? a.raison);
+  }
   return fusionnerContenus(etat, contenus);
 }
 

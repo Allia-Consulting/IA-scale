@@ -89,6 +89,13 @@ export interface AnomalieGabarit {
   readonly source: string;
   /** Raison lisible — signalée, jamais tue. */
   readonly raison: string;
+  /**
+   * Cause technique COURTE (statut HTTP, message d'exception, drapeau de câblage) — AFFICHÉE dans
+   * la ligne d'anomalies du cockpit et journalisée en `console.error` (point 3, T-0035 reprise).
+   * Le défaut de l'épreuve du 17/07 : l'anomalie n'exposait pas sa cause (ni UI, ni console) →
+   * échec muet, indiagnosticable. Toute anomalie porte désormais sa cause ; jamais d'échec muet.
+   */
+  readonly cause?: string;
 }
 
 export interface EtatGabarits {
@@ -186,9 +193,9 @@ export async function decouvrirGabarits(
     // Non configuré : état légitime (le gardien câble les coordonnées au point 2).
     source = 'non_cable';
   } else {
-    // Échec de lecture : le dossier attendu est inaccessible → anomalie explicite.
+    // Échec de lecture : le dossier attendu est inaccessible → anomalie explicite (avec cause).
     source = 'indisponible';
-    anomalies = [{ source: DOSSIER_GABARITS_ACTIFS, raison: 'dossier des gabarits inaccessible' }];
+    anomalies = [{ source: DOSSIER_GABARITS_ACTIFS, raison: 'dossier des gabarits inaccessible', cause: 'listing REST du dossier illisible' }];
   }
 
   return {
@@ -216,7 +223,8 @@ export function formaterFraicheur(etat: EtatGabarits): Fraicheur {
   if (n === 0) {
     return { luLe: etat.luLe };
   }
-  const liste = etat.anomalies.map(a => a.source).join(', ');
+  // La CAUSE est affichée à côté de la source (point 3) : l'anomalie expose sa cause, jamais muette.
+  const liste = etat.anomalies.map(a => (a.cause ? `${a.source} (${a.cause})` : a.source)).join(', ');
   const mot = n > 1 ? 'gabarits en anomalie' : 'gabarit en anomalie';
   return { luLe: etat.luLe, anomalies: `${n} ${mot} : ${liste}` };
 }

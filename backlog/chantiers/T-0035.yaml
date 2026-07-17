@@ -87,9 +87,38 @@ avancement:
         Sites.Read.All]. Tests 50 → 81 verts (golden T-0031 : 148 j/120 j, 133 200 €/84 000 €,
         TJM 900/700). Build SPFx complet vert (.sppkg 1.4.0.0). Rien déployé, tenant intact.
         Voir la PR #232 (câblage économique Graph Workbook délégué).
+    - date: 2026-07-17
+      fait: >
+        Point 2 ÉPROUVÉ SUR LE RÉEL — ÉCHEC, puis REPRISE. Contexte du tir : page cockpit publiée
+        v2.0, solution 1.4.0.0 déployée à l'App Catalog, permission Graph Sites.Read.All approuvée
+        org-wide, 4 props posées et vérifiées BYTE-EXACTES dans CanvasContent1 (gabaritsSiteUrl,
+        gabaritsFolderPath, referentielRessourcesPath, referentielStructurePath) — page PUBLIÉE PAR
+        API après gel de l'UI SharePoint. Symptômes : fraîcheur vivante (« lu le 17/07/2026 à
+        12:58 ») mais « 8 gabarits en anomalie » (gabarit-1.xlsx ×3, gabarit-2.xlsx ×3, référentiel
+        T_Ressources, T_Structure) ; capture réseau exhaustive = AUCUNE requête graph.microsoft.com,
+        AUCUNE vers le site Contrats et administratif, AUCUNE acquisition de jeton (l'échec PRÉCÈDE
+        tout HTTP) ; console VIDE. DIAGNOSTIC (lecture du chemin réel + reproduction au banc, montage
+        React réel + Graph mocké) : le câblage, QUAND les props atteignent le composant, émet bien
+        getClient('3') ET la lecture des tables (prouvé par un nouveau test de montage) ; le passage
+        de la fabrique est garanti par le typage (champ REQUIS). La CAUSE RACINE DE L'ÉCHEC DE
+        L'ÉPREUVE est l'ABSENCE TOTALE DE SIGNAL : chargerGabarits sautait/échouait EN SILENCE
+        (retour muet quand fabrique absente, catch avalant l'échec de getClient), formaterFraicheur
+        n'affichait que la source des anomalies (jamais la raison), zéro console.error — un échec en
+        amont de tout HTTP restait indiagnosticable. Trou des 81 tests verts : tous PURS, aucun
+        n'exerçait le câblage ni le montage. CORRECTION (solution SPFx 1.4.0.0 -> 1.4.1.0) : champ
+        `cause` sur AnomalieGabarit AFFICHÉ dans la ligne d'anomalies ; chargerGabarits surface
+        chaque saut/échec (fabrique absente, getClient en échec, découverte indisponible, résolution
+        site->drive échouée) en anomalie portant sa cause + un console.error('[tour-de-controle]',…)
+        par échec (l'adaptateur Graph journalise chaque GET raté avec son statut ; status 0 = échec
+        avant réponse HTTP) ; nouveau test cablage-graph.test.tsx (montage réel + Graph mocké)
+        assertant que la lecture EST invoquée et les modèles non vides, + versant client-Graph-en-
+        échec assertant l'anomalie surfacée avec cause + console.error. heft 81 -> 83 tests verts,
+        build SPFx complet vert (.sppkg 1.4.1.0). RIEN DÉPLOYÉ, tenant intact. Épreuve détaillée :
+        docs/epreuves/2026-07-17-t-0035-reprise-cablage-graph.md. PR de reprise « T-0035 — reprise :
+        le câblage Graph n'émettait aucun appel » (non mergée).
 
   reste_pour_solder:
-    - "Point 2 — câblage réel CONSTRUIT (PR #232, solution SPFx 1.4.0.0, Graph Workbook délégué, permission Sites.Read.All) : reste À ÉPROUVER SUR LE RÉEL tant que le runbook gardien n'est pas passé — déploiement du .sppkg 1.4.0.0 à l'App Catalog, APPROBATION de la permission Graph Sites.Read.All (API access), pose des props gabaritsSiteUrl/gabaritsFolderPath/referentielRessourcesPath/referentielStructurePath, puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures)"
+    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0) puis ÉPROUVÉ SUR LE RÉEL le 17/07 = ÉCHEC (aucun appel Graph émis, échec muet), suivi d'une REPRISE (solution SPFx 1.4.1.0) rendant le câblage AUTO-DIAGNOSTIQUANT : plus aucun échec muet (champ `cause` affiché + console.error par échec) et test de câblage/montage comblant le trou des tests purs. RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN : déploiement du .sppkg 1.4.1.0 à l'App Catalog puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures) — si la lecture ne part toujours pas, le cockpit ET la console nommeront désormais la cause exacte au lieu d'un échec muet"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
