@@ -151,3 +151,22 @@ avancement:
         Restent gestes gardien : build+déploiement 0.15.0, promotion du skill v1.3, épreuve tenant
         (régénérer un gabarit existant). Détails : docs/epreuves/2026-07-17-t-0033-archiver-deplacement-jumelee.md
         (+ récit complet dans l'entrée T-0035 reprise n°4).
+    - date: 2026-07-17
+      fait: >
+        FAIT NOUVEAU (jumelé T-0035 reprise n°5) — LA PREUVE D'INSTANCIATION N'ÉTAIT PAS À BLÂMER, LE
+        PRÉDICAT L'ÉTAIT. L'épreuve tenant du soir a rendu ROUGE l'instanciation : preuve FROIDE
+        « T_Affectations porte 1 ligne de corps (count:0 attendu à froid) » + rollback qui a MENTI (item
+        01BWFCBZHMHXN46WR2EFDJQFBLFKT7NXNP, 16878 o, réputé supprimé mais resté en racine). TROIS FAITS
+        MESURÉS écartent le diagnostic « binaire non canonique » : (1) le binaire fabrication service
+        porte des tables ref='A1:X2' + insertRow='1' — la ligne à froid est la LIGNE D'INSERTION standard
+        d'une table Excel VIDE ; (2) un classeur Excel AUTHENTIQUE (table sans données) porte ref='A1:D3',
+        DEUX lignes vides — Excel non plus ne fait pas de table header-only, la voie « souche binaire
+        copiée » (/copy) échouerait count:0 À L'IDENTIQUE, donc ÉVALUÉE PUIS ÉCARTÉE ; (3) la preuve froide
+        de la reprise n°4 lisait déjà les colonnes À FROID SANS 403, et les gabarits peuplés relisent juste
+        — le binaire de fabrication 0.14+ EST ouvrable à froid. DÉCISION (gardien) : fabrication service
+        CONSERVÉE. Correctif MINIMAL (serveur 0.15.0 -> 0.16.0) : prédicat « vierge » RECALIBRÉ (en-têtes
+        §5.2 + AUCUNE ligne de corps PLEINE ; lignes vides tolérées ; retour lignes_vides:N) sur les preuves
+        interne §5 ET froide §8, et ROLLBACK VÉRIFIÉ (DELETE puis GET 404 ; sinon annonce honnête
+        d'incomplet). Le fail-closed (conflictBehavior=fail) et le bornage sont INCHANGÉS. 76 tests verts.
+        RIEN mergé/déployé, tenant intact. Détails :
+        docs/epreuves/2026-07-17-t-0035-reprise-5-recalibration-preuve.md (récit complet côté T-0035).
