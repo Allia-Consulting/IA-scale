@@ -19,7 +19,7 @@ criteres_acceptation:
   - "Chaîne service-authored de bout en bout : aucun binaire produit hors service Excel n'entre dans la fabrication des gabarits ; chaque instanciation porte sa preuve interne count:0 ×3"
   - "ZÉRO édition manuelle du gardien (leçon S35) : les seuls gestes gardien sont le merge de la PR et un éventuel clic de dépôt du binaire ; la génération, l'archivage et la ré-instanciation sont machine"
 rayon_impact: firme
-statut: à_faire
+statut: soldé
 note: >
   Nommé en session S35 (14/07/2026). PRIORITÉ HAUTE — bloque le solde de T-0031 : l'épreuve de
   consolidation réelle a échoué (STOP n°2) parce que la souche canon gabarit-pilotage-mission.xlsx
@@ -103,3 +103,13 @@ avancement:
         gardé par la preuve interne et un fallback pré-décidé (base service-authored créée une fois
         par le gardien, bascule /copy). Restent après merge : build+déploiement 0.13.0 (runbook
         gardien) puis épreuve tenant (instancier ×2 → count:0 ×6). Statut inchangé (à_faire).
+    - date: 2026-07-17
+      fait: >
+        ÉPREUVE TENANT VERTE — T-0033 SOLDÉ au sens gardien (éprouvé sur le réel). Serveur 0.13.0
+        déployé (révision --0000020) ; instanciation v2 exécutée pour les missions 1 (Siteflow) et
+        2 (Datalab) : 2 gabarits fabriqués 100 % service (PUT vide + API Workbook), preuve interne
+        count:0 ×3 par appel PLUS preuve indépendante workbook_lire_table count:0 ×6. Le risque
+        assumé (ouverture Workbook d'un classeur 0 octet) est levé sur ce tenant. Deux essais
+        préalables avortés à l'étape 0 — sessions Claude Desktop sans la config MCP locale projet
+        du CLI, jeton et serveur hors de cause, zéro effet tenant. Débloque le solde de T-0031
+        (consolidation réelle). Détail : docs/epreuves/2026-07-17-t-0033-instanciation-v2-tenant.md.
