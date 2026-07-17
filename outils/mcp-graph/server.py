@@ -17,7 +17,7 @@ Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protoco
     - workbook_lire_table         : LIT (lecture seule, NON bornée) les lignes d'une table nommée d'un classeur Excel (saisie / gabarit / réf. coûts).
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
-    - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission dans « 00 - Old » (copie horodatée) avant régénération.
+    - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
     - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve interne count:0 ×3, rollback borné. Plus aucune souche binaire.
 
 (Compte des opérations = 14 outils réellement décorés ; un `grep` du décorateur d'outil retourne 15,
@@ -1605,27 +1605,41 @@ def workbook_maj_ligne(
 @mcp.tool()
 @_journal_appel("workbook_archiver_gabarit")
 def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]:
-    """ARCHIVE le gabarit courant d'une mission dans « 00 - Old » avant régénération (copie horodatée).
+    """ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old ».
 
-    POST /drives/{GABARIT_DRIVE_ID}/items/{item}/copy → « 00 - Old » (GRAPH_GABARIT_OLD_FOLDER_ID)
+    PATCH /drives/{GABARIT_DRIVE_ID}/items/{item}  →  parentReference « 00 - Old » + nom horodaté.
 
-    Écriture BORNÉE : source = `gabarit-<code_mission>.xlsx` de « 06 - Gabarit ERP » résolu côté
-    serveur ; destination = dossier « 00 - Old » figé (GRAPH_GABARIT_OLD_FOLDER_ID). L'appelant ne
-    choisit ni la source ni la destination. Réversible sans perte : la version précédente est conservée
-    sous un nom horodaté avant toute régénération.
+    DÉPLACEMENT, PAS COPIE (correction T-0035 reprise n°4, serveur 0.14.0 → 0.15.0). L'ancienne
+    implémentation COPIAIT (`POST /copy`) : la copie horodatée arrivait bien dans « 00 - Old » mais
+    l'ORIGINAL restait dans « 06 - Gabarit ERP » — le nom `gabarit-<code>.xlsx` n'était donc JAMAIS
+    libéré. Or `workbook_instancier_gabarit` est fail-closed (`conflictBehavior=fail`, à conserver) :
+    la RÉGÉNÉRATION d'un gabarit existant (archiver → ré-instancier → repeupler, orchestrée par le
+    SKILL) butait sur une collision non levable (épreuve tenant du 17/07). Un vrai DÉPLACEMENT libère
+    le nom : l'archive part dans « 00 - Old », la racine « 06 - Gabarit ERP » n'en porte plus aucune
+    trace, et la ré-instanciation fail-closed se satisfait sans écrasement ni affaiblissement.
 
-    NB : le cran auto « reconcilier_gabarit_pilotage » (régénération complète : archiver puis
-    réécrire) est porté par le SKILL consommateur à venir, PAS par un outil MCP composite — cette
-    primitive reste BÊTE (décision S34) : elle archive, rien d'autre.
+    Ce n'est PAS une primitive de déplacement/suppression GÉNÉRIQUE (surface dangereuse proscrite,
+    décision S34) : l'écriture est BORNÉE sur une cible FIGÉE — source = `gabarit-<code_mission>.xlsx`
+    de « 06 - Gabarit ERP » résolu côté serveur (`_resoudre_item_gabarit`, jamais un item_id libre) ;
+    destination = dossier « 00 - Old » figé (GRAPH_GABARIT_OLD_FOLDER_ID). L'appelant ne fournit que
+    `code_mission` (assaini) et ne choisit NI la source NI la destination. RÉVERSIBLE sans perte : la
+    version précédente est conservée intacte sous un nom horodaté dans « 00 - Old » — c'est ce qui tient
+    le cran « reconcilier_gabarit_pilotage » à **auto**. Le rétablissement (00 - Old → racine) reste un
+    geste GARDIEN : aucune primitive n'expose le déplacement inverse.
 
-    Graph /copy est ASYNCHRONE : la réponse est un 202 Accepted + en-tête Location (URL de suivi) ;
-    cette primitive ne bloque PAS sur l'achèvement de la copie.
+    Le déplacement d'un DriveItem au sein d'un même drive est SYNCHRONE : le `PATCH` renvoie `200` avec
+    l'item déplacé — plus de `202`/`Location` à poller (contrairement à `/copy`), donc plus de faux-vert
+    « 202 ≠ preuve » possible. Au retour, le nom est libéré.
+
+    NB : le cran auto « reconcilier_gabarit_pilotage » (régénération complète : archiver → ré-instancier
+    → repeupler) est porté par le SKILL consommateur `consolidation-pilotage`, PAS par un outil MCP
+    composite — cette primitive reste BÊTE (décision S34) : elle déplace le gabarit courant, rien d'autre.
 
     Args:
         code_mission: code de la mission (assaini côté serveur ; sélectionne gabarit-<code>.xlsx).
 
     Returns:
-        dict {"code_mission", "nom_archive", "accepted": bool, "emplacement": <Location|None>}.
+        dict {"code_mission", "nom_archive", "item_id", "deplace": bool, "dossier": "00 - Old"}.
 
     Raises:
         ValueError: code_mission invalide.
@@ -1633,28 +1647,32 @@ def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]
         ConfigManquante: GRAPH_GABARIT_* absentes.
     """
     _verifier_appelant(ctx)
+    code = _assainir_code_mission(code_mission)  # fail-closed AVANT tout réseau (comme les autres primitives)
     cfg = _config_gabarit()
-    drive_id = cfg["gabarit_drive_id"]
     old_folder_id = cfg["gabarit_old_folder_id"]
+    drive_id = cfg["gabarit_drive_id"]
     horodatage = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")  # UTC compact
     with httpx.Client(timeout=30) as client_http:
         item_id = _resoudre_item_gabarit(client_http, code_mission)
-        nom_archive = f"gabarit-{code_mission.strip()}-{horodatage}.xlsx"
-        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/copy"
-        reponse = client_http.post(
+        nom_archive = f"gabarit-{code}-{horodatage}.xlsx"
+        # DÉPLACEMENT (move) : PATCH de l'item avec un nouveau parentReference + nouveau nom.
+        # Même drive → opération synchrone (200), le nom source est libéré au retour.
+        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}"
+        reponse = client_http.patch(
             url,
             headers={**_entetes(), "Content-Type": "application/json"},
             json={
-                "parentReference": {"driveId": drive_id, "id": old_folder_id},
+                "parentReference": {"id": old_folder_id},
                 "name": nom_archive,
             },
         )
         reponse.raise_for_status()
     return {
-        "code_mission": code_mission.strip(),
+        "code_mission": code,
         "nom_archive": nom_archive,
-        "accepted": reponse.status_code == 202,
-        "emplacement": reponse.headers.get("Location"),
+        "item_id": item_id,
+        "deplace": reponse.status_code == 200,
+        "dossier": "00 - Old",
     }
 
 

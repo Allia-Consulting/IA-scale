@@ -158,9 +158,32 @@ avancement:
         déployé, tenant intact. Détail : docs/epreuves/2026-07-17-t-0035-403-workbook-froid.md. PR de
         reprise n°3 « T-0035 — reprise n°3 : cause racine du 403 Workbook (gabarit ouvrable à froid) »
         (non mergée).
+    - date: 2026-07-17
+      fait: >
+        Point 2 — REPRISE n°4 (RÉGÉNÉRATION D'UN GABARIT EXISTANT, RENDUE MACHINE). L'épreuve tenant
+        du soir a montré que régénérer un gabarit qui EXISTE DÉJÀ butait sur une COLLISION NON LEVABLE :
+        workbook_instancier_gabarit est fail-closed sur un gabarit en place (correct, INCHANGÉ) et
+        workbook_archiver_gabarit ne faisait que COPIER (POST /copy) — l'original restait à la racine,
+        le nom gabarit-<code>.xlsx JAMAIS libéré ; l'orchestration de réconciliation n'était pas
+        implémentée. Voie B (rigoureuse) retenue, conforme S34 (primitives BÊTES) : (a) correction
+        MINIMALE et BORNÉE du serveur — workbook_archiver_gabarit passe de la copie au DÉPLACEMENT
+        (PATCH parentReference « 00 - Old » + nom horodaté, SYNCHRONE 200, plus de 202/poll), ce qui
+        LIBÈRE le nom sans affaiblir le fail-closed ; ce n'est PAS une surface de déplacement/suppression
+        générique (source/destination figées côté serveur, l'appelant ne fournit que code_mission) ;
+        réversible (version conservée dans « 00 - Old », rétablissement inverse = geste gardien) ;
+        serveur 0.14.0 -> 0.15.0. (b) orchestration de la régénération dans le SKILL consolidation-pilotage
+        (v1.2 -> v1.3) : lire saisie + gabarit courant -> réconcilier en mémoire (jamais de suppression,
+        jamais de rétrogradation de validé, report de LienFacture) -> archiver (déplacement, nom libéré)
+        -> ré-instancier (fail-closed satisfait ; preuve FROIDE §8 atteste l'ouvrabilité) -> repeupler ;
+        idempotent, réversible, journalisé. 73 tests verts (+3 archivage-déplacement ; fail-closed et
+        bornage inchangés), evals consolidation-pilotage 10/10. ÉTAT TENANT À CONNAÎTRE (réversible) :
+        l'épreuve du soir a laissé 2 copies surnuméraires en « 00 - Old » (gabarit-1/2-20260717T13xxxxZ.xlsx),
+        les originaux gabarit-1/2.xlsx restent actifs à la racine. RIEN mergé/déployé, tenant intact.
+        Détails : docs/epreuves/2026-07-17-t-0035-reprise-4-reconciliation-skill.md (+ jumelée T-0033).
+        PR de reprise n°4 (non mergée).
 
   reste_pour_solder:
-    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte"
+    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
