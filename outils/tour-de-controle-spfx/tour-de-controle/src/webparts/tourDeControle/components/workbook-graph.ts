@@ -243,23 +243,54 @@ function encoderChemin(chemin: string): string {
 }
 
 /**
+ * Décode UN segment de chemin, en tolérant un segment DÉJÀ en clair : `decodeURIComponent`
+ * lève sur un « % » qui n'introduit pas un octet valide (ex. « 100% »), or un chemin issu des
+ * props arrive en clair. On rend alors le segment inchangé plutôt que d'échouer.
+ */
+function decoderSegment(seg: string): string {
+  try { return decodeURIComponent(seg); }
+  catch { return seg; }
+}
+
+/** Segments DÉCODÉS d'un chemin server-relative (les vides — dont le trailing slash — sont ôtés). */
+function segmentsDecodes(chemin: string): ReadonlyArray<string> {
+  return chemin.split('/').filter(s => s.length > 0).map(decoderSegment);
+}
+
+/** `prefixe` est-il un préfixe (segment par segment) de `complet` ? */
+function estPrefixeDeSegments(prefixe: ReadonlyArray<string>, complet: ReadonlyArray<string>): boolean {
+  if (prefixe.length > complet.length) { return false; }
+  for (let i = 0; i < prefixe.length; i++) {
+    if (prefixe[i] !== complet[i]) { return false; }
+  }
+  return true;
+}
+
+/**
  * Calcule le chemin d'un fichier RELATIF à la racine de son drive porteur, en cherchant parmi
- * `drives` celui dont le chemin server-relative préfixe l'URL server-relative du fichier.
+ * `drives` celui dont la racine préfixe l'URL server-relative du fichier.
+ *
+ * Le webUrl des drives revient de Graph PERCENT-ENCODÉ (« Documents%20partages ») alors que les
+ * chemins des props arrivent EN CLAIR (espaces, accents, « & »). On compare donc des SEGMENTS
+ * DÉCODÉS des deux côtés (insensible au trailing slash) ; le résiduel — en clair — est ré-encodé
+ * segment par segment par `encoderChemin` avant l'appel `root:{chemin}:`.
+ *
  * Retourne { driveId, cheminDansDrive } ou undefined si aucun drive ne porte le fichier.
  */
 export function localiserDansDrive(
   drives: ReadonlyArray<{ readonly id: string; readonly webUrl: string }>,
   fichierServerRelative: string
 ): { readonly driveId: string; readonly cheminDansDrive: string } | undefined {
-  const cible = fichierServerRelative.replace(/\/+$/, '');
+  const cibleSegs = segmentsDecodes(fichierServerRelative);
   // Le drive le plus SPÉCIFIQUE d'abord (racine la plus longue) — évite qu'un drive parent rafle.
   const candidats = drives
-    .map(d => ({ id: d.id, racine: cheminServerRelative(d.webUrl) }))
-    .filter(d => d.racine && (cible === d.racine || cible.indexOf(d.racine + '/') === 0))
-    .sort((a, b) => b.racine.length - a.racine.length);
+    .map(d => ({ id: d.id, segs: segmentsDecodes(cheminServerRelative(d.webUrl)) }))
+    .filter(d => d.segs.length > 0 && estPrefixeDeSegments(d.segs, cibleSegs))
+    .sort((a, b) => b.segs.length - a.segs.length);
   if (candidats.length === 0) { return undefined; }
   const c = candidats[0];
-  return { driveId: c.id, cheminDansDrive: cible.substring(c.racine.length) };
+  const residuel = cibleSegs.slice(c.segs.length); // segments décodés restants (en clair)
+  return { driveId: c.id, cheminDansDrive: residuel.length ? '/' + residuel.join('/') : '' };
 }
 
 /** Drive résolu (id + racine server-relative), une fois pour toutes les tables d'un même site. */

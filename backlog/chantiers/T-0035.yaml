@@ -116,9 +116,30 @@ avancement:
         build SPFx complet vert (.sppkg 1.4.1.0). RIEN DÉPLOYÉ, tenant intact. Épreuve détaillée :
         docs/epreuves/2026-07-17-t-0035-reprise-cablage-graph.md. PR de reprise « T-0035 — reprise :
         le câblage Graph n'émettait aucun appel » (non mergée).
+    - date: 2026-07-17
+      fait: >
+        Point 2 — REPRISE n°2 (LOCALISATION DRIVE). La reprise n°1 (auto-diagnostiquante, 1.4.1.0)
+        a rempli son office : l'épreuve du réel (fraîcheur vivante « lu le 17/07 à 13:36 ») a
+        NOMMÉ la cause au lieu d'un échec muet — les 8 anomalies affichaient toutes « chemin hors
+        des drives du site ». getClient('3'), la résolution site→drives et le passage de la
+        fabrique fonctionnent donc ; le seul point de rupture était localiserDansDrive. CAUSE
+        RACINE : Graph renvoie le webUrl des drives PERCENT-ENCODÉ (« Documents%20partages »)
+        alors que les chemins des props arrivent EN CLAIR (espaces, accents « Coût », « & » dans
+        « Masse salariale & Indep ») ; la comparaison de préfixe brute (chaîne↔chaîne) échouait
+        systématiquement → aucun drive porteur → anomalie « chemin hors des drives du site » pour
+        les 8 tables. CORRECTION (solution SPFx 1.4.1.0 -> 1.4.2.0) : localiserDansDrive compare
+        désormais des SEGMENTS DÉCODÉS des deux côtés (decodeURIComponent segment par segment,
+        tolérant à un segment déjà en clair — decoderSegment rend le segment inchangé plutôt que
+        de lever ; insensible au trailing slash) ; le résiduel — en clair — est ré-encodé segment
+        par segment par encoderChemin avant l'appel root:{chemin}: (espaces, accents, « & »
+        correctement ré-encodés). 4 nouveaux tests reproduisant le RÉEL (webUrl drive percent-
+        encodé + chemins props en clair « 06 - Gabarit ERP », « 07 - Coût de Structure », « 08 -
+        Coût Masse salariale & Indep », + cas symétrique) : ROUGES sur le code d'avant, VERTS
+        après. heft 83 -> 87 tests verts. RIEN DÉPLOYÉ, tenant intact. PR de reprise n°2
+        « T-0035 — reprise n°2 : localisation drive (webUrl percent-encodé) » (non mergée).
 
   reste_pour_solder:
-    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0) puis ÉPROUVÉ SUR LE RÉEL le 17/07 = ÉCHEC (aucun appel Graph émis, échec muet), suivi d'une REPRISE (solution SPFx 1.4.1.0) rendant le câblage AUTO-DIAGNOSTIQUANT : plus aucun échec muet (champ `cause` affiché + console.error par échec) et test de câblage/montage comblant le trou des tests purs. RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN : déploiement du .sppkg 1.4.1.0 à l'App Catalog puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures) — si la lecture ne part toujours pas, le cockpit ET la console nommeront désormais la cause exacte au lieu d'un échec muet"
+    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0) puis épreuve du réel le 17/07 qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), enfin CORRIGÉ (reprise n°2, 1.4.2.0) : localiserDansDrive normalise webUrl percent-encodé ↔ chemin en clair par segments décodés + ré-encodage du résiduel. RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN : déploiement du .sppkg 1.4.2.0 à l'App Catalog puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures) — les gabarits/référentiels doivent désormais être localisés et lus ; toute anomalie résiduelle nommera encore sa cause exacte"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
