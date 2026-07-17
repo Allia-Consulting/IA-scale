@@ -86,10 +86,10 @@ avancement:
         package-solution 1.3.0.0 → 1.4.0.0 + webApiPermissionRequests [Microsoft Graph /
         Sites.Read.All]. Tests 50 → 81 verts (golden T-0031 : 148 j/120 j, 133 200 €/84 000 €,
         TJM 900/700). Build SPFx complet vert (.sppkg 1.4.0.0). Rien déployé, tenant intact.
-        Voir la PR de ce chantier (câblage économique Graph Workbook délégué).
+        Voir la PR #232 (câblage économique Graph Workbook délégué).
 
   reste_pour_solder:
-    - "Point 2 — câblage réel CONSTRUIT (solution SPFx 1.4.0.0, Graph Workbook délégué, permission Sites.Read.All) : reste À ÉPROUVER SUR LE RÉEL tant que le runbook gardien n'est pas passé — déploiement du .sppkg 1.4.0.0 à l'App Catalog, APPROBATION de la permission Graph Sites.Read.All (API access), pose des props gabaritsSiteUrl/gabaritsFolderPath/referentielRessourcesPath/referentielStructurePath, puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures)"
+    - "Point 2 — câblage réel CONSTRUIT (PR #232, solution SPFx 1.4.0.0, Graph Workbook délégué, permission Sites.Read.All) : reste À ÉPROUVER SUR LE RÉEL tant que le runbook gardien n'est pas passé — déploiement du .sppkg 1.4.0.0 à l'App Catalog, APPROBATION de la permission Graph Sites.Read.All (API access), pose des props gabaritsSiteUrl/gabaritsFolderPath/referentielRessourcesPath/referentielStructurePath, puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures)"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
