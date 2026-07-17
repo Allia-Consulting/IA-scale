@@ -10,29 +10,36 @@ cas:
       - "1er du mois"
   - id: fusion-02
     type: invariant
-    description: "Fusion — montant d'une facture existante modifié → 1 maj (workbook_maj_ligne), 0 ajout, 0 suppression ; clé (CodeMission, NumFacture)."
+    description: "Régénération réconciliée — montant d'une facture existante modifié : le gabarit est régénéré (jamais réécrit en place), sans suppression ; clé (CodeMission, NumFacture)."
     contient:
-      - "FUSION INCRÉMENTALE, JAMAIS DE SUPPRESSION"
-      - "workbook_maj_ligne"
+      - "RÉGÉNÉRATION RÉCONCILIÉE, JAMAIS DE SUPPRESSION"
       - "(CodeMission, NumFacture)"
   - id: garde-03
     type: invariant
-    description: "Garde — un mois existant repassé à 0 : aucune écriture qui efface, la ligne est conservée + anomalie attendue."
+    description: "Garde — un mois existant repassé à 0 : aucune écriture qui efface, la ligne est reportée dans le jeu régénéré + anomalie attendue."
     contient:
       - "n'efface RIEN au gabarit"
       - "correction de suppression à confirmer par le responsable"
   - id: archivage-04
     type: invariant
-    description: "Garde-fou anti-faux-vert — archivage préalable via copie asynchrone : un 202 n'est pas une preuve, poller jusqu'à completed."
+    description: "Archivage = DÉPLACEMENT (T-0035 reprise n°4) : workbook_archiver_gabarit déplace le gabarit courant vers 00 - Old (synchrone), ce qui LIBÈRE le nom pour la ré-instanciation fail-closed."
     contient:
       - "workbook_archiver_gabarit"
-      - "un 202 n'est pas une preuve"
+      - "DÉPLACE"
+      - "Le déplacement est SYNCHRONE"
   - id: cran-05
     type: invariant
-    description: "Cran — reconcilier_gabarit_pilotage = auto, réversible par archive systématique préalable + fusion sans suppression."
+    description: "Cran — reconcilier_gabarit_pilotage = auto, réversible par archivage par DÉPLACEMENT (nom libéré, version conservée dans 00 - Old) + régénération sans suppression."
     contient:
       - "reconcilier_gabarit_pilotage"
-      - "archive systématique préalable"
+      - "archivage par DÉPLACEMENT"
+  - id: reconciliation-10
+    type: invariant
+    description: "Régénération d'un gabarit EXISTANT rendue machine : réconcilier en mémoire → archiver (déplacement, nom libéré) → ré-instancier (preuve froide) → repeupler ; idempotent, réversible (00 - Old), journalisé."
+    contient:
+      - "archiver (DÉPLACEMENT, nom libéré)"
+      - "ré-instancier"
+      - "preuve FROIDE §8"
   - id: bornage-06
     type: invariant
     description: "Garde-fou structurel — écriture bornée par construction : le skill ne manipule jamais de drive_id/item_id en écriture."

@@ -133,3 +133,21 @@ avancement:
         gestes gardien : build+déploiement 0.14.0 puis épreuve tenant (instancier ×2 -> lecture
         FROIDE en Graph délégué count:0 ×6). La REQUALIFICATION éventuelle de ce solde (preuves
         chaudes) appartient au gardien. Détail : docs/epreuves/2026-07-17-t-0035-403-workbook-froid.md.
+    - date: 2026-07-17
+      fait: >
+        FAIT NOUVEAU (jumelé T-0035 reprise n°4) — RÉGÉNÉRATION D'UN GABARIT EXISTANT. La fabrication
+        d'un gabarit NEUF est corrigée (0.14.0, preuve froide) ; restait la régénération d'un gabarit
+        qui EXISTE : elle butait sur une COLLISION NON LEVABLE — workbook_instancier_gabarit est
+        fail-closed sur un gabarit en place (correct, INCHANGÉ) et workbook_archiver_gabarit ne faisait
+        que COPIER (POST /copy), sans jamais libérer le nom gabarit-<code>.xlsx. CORRECTION conforme
+        S34 (primitive BÊTE, logique dans le skill) : workbook_archiver_gabarit passe de la copie au
+        DÉPLACEMENT (PATCH parentReference « 00 - Old » + nom horodaté, SYNCHRONE 200 ; plus de 202/poll),
+        ce qui LIBÈRE le nom sans affaiblir le fail-closed ; BORNÉ (source/destination figées côté
+        serveur, pas une surface générique) ; réversible (version conservée en « 00 - Old », rétablissement
+        inverse = geste gardien) ; serveur 0.14.0 -> 0.15.0. L'orchestration de régénération (archiver
+        -> ré-instancier -> repeupler, réconciliation par clé métier) vit dans le skill
+        consolidation-pilotage (v1.2 -> v1.3). 73 tests verts (+3 archivage-déplacement ; fail-closed
+        d'instanciation et bornage INCHANGÉS et verts), evals 10/10. RIEN mergé/déployé, tenant intact.
+        Restent gestes gardien : build+déploiement 0.15.0, promotion du skill v1.3, épreuve tenant
+        (régénérer un gabarit existant). Détails : docs/epreuves/2026-07-17-t-0033-archiver-deplacement-jumelee.md
+        (+ récit complet dans l'entrée T-0035 reprise n°4).

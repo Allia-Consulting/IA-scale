@@ -402,6 +402,101 @@ def test_workbook_maj_ligne_valeurs_vides_refuse(_sans_porte):
 
 
 # --------------------------------------------------------------------------------------------
+# workbook_archiver_gabarit — DÉPLACEMENT (move), PAS COPIE (T-0035 reprise n°4, serveur 0.15.0)
+# Le déplacement LIBÈRE le nom `gabarit-<code>.xlsx` de « 06 - Gabarit ERP » → la ré-instanciation
+# fail-closed du skill se satisfait sans collision. Cible FIGÉE côté serveur, réversible (00 - Old).
+# --------------------------------------------------------------------------------------------
+
+class _FauxClientArchiver:
+    """Client httpx factice pour workbook_archiver_gabarit.
+
+    `_resoudre_item_gabarit` fait un GET (résolution par chemin sous le dossier figé) ; l'archivage
+    fait ensuite UN PATCH (déplacement). Un POST /copy est un ÉCHEC de test : l'archivage ne copie plus.
+    """
+
+    def __init__(self, gabarit_present=True):
+        self._present = gabarit_present
+        self.appels = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get(self, url, headers=None):
+        self.appels.append(("GET", url, None))
+        if not self._present:
+            return _RepWb(404, {})  # aucun gabarit pour ce code → FileNotFoundError attendu
+        return _RepWb(200, {"id": "ITEM-GABARIT"})
+
+    def patch(self, url, headers=None, json=None):
+        self.appels.append(("PATCH", url, json))
+        return _RepWb(200, {"id": "ITEM-GABARIT"})
+
+    def post(self, url, headers=None, json=None):
+        self.appels.append(("POST", url, json))
+        raise AssertionError(
+            "workbook_archiver_gabarit ne doit PLUS appeler POST /copy : c'est un DÉPLACEMENT "
+            "(PATCH parentReference), pas une copie — sinon le nom n'est jamais libéré."
+        )
+
+
+def test_workbook_archiver_gabarit_deplace_pas_copie(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(25 bis) NOMINAL : l'archivage DÉPLACE le gabarit courant vers « 00 - Old » par PATCH
+    (parentReference = dossier « 00 - Old » figé + nom horodaté). AUCUN POST /copy. Retour synchrone
+    `deplace=True` — plus de 202/Location à poller. Le nom source est libéré au retour."""
+    client = _FauxClientArchiver()
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_archiver_gabarit)
+
+    resultat = fn(None, code_mission="  MISSION-2  ")
+
+    assert resultat["code_mission"] == "MISSION-2"
+    assert resultat["deplace"] is True
+    assert resultat["dossier"] == "00 - Old"
+    assert resultat["item_id"] == "ITEM-GABARIT"
+    # nom d'archive horodaté : gabarit-<code>-<UTC compact>.xlsx
+    assert resultat["nom_archive"].startswith("gabarit-MISSION-2-") and resultat["nom_archive"].endswith(".xlsx")
+
+    patchs = [(u, c) for (m, u, c) in client.appels if m == "PATCH"]
+    assert len(patchs) == 1, "un seul PATCH (déplacement de l'unique gabarit courant)."
+    url_patch, corps = patchs[0]
+    assert f"/items/ITEM-GABARIT" in url_patch and "/copy" not in url_patch
+    # destination FIGÉE côté serveur : dossier « 00 - Old » (jamais choisi par l'appelant).
+    assert corps["parentReference"]["id"] == "FOLDER-00"
+    assert corps["name"] == resultat["nom_archive"]
+    # DÉPLACEMENT, pas copie : aucun POST (le mock lèverait sur POST /copy de toute façon).
+    assert not any(m == "POST" for (m, _u, _c) in client.appels)
+
+
+def test_workbook_archiver_gabarit_code_invalide_refuse_avant_reseau(_sans_porte, monkeypatch):
+    """(25 ter) Un code_mission invalide refuse (ValueError) AVANT toute ouverture de client httpx :
+    l'assainissement partagé précède le réseau (fail-closed, comme les autres primitives gabarit)."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré un code_mission invalide.")
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.workbook_archiver_gabarit)
+    with pytest.raises(ValueError):
+        fn(None, code_mission="../evasion")
+
+
+def test_workbook_archiver_gabarit_absent_leve_filenotfound_sans_patch(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(25 quater) Aucun gabarit pour ce code (résolution 404) → FileNotFoundError, et AUCUN PATCH
+    n'est tenté : on ne déplace rien qui n'existe pas (le déplacement reste borné à une cible réelle)."""
+    client = _FauxClientArchiver(gabarit_present=False)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_archiver_gabarit)
+
+    with pytest.raises(FileNotFoundError):
+        fn(None, code_mission="MISSION-2")
+    assert not any(m == "PATCH" for (m, _u, _c) in client.appels), (
+        "aucun déplacement ne doit être tenté si le gabarit courant n'existe pas."
+    )
+
+
+# --------------------------------------------------------------------------------------------
 # workbook_instancier_gabarit v2 — FABRICATION SERVICE (API-native), cible figée fail-closed
 # (création service-authored 0 octet + tables/add sur les en-têtes §5.2, preuve interne count:0 ×3,
 #  rollback borné). Plus aucune souche binaire dans la chaîne.
