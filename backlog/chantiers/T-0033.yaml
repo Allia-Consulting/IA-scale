@@ -6,17 +6,17 @@ phase: 1
 type_action: infrastructure
 cran: valide   # promotion d'un binaire canon SOCLE (gabarit-pilotage-mission.xlsx) + remplacement tenant : irréversible/sortie de firme → porte gardien
 produit:
-  - "(script) un générateur Python (openpyxl) qui régénère la souche gabarit-pilotage-mission.xlsx PROPRE : les 3 tables nommées T_Affectations / T_Imputations / T_Echeancier conformes à modele-donnees.md §5.2, EN-TÊTES SEULS (zéro ligne de corps), statuts de référence ACCENTUÉS (« à valider », « à émettre ») — le script est le livrable reproductible, jamais un binaire édité à la main"
-  - "(canon) promotion du binaire souche régénéré à contrats/socle/gabarit-pilotage-mission.xlsx (remplace la souche polluée par les lignes d'illustration MIS-EXEMPLE)"
-  - "(tenant) remplacement de la souche sur le tenant (racine « 06 - Gabarit ERP », site Contrats-et-administratif) par le binaire promu"
-  - "(tenant) archivage MACHINE des gabarit-1.xlsx / gabarit-2.xlsx pollués vers « 00 - Old » (workbook_archiver_gabarit), puis ré-instanciation MACHINE des deux gabarits depuis la souche propre (workbook_instancier_gabarit)"
+  - "(serveur) primitive workbook_instancier_gabarit v2 API-NATIVE : création du classeur gabarit-<CodeMission>.xlsx par écriture service (PUT contenu vide, conflictBehavior=fail) puis fabrication des 3 tables via l'API Workbook (feuilles nommées, en-têtes §5.2 par PATCH range, tables/add hasHeaders, renommage T_*) — tables à 0 ligne lisibles PAR CONSTRUCTION, plus aucun binaire tiers dans la chaîne"
+  - "(serveur) preuve interne count:0 ×3 avant retour + rollback borné (suppression de l'item créé par l'appel en cas d'échec) ; session Workbook persistChanges"
+  - "(canon) modele-donnees.md : §5.2 le contrat devient l'unique source de vérité du schéma (le binaire gabarit-pilotage-mission.xlsx perd le rôle de souche) ; §5.6 instanciation par fabrication service, plus par copie de souche"
+  - "(fallback pré-décidé, non construit) si le classeur 0 octet s'avérait non ouvrable par l'API Workbook sur le tenant : base unique base-vierge-service.xlsx créée par le gardien via SharePoint (service-authored, classe innocentée par Test B) et bascule de la création sur /copy — étapes suivantes identiques"
 depend_de: [T-0031]   # consomme les primitives Workbook ; T-0033 DÉBLOQUE le solde de T-0031 (souche propre = préalable à la consolidation réelle)
 contrats_concernes:
   - contrats/socle/modele-donnees.md          # §5.2 : schéma normatif des 3 tables du gabarit (en-têtes figés)
   - contrats/socle/gabarit-pilotage-mission.xlsx  # le binaire souche à régénérer et re-promouvoir
 criteres_acceptation:
   - "workbook_lire_table renvoie count 0 sur les 6 tables des deux gabarits ré-instanciés (3 tables × gabarit-1/gabarit-2)"
-  - "La souche promue = 3 tables nommées conformes §5.2, en-têtes seuls, zéro ligne de corps, statuts de référence accentués"
+  - "Chaîne service-authored de bout en bout : aucun binaire produit hors service Excel n'entre dans la fabrication des gabarits ; chaque instanciation porte sa preuve interne count:0 ×3"
   - "ZÉRO édition manuelle du gardien (leçon S35) : les seuls gestes gardien sont le merge de la PR et un éventuel clic de dépôt du binaire ; la génération, l'archivage et la ré-instanciation sont machine"
 rayon_impact: firme
 statut: à_faire
@@ -91,3 +91,15 @@ avancement:
         À instruire en S37 : conception lue du code réel du serveur, amendement fiche T-0033
         (produit/critères), retouche éventuelle modele-donnees.md §5.6 (rôle de la souche), build+déploiement
         (runbook gardien), golden gardé par une épreuve de LECTURE Graph. Statut inchangé (à_faire).
+    - date: 2026-07-17
+      fait: >
+        Reprise S37 instruite : conception v2 API-native lue du code réel (server.py au HEAD 05c486de)
+        et de la doc Graph (tables/add : 504 occasionnel documenté → retry ; rename PATCH tables ;
+        en-têtes PATCH range ; session Workbook). La primitive abandonne la copie de souche : création
+        service (PUT vide fail-closed) + fabrication des tables par le service, preuve interne
+        count:0 ×3, rollback borné. Le raffinement « statuts de référence accentués » de la souche
+        devient sans objet (aucune valeur de corps) : statuts normés par §5.2, portés par les
+        écritures. Risque assumé : ouverture Workbook d'un classeur 0 octet non documentée sur Learn —
+        gardé par la preuve interne et un fallback pré-décidé (base service-authored créée une fois
+        par le gardien, bascule /copy). Restent après merge : build+déploiement 0.13.0 (runbook
+        gardien) puis épreuve tenant (instancier ×2 → count:0 ×6). Statut inchangé (à_faire).

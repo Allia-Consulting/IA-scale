@@ -6,7 +6,7 @@
 
 ## Ce que c'est
 
-Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **neuf** opérations sur Microsoft Graph, et neuf seulement :
+Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en **HTTP streamable**, qui donne à un agent **quatorze** opérations sur Microsoft Graph, et quatorze seulement :
 
 | Outil | Verbe | Effet |
 |---|---|---|
@@ -19,6 +19,11 @@ Un serveur [Model Context Protocol](https://modelcontextprotocol.io), exposé en
 | `creer_espace_mission(annee, client, nom_mission)` | **écriture dossier** | `POST .../drives/{MISSION_DRIVE}/items/{MISSION_FOLDER}/children` — crée l'**espace de mission** (dossier au nom **composé côté serveur** `AAAA - Client - Nom de la mission` + arbre **FIGÉ** `01 - Pilotage / 02 - Livrables`) **uniquement** sous la racine **« Missions » FIGÉE**, jamais ailleurs ; collision = **fail** (`T-0024-a`). |
 | `deposer_document_mission(annee, client, nom_mission, sous_dossier, nom_fichier, contenu_base64, sha256_attendu)` | **écriture fichier** | `PUT .../drives/{MISSION_DRIVE}/items/{MISSION_FOLDER}:/{nom_espace}/{sous_dossier}/{nom}:/content` — dépose un **brouillon interne** dans un sous-dossier **whitelisté** d'un espace de mission (nom d'espace **recomposé côté serveur**) ; extension dans `{.docx .pptx .xlsx .pdf .md}` ; collision = **fail** ; **intégrité fail-closed** (`sha256_attendu` recalculé côté serveur, mismatch = refus avant écriture) (`T-0024-a`). |
 | `notifier_canal(titre, corps, reference="")` | **écriture** | `POST /sites/{site}/lists/{NOTIFICATIONS}/items` — dépose une **notification d'équipe** **uniquement** dans la liste « Notifications » **FIGÉE** ; le canal Teams « Allia Consulting — vie interne » est atteint par **flux M365** (élément créé → Post as Flow bot) — Graph n'offre PAS d'envoi de canal en app-only ; cran **notifie** (`T-0012`). |
+| `workbook_lire_table(drive_id, item_id, table)` | **lecture** | `GET .../items/{item}/workbook/tables/{table}/rows` — lit les lignes d'une table nommée d'un classeur Excel ; **lecture NON bornée** (saisie / gabarit / référentiel de coûts), ne modifie rien (`T-0031`). |
+| `workbook_ajouter_lignes(code_mission, table, lignes)` | **écriture** | `POST .../workbook/tables/{table}/rows` — ajoute des lignes à une table du **gabarit** d'une mission ; cible **FIGÉE** « 06 - Gabarit ERP » résolue côté serveur (`T-0031`). |
+| `workbook_maj_ligne(code_mission, table, index, valeurs)` | **écriture** | `PATCH .../rows/itemAt(index=…)` — met à jour une ligne par **position** dans une table du gabarit ; cible **FIGÉE** côté serveur (`T-0031`). |
+| `workbook_archiver_gabarit(code_mission)` | **écriture fichier** | `POST .../items/{item}/copy` → « 00 - Old » — archive (copie horodatée) le gabarit courant d'une mission avant régénération ; source et destination **FIGÉES** côté serveur (`T-0031`). |
+| `workbook_instancier_gabarit(code_mission)` | **écriture fichier** | **v2 API-native** — fabrique `gabarit-<CodeMission>.xlsx` **par le service Excel** (PUT contenu vide fail-closed, puis `tables/add` sur les en-têtes §5.2) dans « 06 - Gabarit ERP » **FIGÉE** ; **plus aucune souche binaire** ; **preuve interne count:0 ×3**, **rollback borné**, collision = **fail** (`T-0031` / `T-0033`). |
 
 ## Transport HTTP streamable et endpoint de santé
 
@@ -102,6 +107,26 @@ l'agent agit, l'équipe est informée. Latence du déclencheur : de l'ordre de l
 standard M365) — acceptable pour une notification d'équipe. Évolution nommée si l'interactivité
 (mentions, cartes, réponses) devient un besoin : bot Azure (identité managée), seule voie d'envoi
 direct supportée — coût aujourd'hui disproportionné pour une notification sortante.
+
+## Le garde-fou structurel (septies) : les primitives Workbook n'écrivent qu'au domicile gabarit
+
+Les cinq primitives **Workbook/Tables** (`T-0031`) portent le modèle économique distribué (`modele-donnees.md` §5) : un **classeur Excel à tables nommées** par mission (`gabarit-<CodeMission>.xlsx`), distinct des listes SharePoint. Elles séparent nettement **lecture** et **écriture** :
+
+- **Lecture NON bornée** — `workbook_lire_table(drive_id, item_id, table)` accepte `drive_id` + `item_id` de l'appelant : elle peut lire une **saisie** (Management et Gestion), un **gabarit** (« 06 - Gabarit ERP ») ou le **référentiel de coûts** (audience restreinte). Elle ne modifie rien ; adressage par **position** (l'ordre des lignes est celui de la table).
+- **Écriture BORNÉE par construction** — `workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit` et `workbook_instancier_gabarit` n'exposent **aucun** `drive_id` / `item_id` / `folder_id`. La cible est toujours le `gabarit-<code_mission>.xlsx` du dossier **FIGÉ** « 06 - Gabarit ERP » (`GRAPH_GABARIT_DRIVE_ID` + `GRAPH_GABARIT_FOLDER_ID`), résolu côté serveur ; `code_mission` est **assaini** par la même routine que le nom de fichier de `deposer_document_mission`. Écrire ailleurs est *structurellement* impossible. Chaque primitive reste **bête** : elle fait une chose ; l'orchestration systématique (régénération complète, instanciation d'un gabarit manquant) est portée par le **skill** `consolidation-pilotage`, pas par un outil composite.
+
+**`workbook_instancier_gabarit` — v2 « fabrication service » (API-native, `T-0033`).** L'instanciation ne **copie plus aucune souche binaire** (leçon `T-0033` : un binaire openpyxl à tables sans ligne de corps est renormalisé par SharePoint et finit illisible — `501` sur l'API Workbook). Le gabarit est désormais **fabriqué de bout en bout par le service Excel** :
+
+1. **Création service-authored, FAIL-CLOSED** — `PUT` d'un contenu **vide (0 octet)** sous le dossier figé, `@microsoft.graph.conflictBehavior=fail` (collision → `FileExistsError`, jamais d'écrasement) ;
+2. **Session Workbook** `persistChanges: true` (l'id de session accompagne tous les appels suivants) ;
+3. **Feuilles** — la 1re feuille est renommée « Affectations », « Imputations » et « Echeancier » sont ajoutées ;
+4. **Par table** — écriture des en-têtes §5.2 (`PATCH range`), création de la table (`tables/add` `hasHeaders`, avec **retry borné** sur `504`), renommage `T_Affectations` / `T_Imputations` / `T_Echeancier` ;
+5. **Preuve interne anti-faux-vert** — chaque table est relue (`/rows`) et **doit** porter **0 ligne de corps** (`count:0 ×3`) ; la forme fiable, fabriquée **par le service** ;
+6. **closeSession** (best effort).
+
+**Rollback borné** : toute erreur survenant **après** la création (étape 1) supprime (best effort → corbeille) le **seul** item créé par l'appel courant — jamais un autre. Le schéma des 3 tables **dérive de** `modele-donnees.md` §5.2, qui **fait foi** (le binaire `gabarit-pilotage-mission.xlsx` est retiré du rôle de souche, conservé au canon comme trace historique). Retour : `{code_mission, nom_gabarit, item_id, tables: {T_Affectations: 0, T_Imputations: 0, T_Echeancier: 0}}`.
+
+Cran des écritures gabarit : **auto** (`table-des-crans.yaml` : `reconcilier_gabarit_pilotage` / `instancier_gabarit_pilotage`) — interne, local, réversible. La **mise en service** (domicile « 06 - Gabarit ERP » / « 00 - Old », pose des variables) est un **runbook gardien** (`T-0031`) ; le **build + déploiement** de la v2 (image serveur **0.13.0**) puis l'**épreuve tenant** (instancier ×2 → `count:0 ×6`) restent des gestes gardien après merge.
 
 ## Authentification de SORTIE Graph : identité managée — ZÉRO secret
 
