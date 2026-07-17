@@ -423,23 +423,43 @@ class _RepWb:
             raise server.httpx.HTTPStatusError("statut Graph d'erreur", request=None, response=None)
 
 
+# En-têtes attendus par table (miroir de server.TABLES_GABARIT), pour fabriquer une réponse /columns.
+_ENTETES_PAR_TABLE = {table: entetes for (_feuille, table, entetes) in server.TABLES_GABARIT}
+
+
 class _FauxClientWorkbook:
     """Client httpx factice simulant la séquence Workbook v2 complète (fabrication service).
 
     Route par (méthode, motif d'URL) et enregistre chaque appel dans `self.appels`
-    [(méthode, url, corps)]. Paramètres de pilotage des branches :
+    [(méthode, url, corps)] — et, en parallèle, les en-têtes dans `self.entetes_appels`
+    [(méthode, url, headers)] (permet d'assurer que la PREUVE FROIDE §8 lit SANS workbook-session-id).
+    Paramètres de pilotage des branches :
       - statut_creation  : code du PUT de création (201 nominal ; 409 = collision fail-closed) ;
       - codes_tables_add : codes renvoyés par POST tables/add, consommés dans l'ordre (permet de
                            simuler un 504 puis un 201) ; défaut 201 quand la liste est épuisée ;
-      - rows_counts      : {nom_table: nb_lignes} pilotant la preuve interne (0 = vert).
+      - rows_counts      : {nom_table: nb_lignes} pilotant la preuve EN SESSION §5 (/rows ; 0 = vert) ;
+      - columns_status   : code HTTP de la PREUVE FROIDE §8 (/columns ; 200 nominal, 403 = non ouvrable
+                           à froid — le cas du cockpit T-0035) ;
+      - cold_counts      : {nom_table: nb_lignes_corps} pilotant la PREUVE FROIDE §8 (0 = vert).
     """
 
-    def __init__(self, statut_creation=201, codes_tables_add=None, rows_counts=None):
+    def __init__(
+        self,
+        statut_creation=201,
+        codes_tables_add=None,
+        rows_counts=None,
+        columns_status=200,
+        cold_counts=None,
+    ):
         self._statut_creation = statut_creation
         self._codes_tables_add = list(codes_tables_add) if codes_tables_add else []
         self._rows_counts = rows_counts or {}
+        self._columns_status = columns_status
+        self._cold_counts = cold_counts or {}
         self._table_seq = 0
+        self._nb_sessions = 0
         self.appels = []
+        self.entetes_appels = []
 
     def __enter__(self):
         return self
@@ -449,12 +469,16 @@ class _FauxClientWorkbook:
 
     def put(self, url, headers=None, content=None, params=None):
         self.appels.append(("PUT", url, {"params": params, "taille": len(content or b"")}))
+        self.entetes_appels.append(("PUT", url, headers or {}))
         return _RepWb(self._statut_creation, {"id": "ITEM-CREE"})
 
     def post(self, url, headers=None, json=None):
         self.appels.append(("POST", url, json))
+        self.entetes_appels.append(("POST", url, headers or {}))
         if url.endswith("/createSession"):
-            return _RepWb(201, {"id": "SESSION-XYZ"})
+            self._nb_sessions += 1
+            # id distinct par session : fabrication (§2) puis ré-émission (§7).
+            return _RepWb(201, {"id": f"SESSION-{self._nb_sessions}"})
         if url.endswith("/worksheets/add"):
             return _RepWb(201, {"id": "{ws-added}", "name": (json or {}).get("name")})
         if url.endswith("/tables/add"):
@@ -469,20 +493,34 @@ class _FauxClientWorkbook:
 
     def get(self, url, headers=None):
         self.appels.append(("GET", url, None))
+        self.entetes_appels.append(("GET", url, headers or {}))
         if url.endswith("/worksheets"):
             return _RepWb(200, {"value": [{"id": "{00000000-0001-0000-0000-000000000000}", "name": "Feuil1"}]})
         if url.endswith("/rows"):
             nom_table = url.split("/tables/")[1].split("/rows")[0]
             n = self._rows_counts.get(nom_table, 0)
             return _RepWb(200, {"value": [{"values": [["x"]]} for _ in range(n)]})
+        if url.endswith("/columns"):
+            # PREUVE FROIDE §8 : réponse au format /columns (une colonne par en-tête, en-tête + corps).
+            if self._columns_status != 200:
+                return _RepWb(self._columns_status, {})
+            nom_table = url.split("/tables/")[1].split("/columns")[0]
+            entetes = _ENTETES_PAR_TABLE.get(nom_table, ())
+            n_corps = self._cold_counts.get(nom_table, 0)
+            colonnes = [
+                {"name": e, "values": [[e]] + [[f"c{r}"] for r in range(n_corps)]} for e in entetes
+            ]
+            return _RepWb(200, {"value": colonnes})
         return _RepWb(200, {})
 
     def patch(self, url, headers=None, json=None):
         self.appels.append(("PATCH", url, json))
+        self.entetes_appels.append(("PATCH", url, headers or {}))
         return _RepWb(200, {})
 
     def delete(self, url, headers=None):
         self.appels.append(("DELETE", url, None))
+        self.entetes_appels.append(("DELETE", url, headers or {}))
         return _RepWb(204, {})
 
 
@@ -530,8 +568,9 @@ def test_workbook_instancier_gabarit_code_invalide_aucun_appel_reseau(_sans_port
 
 def test_workbook_instancier_gabarit_nominal_fabrication_service(_sans_porte, _config_gabarit_factice, monkeypatch):
     """(27) NOMINAL v2 : PUT vide (fail-closed) → session → feuilles (rename + 2 add) → 3×(range +
-    tables/add + rename T_*) → preuve count:0 ×3 → closeSession. Cible FIGÉE (dossier gabarit résolu
-    côté serveur), nom `gabarit-<code>.xlsx`, retour portant item_id + les 3 tables à 0. Aucun rollback."""
+    tables/add + rename T_*) → preuve EN SESSION count:0 ×3 → closeSession → RÉ-ÉMISSION (2e session +
+    range inerte) → PREUVE FROIDE count:0 ×3 (/columns, sans session). Cible FIGÉE (dossier gabarit
+    résolu côté serveur), nom `gabarit-<code>.xlsx`, retour portant item_id + les 3 tables à 0. Aucun rollback."""
     client = _FauxClientWorkbook()
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
@@ -549,15 +588,74 @@ def test_workbook_instancier_gabarit_nominal_fabrication_service(_sans_porte, _c
     assert "FOLDER-06" in put_appel[1] and "gabarit-MISSION-2.xlsx" in put_appel[1]
     assert put_appel[2]["params"]["@microsoft.graph.conflictBehavior"] == "fail"
     assert put_appel[2]["taille"] == 0
-    # 2) session ouverte avant toute écriture de feuille/table.
-    assert any(u.endswith("/createSession") for (_m, u) in methodes)
-    # 3+4) trois tables créées puis nommées T_* ; 5) preuve interne = 3 lectures /rows ; 6) session fermée.
+    # 3+4) trois tables créées puis nommées T_* ; 5) preuve EN SESSION = 3 lectures /rows.
     assert sum(1 for (_m, u) in methodes if u.endswith("/tables/add")) == 3
     noms_tables = {c.get("name") for (m, u, c) in client.appels if m == "PATCH" and "/tables/" in u and c}
     assert {"T_Affectations", "T_Imputations", "T_Echeancier"} <= noms_tables
     assert sum(1 for (_m, u) in methodes if u.endswith("/rows")) == 3
-    assert any(u.endswith("/closeSession") for (_m, u) in methodes)
+    # 2+7) DEUX sessions : fabrication puis RÉ-ÉMISSION (« Ouvrir + Enregistrer » machine) ; 2 fermetures.
+    assert sum(1 for (_m, u) in methodes if u.endswith("/createSession")) == 2, (
+        "la fabrication (§2) ET la ré-émission froide (§7) ouvrent chacune une session."
+    )
+    assert sum(1 for (_m, u) in methodes if u.endswith("/closeSession")) == 2
+    # 8) PREUVE FROIDE : 3 lectures /columns (le chemin du cockpit), postérieures au 1er closeSession.
+    assert sum(1 for (_m, u) in methodes if u.endswith("/columns")) == 3
     assert not any(m == "DELETE" for (m, _u) in methodes), "instanciation réussie → aucun rollback."
+
+
+def test_workbook_instancier_gabarit_preuve_froide_est_sans_session(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 bis) La PREUVE FROIDE §8 reproduit le chemin EXACT du cockpit : les lectures /columns portent
+    le jeton MAIS AUCUN `workbook-session-id` (lecture à froid). C'est précisément ce que la preuve
+    chaude §5 (/rows AVEC session) ne testait pas — l'angle mort qui a produit le faux-vert T-0033."""
+    client = _FauxClientWorkbook()
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    fn(None, code_mission="MISSION-2")
+
+    lectures_columns = [(u, h) for (m, u, h) in client.entetes_appels if m == "GET" and u.endswith("/columns")]
+    assert len(lectures_columns) == 3
+    for _u, headers in lectures_columns:
+        assert "workbook-session-id" not in headers, (
+            "la preuve FROIDE doit lire SANS session (chemin du cockpit) ; un id de session la rendrait chaude."
+        )
+    # Contraste : la preuve EN SESSION §5 (/rows) porte bien, elle, un workbook-session-id.
+    lectures_rows = [(u, h) for (m, u, h) in client.entetes_appels if m == "GET" and u.endswith("/rows")]
+    assert lectures_rows and all("workbook-session-id" in h for _u, h in lectures_rows)
+
+
+def test_workbook_instancier_gabarit_preuve_froide_403_supprime_item(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 ter) PREUVE FROIDE anti-faux-vert : si la lecture SANS session (/columns) renvoie 403 —
+    classeur NON ouvrable à froid par l'API Workbook, le cas exact du cockpit T-0035 —, l'instanciation
+    LÈVE et l'item créé est SUPPRIMÉ (rollback borné). C'est le garde-fou qui aurait attrapé le 403
+    AVANT qu'il n'atteigne le cockpit."""
+    client = _FauxClientWorkbook(columns_status=403)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        fn(None, code_mission="MISSION-2")
+    assert "FROIDE" in str(excinfo.value)
+
+    suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
+    assert len(suppressions) == 1 and "ITEM-CREE" in suppressions[0], (
+        "un échec de la preuve froide doit supprimer exactement l'item créé (rollback borné)."
+    )
+
+
+def test_workbook_instancier_gabarit_preuve_froide_lignes_corps_supprime_item(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27 quater) PREUVE FROIDE : une table ouvrable à froid MAIS portant une ligne de corps
+    (count ≠ 0 vu à froid) échoue aussi → rollback borné. Le count:0 doit être vrai À FROID, pas
+    seulement en session chaude."""
+    client = _FauxClientWorkbook(cold_counts={"T_Echeancier": 1})
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        fn(None, code_mission="MISSION-2")
+    assert "FROIDE" in str(excinfo.value)
+    suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
+    assert len(suppressions) == 1 and "ITEM-CREE" in suppressions[0]
 
 
 def test_workbook_instancier_gabarit_collision_refuse_sans_autre_appel(_sans_porte, _config_gabarit_factice, monkeypatch):

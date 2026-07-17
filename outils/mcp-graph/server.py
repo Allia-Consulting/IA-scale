@@ -1675,9 +1675,17 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
          « Echeancier » ;
       4. PAR TABLE (TABLES_GABARIT) : écriture des en-têtes §5.2 (PATCH range), création de la table
          (`tables/add`, hasHeaders — RETRY borné sur 504), renommage `T_*` ;
-      5. PREUVE INTERNE anti-faux-vert : chacune des 3 tables est relue (`/rows`) et DOIT porter 0 ligne
-         de corps (count:0 ×3) — la forme fiable, fabriquée PAR LE SERVICE ;
-      6. closeSession (best effort).
+      5. PREUVE EN SESSION (sanity chaude) : chacune des 3 tables est relue (`/rows`, session chaude) et
+         DOIT porter 0 ligne de corps (count:0 ×3) — nécessaire mais NON suffisant (cf. §8) ;
+      6. closeSession de la session de fabrication (best effort) ;
+      7. RÉ-ÉMISSION PAR LE SERVICE (« Ouvrir + Enregistrer » machine) : 2e session FROIDE + réécriture
+         INERTE des en-têtes de la 1re table (même valeurs) → le service re-sérialise un binaire canonique.
+         Un classeur amorcé depuis 0 octet est lisible en session CHAUDE mais son binaire AU REPOS n'est
+         pas canonique : l'API Workbook refuse son ouverture FROIDE ultérieure (403 — épreuve T-0035) ;
+      8. PREUVE FROIDE, SANS SESSION (le chemin EXACT du cockpit — `/columns`, aucun workbook-session-id) :
+         chacune des 3 tables DOIT s'ouvrir à froid (HTTP 200), porter ses en-têtes §5.2 et 0 ligne de
+         corps. C'EST cette preuve qui atteste l'ouvrabilité dont le cockpit a besoin ; un échec froid
+         (403/404/500) déclenche le rollback borné — plus jamais de faux-vert.
 
     Écriture BORNÉE par construction : destination = `gabarit-<code_mission>.xlsx` sous le dossier FIGÉ
     « 06 - Gabarit ERP » (GRAPH_GABARIT_DRIVE_ID + GRAPH_GABARIT_FOLDER_ID) résolu côté serveur.
@@ -1702,14 +1710,17 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
 
     Returns:
         dict {"code_mission", "nom_gabarit", "item_id", "tables": {"T_Affectations": 0,
-        "T_Imputations": 0, "T_Echeancier": 0}} — les comptes prouvés count:0 à l'instanciation.
+        "T_Imputations": 0, "T_Echeancier": 0}} — les comptes prouvés count:0 par la PREUVE FROIDE
+        (§8, lecture sans session), qui atteste aussi l'ouvrabilité à froid par l'API Workbook.
 
     Raises:
         ValueError: code_mission invalide.
         FileExistsError: un gabarit existe déjà pour ce code_mission (conflictBehavior=fail → 409).
         ConfigManquante: GRAPH_GABARIT_* absentes.
-        HTTPStatusError: échec Graph non intercepté (session, feuilles, tables, preuve interne) —
-            l'item créé par l'appel est alors supprimé (rollback borné) avant que l'erreur ne remonte.
+        HTTPStatusError: échec Graph non intercepté (session, feuilles, tables, ré-émission) — l'item
+            créé par l'appel est alors supprimé (rollback borné) avant que l'erreur ne remonte.
+        RuntimeError: preuve EN SESSION ou preuve FROIDE en échec (count ≠ 0, en-têtes manquants, ou
+            classeur non ouvrable à froid) — même rollback borné.
     """
     _verifier_appelant(ctx)
     code = _assainir_code_mission(code_mission)
@@ -1812,8 +1823,10 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 )
                 reponse_nom_table.raise_for_status()
 
-            # --- 5) PREUVE INTERNE anti-faux-vert : count:0 exigé sur les 3 tables ---
-            comptes: dict[str, int] = {}
+            # --- 5) PREUVE INTERNE EN SESSION (sanity chaude) : count:0 exigé sur les 3 tables ---
+            # Lecture DANS la session de fabrication (jeton + workbook-session-id) : garantit que la
+            # structure vient d'être posée correctement. NÉCESSAIRE mais PAS SUFFISANTE — une lecture
+            # chaude réussit même quand la lecture FROIDE échoue (c'est le faux-vert de T-0033, cf. §8).
             for _feuille_nom, table_nom, _entetes_table in TABLES_GABARIT:
                 reponse_rows = client_http.get(
                     f"{base_wb}/tables/{table_nom}/rows",
@@ -1823,19 +1836,91 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 nb_lignes = len(reponse_rows.json().get("value", []))
                 if nb_lignes != 0:
                     raise RuntimeError(
-                        f"preuve interne échouée : la table {table_nom} porte {nb_lignes} ligne(s) de "
-                        "corps (count:0 attendu). Instanciation avortée — l'item créé est supprimé."
+                        f"preuve interne (session) échouée : la table {table_nom} porte {nb_lignes} "
+                        "ligne(s) de corps (count:0 attendu). Instanciation avortée — l'item créé est supprimé."
                     )
-                comptes[table_nom] = 0
 
-            # --- 6) closeSession (best effort : ne pas faire échouer une instanciation réussie) ---
+            # --- 6) closeSession de la session de FABRICATION (best effort) ---
             try:
                 client_http.post(f"{base_wb}/closeSession", headers=_wb_entetes())
             except Exception:  # noqa: BLE001
-                logger.warning("closeSession en échec (best effort) pour %s — ignoré.", nom_gabarit)
+                logger.warning(
+                    "closeSession (fabrication) en échec (best effort) pour %s — ignoré.", nom_gabarit
+                )
+
+            # --- 7) RÉ-ÉMISSION PAR LE SERVICE (« Ouvrir + Enregistrer » machine) ---
+            # Un classeur amorcé depuis un contenu 0 octet est lisible en session CHAUDE juste après sa
+            # fabrication (la preuve §5 et l'épreuve tenant T-0033 du 17/07 étaient toutes deux chaudes),
+            # mais son binaire AU REPOS n'est PAS canonique : l'API Workbook REFUSE son ouverture FROIDE
+            # ultérieure (403 sur /workbook/tables — épreuve T-0035 du 17/07, cockpit en Graph délégué). Un
+            # simple Ouvrir + Enregistrer du fichier dans Excel réémet un classeur propre et lève le 403. On
+            # reproduit ce geste PAR LE SERVICE : ré-ouverture FROIDE (2e session) + réécriture INERTE des
+            # en-têtes de la 1re table (mêmes valeurs : sémantiquement neutre, mais « dirtie » le classeur →
+            # le service le re-sérialise entièrement à la fermeture, sans binaire tiers dans la chaîne).
+            reponse_session2 = client_http.post(
+                f"{base_wb}/createSession",
+                headers={**_entetes(), "Content-Type": "application/json"},
+                json={"persistChanges": True},
+            )
+            reponse_session2.raise_for_status()
+            session2_id = reponse_session2.json()["id"]
+            entetes_session2 = {
+                **_entetes(),
+                "workbook-session-id": session2_id,
+                "Content-Type": "application/json",
+            }
+            feuille0, _table0, entetes0 = TABLES_GABARIT[0]
+            adresse0 = f"A1:{_colonne_excel(len(entetes0))}1"
+            reponse_reemission = client_http.patch(
+                f"{base_wb}/worksheets/{feuille0}/range(address='{adresse0}')",
+                headers=entetes_session2,
+                json={"values": [list(entetes0)]},
+            )
+            reponse_reemission.raise_for_status()
+            try:
+                client_http.post(f"{base_wb}/closeSession", headers=entetes_session2)
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "closeSession (ré-émission) en échec (best effort) pour %s — ignoré.", nom_gabarit
+                )
+
+            # --- 8) PREUVE FROIDE, SANS SESSION : le chemin EXACT du cockpit (/columns) ---
+            # AUCUN workbook-session-id ici : on lit à FROID, comme la tour de contrôle (workbook-graph.ts,
+            # `.../workbook/tables/{name}/columns`). C'est la lecture qui échouait en 403. Si le classeur
+            # reste non ouvrable à froid MALGRÉ la ré-émission (§7), l'échec survient ICI et déclenche le
+            # rollback borné — plus jamais de faux-vert (une preuve chaude qui masque un 403 froid). C'est
+            # cette preuve-ci, et non la §5, qui atteste l'ouvrabilité dont le cockpit a besoin.
+            comptes: dict[str, int] = {}
+            for _feuille_nom, table_nom, entetes_table in TABLES_GABARIT:
+                reponse_froide = client_http.get(
+                    f"{base_wb}/tables/{table_nom}/columns",
+                    headers=_entetes(),  # jeton seul, PAS d'id de session (lecture froide)
+                )
+                if reponse_froide.status_code != 200:
+                    raise RuntimeError(
+                        f"preuve FROIDE échouée : lecture SANS session de {table_nom}/columns → HTTP "
+                        f"{reponse_froide.status_code}. Le classeur n'est pas ouvrable à froid par l'API "
+                        "Workbook (le 403 du cockpit, T-0035). Instanciation avortée — l'item créé est supprimé."
+                    )
+                colonnes = reponse_froide.json().get("value", [])
+                noms_colonnes = {c.get("name") for c in colonnes}
+                manquants = [e for e in entetes_table if e not in noms_colonnes]
+                if manquants:
+                    raise RuntimeError(
+                        f"preuve FROIDE : en-têtes manquants dans {table_nom} ({', '.join(manquants)}). "
+                        "Instanciation avortée — l'item créé est supprimé."
+                    )
+                # Hauteur de colonne − 1 (l'en-tête) = lignes de corps ; 0 attendu.
+                nb_corps = max((max(0, len(c.get("values", [])) - 1) for c in colonnes), default=0)
+                if nb_corps != 0:
+                    raise RuntimeError(
+                        f"preuve FROIDE : la table {table_nom} porte {nb_corps} ligne(s) de corps "
+                        "(count:0 attendu à froid). Instanciation avortée — l'item créé est supprimé."
+                    )
+                comptes[table_nom] = 0
 
         except BaseException:
-            # --- 7) ROLLBACK BORNÉ : suppression du SEUL item créé par CET appel (best effort) ---
+            # --- 9) ROLLBACK BORNÉ : suppression du SEUL item créé par CET appel (best effort) ---
             try:
                 client_http.delete(
                     f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}",
