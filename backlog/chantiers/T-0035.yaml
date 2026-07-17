@@ -67,9 +67,29 @@ avancement:
         câblés (point 2). Cohérence : les données économiques restent en états vides honnêtes
         (« aucun gabarit actif lu ») tant que T-0033/T-0031 ne sont pas soldés — l'onglet
         n'expose rien d'inventé.
+    - date: 2026-07-17
+      fait: >
+        Point 2 (CÂBLAGE ÉCONOMIQUE) construit. La web part lit désormais à la volée, sous
+        l'identité de l'utilisateur (Graph DÉLÉGUÉ, permission Sites.Read.All à approuver par le
+        gardien) le CONTENU des tables : nouveau module pur workbook-graph.ts (résolution
+        site→drive→driveItem par chemin, lecture workbook/tables/{name}/columns, normalisations
+        éprouvées T-0031 — date série Excel→Date, CodeMission entier→string ; schéma cassé =
+        anomalie signalée ; référentiel 403/404 = accès restreint, jamais bloquant) + adaptateur
+        MSGraphClientV3. Calculs §5.4 stricts (bandeaux-economiques.ts) : Staffing (salariés actifs
+        du mois, sous-traitants exclus, taux = jours ÷ jours ouvrés lun-ven, fériés hors périmètre
+        v1) ; Rentabilité (CA budget/réalisé = Σ jours × TJM ; EBITDA = CA − jours×CoutJour −
+        T_Structure, « · » + mention si référentiel restreint) ; Factures « à émettre » (lien PDF,
+        lecture seule, PAS de bouton « Émise », v2.1). TJM par mission DÉRIVÉ de l'échéancier
+        (Σ MontantHT ÷ Σ JoursPrevus ; décision 17/07 — aucun champ TJM au canon Missions/CRM).
+        « · » partout où la donnée manque, aucun zéro inventé. Property pane : referentielCoutsPath
+        (jamais câblée) retirée, referentielRessourcesPath + referentielStructurePath ajoutées.
+        package-solution 1.3.0.0 → 1.4.0.0 + webApiPermissionRequests [Microsoft Graph /
+        Sites.Read.All]. Tests 50 → 81 verts (golden T-0031 : 148 j/120 j, 133 200 €/84 000 €,
+        TJM 900/700). Build SPFx complet vert (.sppkg 1.4.0.0). Rien déployé, tenant intact.
+        Voir la PR #232 (câblage économique Graph Workbook délégué).
 
   reste_pour_solder:
-    - "Point 2 — câblage réel des bandeaux économiques (staffing, rentabilité, factures) après T-0033 puis solde de T-0031 ; les 3 props de coordonnées gabarits du property pane seront posées par le gardien à ce moment-là"
+    - "Point 2 — câblage réel CONSTRUIT (PR #232, solution SPFx 1.4.0.0, Graph Workbook délégué, permission Sites.Read.All) : reste À ÉPROUVER SUR LE RÉEL tant que le runbook gardien n'est pas passé — déploiement du .sppkg 1.4.0.0 à l'App Catalog, APPROBATION de la permission Graph Sites.Read.All (API access), pose des props gabaritsSiteUrl/gabaritsFolderPath/referentielRessourcesPath/referentielStructurePath, puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures)"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"

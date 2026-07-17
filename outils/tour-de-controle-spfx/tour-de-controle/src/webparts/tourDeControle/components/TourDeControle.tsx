@@ -23,8 +23,8 @@ function statutNode(item: DetailItem): React.ReactElement {
 }
 
 export default function TourDeControle(props: ITourDeControleProps): React.ReactElement {
-  const { userDisplayName, spHttpClient, dataSiteUrl } = props;
-  const { gabaritsSiteUrl, gabaritsFolderPath, referentielCoutsPath } = props;
+  const { userDisplayName, spHttpClient, dataSiteUrl, msGraphClientFactory } = props;
+  const { gabaritsSiteUrl, gabaritsFolderPath, referentielRessourcesPath, referentielStructurePath } = props;
 
   // Un seul état, l'ensemble des panneaux ouverts (clé = id de compteur).
   // Modèle voir → creuser → agir : un compteur déplie/replie SON détail dans le cockpit.
@@ -37,17 +37,22 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
   // Config de découverte des gabarits — posée par le gardien (property pane, point 2) ;
   // vide = non câblée → états vides honnêtes.
   const cfgGabarits = useMemo(
-    () => ({ siteUrl: gabaritsSiteUrl, dossierGabarits: gabaritsFolderPath, referentielCouts: referentielCoutsPath }),
-    [gabaritsSiteUrl, gabaritsFolderPath, referentielCoutsPath]
+    () => ({
+      siteUrl: gabaritsSiteUrl,
+      dossierGabarits: gabaritsFolderPath,
+      referentielRessources: referentielRessourcesPath,
+      referentielStructure: referentielStructurePath
+    }),
+    [gabaritsSiteUrl, gabaritsFolderPath, referentielRessourcesPath, referentielStructurePath]
   );
 
   useEffect(() => {
     let vivant = true;
-    chargerCockpit(spHttpClient, dataSiteUrl, cfgGabarits)
+    chargerCockpit(spHttpClient, dataSiteUrl, cfgGabarits, msGraphClientFactory)
       .then(d => { if (vivant) { setData(d); } })
       .catch(() => { /* fail-visible : data reste null → zones en « lecture indisponible » */ });
     return () => { vivant = false; };
-  }, [spHttpClient, dataSiteUrl, cfgGabarits]);
+  }, [spHttpClient, dataSiteUrl, cfgGabarits, msGraphClientFactory]);
 
   const basculer = useCallback((id: string): void => {
     setOuverts(prev => {
