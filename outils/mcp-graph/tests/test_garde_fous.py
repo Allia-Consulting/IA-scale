@@ -402,11 +402,13 @@ def test_workbook_maj_ligne_valeurs_vides_refuse(_sans_porte):
 
 
 # --------------------------------------------------------------------------------------------
-# workbook_instancier_gabarit — instanciation par COPIE de la souche vierge, cible figée fail-closed
+# workbook_instancier_gabarit v2 — FABRICATION SERVICE (API-native), cible figée fail-closed
+# (création service-authored 0 octet + tables/add sur les en-têtes §5.2, preuve interne count:0 ×3,
+#  rollback borné). Plus aucune souche binaire dans la chaîne.
 # --------------------------------------------------------------------------------------------
 
-class _FauxReponseCopie:
-    """Réponse httpx minimale : status_code, .json(), .headers, raise_for_status() inerte < 400."""
+class _RepWb:
+    """Réponse httpx factice : status_code, .json(), .headers ; raise_for_status() → HTTPStatusError ≥ 400."""
 
     def __init__(self, status_code, json_data=None, headers=None):
         self.status_code = status_code
@@ -418,26 +420,26 @@ class _FauxReponseCopie:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise AssertionError(
-                f"raise_for_status ne devrait pas être atteint sur {self.status_code} "
-                "(les cas 404/409 sont interceptés AVANT par un garde-fou explicite)."
-            )
+            raise server.httpx.HTTPStatusError("statut Graph d'erreur", request=None, response=None)
 
 
-class _FauxClientCopie:
-    """Client httpx factice : GET source (souche vierge) puis POST /copy au statut configuré.
+class _FauxClientWorkbook:
+    """Client httpx factice simulant la séquence Workbook v2 complète (fabrication service).
 
-    Capture le dernier POST (URL + corps JSON) pour prouver la cible FIGÉE (dossier gabarit résolu
-    côté serveur) et `@microsoft.graph.conflictBehavior=fail`. `statut_source` permet de simuler une
-    souche vierge absente (404).
+    Route par (méthode, motif d'URL) et enregistre chaque appel dans `self.appels`
+    [(méthode, url, corps)]. Paramètres de pilotage des branches :
+      - statut_creation  : code du PUT de création (201 nominal ; 409 = collision fail-closed) ;
+      - codes_tables_add : codes renvoyés par POST tables/add, consommés dans l'ordre (permet de
+                           simuler un 504 puis un 201) ; défaut 201 quand la liste est épuisée ;
+      - rows_counts      : {nom_table: nb_lignes} pilotant la preuve interne (0 = vert).
     """
 
-    dernier_post = None
-    dernier_get = None
-
-    def __init__(self, statut_copie=202, statut_source=200):
-        self._statut_copie = statut_copie
-        self._statut_source = statut_source
+    def __init__(self, statut_creation=201, codes_tables_add=None, rows_counts=None):
+        self._statut_creation = statut_creation
+        self._codes_tables_add = list(codes_tables_add) if codes_tables_add else []
+        self._rows_counts = rows_counts or {}
+        self._table_seq = 0
+        self.appels = []
 
     def __enter__(self):
         return self
@@ -445,27 +447,62 @@ class _FauxClientCopie:
     def __exit__(self, *a):
         return False
 
-    def get(self, url, headers=None):
-        _FauxClientCopie.dernier_get = {"url": url}
-        return _FauxReponseCopie(self._statut_source, {"id": "souche-vierge-item-id"})
+    def put(self, url, headers=None, content=None, params=None):
+        self.appels.append(("PUT", url, {"params": params, "taille": len(content or b"")}))
+        return _RepWb(self._statut_creation, {"id": "ITEM-CREE"})
 
     def post(self, url, headers=None, json=None):
-        _FauxClientCopie.dernier_post = {"url": url, "json": json}
-        entetes = {"Location": "https://graph.microsoft.com/monitor/xyz"} if self._statut_copie == 202 else {}
-        return _FauxReponseCopie(self._statut_copie, {}, entetes)
+        self.appels.append(("POST", url, json))
+        if url.endswith("/createSession"):
+            return _RepWb(201, {"id": "SESSION-XYZ"})
+        if url.endswith("/worksheets/add"):
+            return _RepWb(201, {"id": "{ws-added}", "name": (json or {}).get("name")})
+        if url.endswith("/tables/add"):
+            code = self._codes_tables_add.pop(0) if self._codes_tables_add else 201
+            if code == 504:
+                return _RepWb(504, {})
+            self._table_seq += 1
+            return _RepWb(201, {"id": f"TBL-{self._table_seq}"})
+        if url.endswith("/closeSession"):
+            return _RepWb(200, {})
+        return _RepWb(200, {})
+
+    def get(self, url, headers=None):
+        self.appels.append(("GET", url, None))
+        if url.endswith("/worksheets"):
+            return _RepWb(200, {"value": [{"id": "{00000000-0001-0000-0000-000000000000}", "name": "Feuil1"}]})
+        if url.endswith("/rows"):
+            nom_table = url.split("/tables/")[1].split("/rows")[0]
+            n = self._rows_counts.get(nom_table, 0)
+            return _RepWb(200, {"value": [{"values": [["x"]]} for _ in range(n)]})
+        return _RepWb(200, {})
+
+    def patch(self, url, headers=None, json=None):
+        self.appels.append(("PATCH", url, json))
+        return _RepWb(200, {})
+
+    def delete(self, url, headers=None):
+        self.appels.append(("DELETE", url, None))
+        return _RepWb(204, {})
 
 
 @pytest.fixture
 def _config_gabarit_factice(monkeypatch):
-    """Fournit une config GABARIT valide et neutralise l'acquisition de jeton pour exercer le corps
-    réseau (mocké) de l'instanciation — `_entetes()` acquerrait sinon un jeton Azure (indisponible
-    hors tenant). Aucun secret : en-tête factice."""
+    """Config GABARIT valide + acquisition de jeton neutralisée, pour exercer le corps réseau (mocké)
+    de l'instanciation — `_entetes()` acquerrait sinon un jeton Azure (indisponible hors tenant).
+    Aucun secret : en-tête factice."""
     monkeypatch.setattr(
         server,
         "_config_gabarit",
         lambda: {"gabarit_drive_id": "DRIVE-CA", "gabarit_folder_id": "FOLDER-06", "gabarit_old_folder_id": "FOLDER-00"},
     )
     monkeypatch.setattr(server, "_entetes", lambda: {"Authorization": "Bearer faketoken"})
+
+
+@pytest.fixture
+def _sans_sleep(monkeypatch):
+    """Neutralise le backoff (time.sleep) : le RETRY 504 ne doit pas attendre réellement en test."""
+    monkeypatch.setattr(server.time, "sleep", lambda _s: None)
 
 
 @pytest.mark.parametrize("mauvais", ["", "   ", "a/b", "a\\b", "a..b", "..", "code\x01"])
@@ -477,45 +514,96 @@ def test_workbook_instancier_gabarit_code_invalide_refuse(_sans_porte, mauvais):
         fn(None, code_mission=mauvais)
 
 
-def test_workbook_instancier_gabarit_nominal_cible_figee(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(27) Nominal : la copie vise la cible FIGÉE (dossier gabarit résolu côté serveur), le nom dérivé
-    est `gabarit-<code>.xlsx`, `conflictBehavior=fail` est posé, la source est la souche vierge canon
-    (résolue par chemin sous le dossier figé), et le 202+Location est remonté tel quel."""
-    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientCopie(statut_copie=202))
+def test_workbook_instancier_gabarit_code_invalide_aucun_appel_reseau(_sans_porte, monkeypatch):
+    """(26 bis) Un code_mission invalide refuse AVANT toute ouverture de client httpx : le client
+    interdit prouve qu'aucun appel réseau n'est tenté (l'assainissement précède le réseau)."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError(
+                "client httpx instancié malgré un code_mission invalide (refus attendu avant réseau)."
+            )
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+    with pytest.raises(ValueError):
+        fn(None, code_mission="../evasion")
+
+
+def test_workbook_instancier_gabarit_nominal_fabrication_service(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(27) NOMINAL v2 : PUT vide (fail-closed) → session → feuilles (rename + 2 add) → 3×(range +
+    tables/add + rename T_*) → preuve count:0 ×3 → closeSession. Cible FIGÉE (dossier gabarit résolu
+    côté serveur), nom `gabarit-<code>.xlsx`, retour portant item_id + les 3 tables à 0. Aucun rollback."""
+    client = _FauxClientWorkbook()
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
 
     resultat = fn(None, code_mission="  MISSION-2  ")  # espaces → strip par l'assainissement
 
     assert resultat["code_mission"] == "MISSION-2"
     assert resultat["nom_gabarit"] == "gabarit-MISSION-2.xlsx"
-    assert resultat["accepted"] is True
-    assert resultat["emplacement"] == "https://graph.microsoft.com/monitor/xyz"
-    # Source = souche vierge canon, résolue par CHEMIN sous le dossier gabarit figé.
-    assert server.GABARIT_VIERGE_NOM in _FauxClientCopie.dernier_get["url"]
-    assert "FOLDER-06" in _FauxClientCopie.dernier_get["url"]
-    # Destination FIGÉE : même dossier gabarit + nom dérivé + jamais d'écrasement.
-    corps = _FauxClientCopie.dernier_post["json"]
-    assert corps["parentReference"]["id"] == "FOLDER-06"
-    assert corps["parentReference"]["driveId"] == "DRIVE-CA"
-    assert corps["name"] == "gabarit-MISSION-2.xlsx"
-    assert corps["@microsoft.graph.conflictBehavior"] == "fail"
+    assert resultat["item_id"] == "ITEM-CREE"
+    assert resultat["tables"] == {"T_Affectations": 0, "T_Imputations": 0, "T_Echeancier": 0}
+
+    methodes = [(m, u) for (m, u, _c) in client.appels]
+    # 1) création service-authored fail-closed : PUT vide (0 octet), conflictBehavior=fail, dossier figé.
+    put_appel = next(a for a in client.appels if a[0] == "PUT")
+    assert "FOLDER-06" in put_appel[1] and "gabarit-MISSION-2.xlsx" in put_appel[1]
+    assert put_appel[2]["params"]["@microsoft.graph.conflictBehavior"] == "fail"
+    assert put_appel[2]["taille"] == 0
+    # 2) session ouverte avant toute écriture de feuille/table.
+    assert any(u.endswith("/createSession") for (_m, u) in methodes)
+    # 3+4) trois tables créées puis nommées T_* ; 5) preuve interne = 3 lectures /rows ; 6) session fermée.
+    assert sum(1 for (_m, u) in methodes if u.endswith("/tables/add")) == 3
+    noms_tables = {c.get("name") for (m, u, c) in client.appels if m == "PATCH" and "/tables/" in u and c}
+    assert {"T_Affectations", "T_Imputations", "T_Echeancier"} <= noms_tables
+    assert sum(1 for (_m, u) in methodes if u.endswith("/rows")) == 3
+    assert any(u.endswith("/closeSession") for (_m, u) in methodes)
+    assert not any(m == "DELETE" for (m, _u) in methodes), "instanciation réussie → aucun rollback."
 
 
-def test_workbook_instancier_gabarit_cible_existante_refuse(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(28) FAIL-CLOSED : la copie renvoie 409 (gabarit déjà existant) → FileExistsError, jamais
-    d'écrasement (conflictBehavior=fail)."""
-    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientCopie(statut_copie=409))
+def test_workbook_instancier_gabarit_collision_refuse_sans_autre_appel(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(28) FAIL-CLOSED : le PUT de création renvoie 409 (gabarit déjà présent) → FileExistsError, et
+    AUCUN autre appel — pas de session, pas de rollback (rien n'a été créé par cet appel)."""
+    client = _FauxClientWorkbook(statut_creation=409)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
+
     with pytest.raises(FileExistsError):
         fn(None, code_mission="MISSION-2")
 
+    assert [m for (m, _u, _c) in client.appels] == ["PUT"], (
+        "une collision doit s'arrêter au PUT : aucune session, aucune table, aucun rollback."
+    )
 
-def test_workbook_instancier_gabarit_souche_vierge_absente_refuse(_sans_porte, _config_gabarit_factice, monkeypatch):
-    """(29) Souche vierge canon absente (GET source → 404) → FileNotFoundError (jamais de copie muette)."""
-    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientCopie(statut_source=404))
+
+def test_workbook_instancier_gabarit_retry_504_sur_tables_add(_sans_porte, _config_gabarit_factice, _sans_sleep, monkeypatch):
+    """(29) RETRY borné : le 1er POST tables/add renvoie 504, le réessai renvoie 201 → l'instanciation
+    aboutit (3 tables créées, preuve count:0 ×3, retour nominal), sans rollback."""
+    # 1re table : 504 puis 201 ; les deux suivantes : 201 (liste épuisée → défaut 201).
+    client = _FauxClientWorkbook(codes_tables_add=[504, 201])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.workbook_instancier_gabarit)
-    with pytest.raises(FileNotFoundError):
+
+    resultat = fn(None, code_mission="MISSION-2")
+
+    assert resultat["tables"] == {"T_Affectations": 0, "T_Imputations": 0, "T_Echeancier": 0}
+    # 4 POST tables/add au total : 2 pour la 1re table (504 + 201), 1 + 1 pour les deux autres.
+    assert sum(1 for (m, u, _c) in client.appels if m == "POST" and u.endswith("/tables/add")) == 4
+    assert not any(m == "DELETE" for (m, _u, _c) in client.appels), "un 504 rattrapé ne déclenche pas de rollback."
+
+
+def test_workbook_instancier_gabarit_preuve_interne_rouge_supprime_item(_sans_porte, _config_gabarit_factice, monkeypatch):
+    """(30) PREUVE INTERNE anti-faux-vert : si une table relue porte une ligne de corps (count≠0),
+    l'instanciation lève ET l'item créé par l'appel est SUPPRIMÉ (rollback borné sur ce SEUL item)."""
+    client = _FauxClientWorkbook(rows_counts={"T_Imputations": 1})  # une table relue à 1 ligne → preuve rouge
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.workbook_instancier_gabarit)
+
+    with pytest.raises(RuntimeError):
         fn(None, code_mission="MISSION-2")
+
+    suppressions = [u for (m, u, _c) in client.appels if m == "DELETE"]
+    assert len(suppressions) == 1, "l'échec après création doit supprimer exactement l'item créé."
+    assert "ITEM-CREE" in suppressions[0], "le rollback vise le SEUL item créé par cet appel."
 
 
 # --------------------------------------------------------------------------------------------

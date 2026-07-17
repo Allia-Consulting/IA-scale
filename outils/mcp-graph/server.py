@@ -18,7 +18,7 @@ Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protoco
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission dans « 00 - Old » (copie horodatée) avant régénération.
-    - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par COPIE de la souche vierge canon — cible FIGÉE « 06 - Gabarit ERP », fail-closed (jamais d'écrasement).
+    - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve interne count:0 ×3, rollback borné. Plus aucune souche binaire.
 
 (Compte des opérations = 14 outils réellement décorés ; un `grep` du décorateur d'outil retourne 15,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
@@ -69,6 +69,7 @@ import os
 import time
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
@@ -200,9 +201,15 @@ ENV_MISSION_FOLDER_ID = "GRAPH_MISSION_FOLDER_ID"  # dossier racine « Missions 
 ENV_GABARIT_DRIVE_ID     = "GRAPH_GABARIT_DRIVE_ID"      # drive du site Contrats-admin hébergeant les gabarits
 ENV_GABARIT_FOLDER_ID    = "GRAPH_GABARIT_FOLDER_ID"     # dossier « 06 - Gabarit ERP » (cible figée d'écriture gabarit)
 ENV_GABARIT_OLD_FOLDER_ID= "GRAPH_GABARIT_OLD_FOLDER_ID" # dossier « 00 - Old » (archivage avant régénération)
-# Souche UNIQUE : le gabarit vierge canon à la racine de « 06 - Gabarit ERP » (modele-donnees §5.2).
-# Source FIGÉE de workbook_instancier_gabarit — jamais choisie par l'appelant.
-GABARIT_VIERGE_NOM       = "gabarit-pilotage-mission.xlsx"
+# Schéma des 3 tables du gabarit de pilotage — DÉRIVÉ de contrats/socle/modele-donnees.md §5.2
+# (en-têtes figés). Le contrat FAIT FOI : cette constante en est la projection machine, pour que
+# workbook_instancier_gabarit fabrique les tables PAR LE SERVICE (API Workbook), sans binaire tiers.
+# Chaque entrée : (nom de feuille, nom de table nommée, en-têtes figés dans l'ordre du contrat).
+TABLES_GABARIT = (
+    ("Affectations", "T_Affectations", ("CodeMission", "Ressource", "Mois", "JoursPrevus")),
+    ("Imputations", "T_Imputations", ("CodeMission", "Ressource", "Mois", "JoursRealises", "StatutValidation")),
+    ("Echeancier", "T_Echeancier", ("NumFacture", "CodeMission", "MoisCA", "MontantHT", "Echeance", "Statut", "LienFacture")),
+)
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
@@ -522,6 +529,20 @@ def _assainir_code_mission(code_mission: str) -> str:
             "ni caractère de contrôle (la cible gabarit est figée sous « 06 - Gabarit ERP »)."
         )
     return code
+
+
+def _colonne_excel(n: int) -> str:
+    """Lettre de colonne Excel pour un index 1-based (1→A … 26→Z).
+
+    Helper trivial : 26 colonnes suffisent (le plus large gabarit, T_Echeancier, a 7 en-têtes).
+    Sert à composer l'adresse de la plage d'en-têtes (A1:<lettre>1) de chaque table.
+
+    Raises:
+        ValueError: index hors bornes [1..26].
+    """
+    if not isinstance(n, int) or not 1 <= n <= 26:
+        raise ValueError("index de colonne hors bornes [1..26] (gabarits ≤ 7 colonnes).")
+    return chr(ord("A") + n - 1)
 
 
 def _resoudre_item_gabarit(client_http: httpx.Client, code_mission: str) -> str:
@@ -1640,38 +1661,55 @@ def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]
 @mcp.tool()
 @_journal_appel("workbook_instancier_gabarit")
 def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]:
-    """INSTANCIE le gabarit d'une mission par COPIE de la souche vierge canon (écriture BORNÉE, fail-closed).
+    """INSTANCIE le gabarit d'une mission par FABRICATION SERVICE de bout en bout (écriture BORNÉE, fail-closed).
 
-    POST /drives/{GABARIT_DRIVE_ID}/items/{item_vierge}/copy → « 06 - Gabarit ERP » (GRAPH_GABARIT_FOLDER_ID)
+    FABRICATION 100 % SERVICE (v2, API-native) : la primitive ne copie plus AUCUNE souche binaire et ne
+    dépend d'AUCUN artefact produit hors du service Excel (leçon T-0033 — un binaire openpyxl à tables
+    sans ligne de corps est normalisé par SharePoint et finit illisible 501). La chaîne est :
 
-    Écriture BORNÉE par construction : source = `gabarit-pilotage-mission.xlsx` (souche vierge unique,
-    GABARIT_VIERGE_NOM) à la racine de « 06 - Gabarit ERP » résolue côté serveur ; destination = le MÊME
-    dossier, nom `gabarit-<code_mission>.xlsx`. L'appelant ne fournit AUCUN drive_id / item_id /
-    folder_id — seulement `code_mission`, assaini par la MÊME routine (`_assainir_code_mission`) que les
-    autres primitives gabarit. Il est structurellement impossible d'instancier ailleurs.
+      1. CRÉATION SERVICE-AUTHORED, FAIL-CLOSED — PUT d'un contenu VIDE (0 octet) sous le dossier figé,
+         `@microsoft.graph.conflictBehavior=fail` : le service Excel matérialise un classeur ouvrable
+         par construction. 409 → FileExistsError (aucun écrasement, aucune fusion) ;
+      2. SESSION Workbook `persistChanges: true` (les écritures sont persistées) ;
+      3. FEUILLES : renommage de la 1re feuille en « Affectations », ajout de « Imputations » et
+         « Echeancier » ;
+      4. PAR TABLE (TABLES_GABARIT) : écriture des en-têtes §5.2 (PATCH range), création de la table
+         (`tables/add`, hasHeaders — RETRY borné sur 504), renommage `T_*` ;
+      5. PREUVE INTERNE anti-faux-vert : chacune des 3 tables est relue (`/rows`) et DOIT porter 0 ligne
+         de corps (count:0 ×3) — la forme fiable, fabriquée PAR LE SERVICE ;
+      6. closeSession (best effort).
 
-    CRÉATION PURE, FAIL-CLOSED : `@microsoft.graph.conflictBehavior=fail`. Si un `gabarit-<code>.xlsx`
-    existe déjà, Graph refuse la copie (409) et cette primitive lève FileExistsError — l'instanciation
-    ne détruit ni n'écrase JAMAIS un gabarit en place. Réversible par simple suppression de la copie.
+    Écriture BORNÉE par construction : destination = `gabarit-<code_mission>.xlsx` sous le dossier FIGÉ
+    « 06 - Gabarit ERP » (GRAPH_GABARIT_DRIVE_ID + GRAPH_GABARIT_FOLDER_ID) résolu côté serveur.
+    L'appelant ne fournit AUCUN drive_id / item_id / folder_id — seulement `code_mission`, assaini par la
+    MÊME routine (`_assainir_code_mission`) que les autres primitives gabarit. Instancier ailleurs est
+    structurellement impossible.
 
-    NB : l'instanciation SYSTÉMATIQUE d'un gabarit manquant (décision gardien 14/07/2026 : plus jamais
-    un geste humain) est orchestrée par le SKILL consommateur `consolidation-pilotage`, PAS par un outil
-    composite — cette primitive reste BÊTE : elle instancie, rien d'autre.
+    ROLLBACK BORNÉ : toute exception survenant APRÈS la création réussie (étape 1) déclenche, avant de
+    relever l'erreur, la suppression (best effort → corbeille) du SEUL item créé par CET appel. Jamais de
+    suppression d'un item que cet appel n'a pas créé. Un échec en cours de fabrication ne laisse donc
+    pas de coquille à demi-formée.
 
-    Graph /copy est ASYNCHRONE : la réponse est un 202 Accepted + en-tête Location (URL de suivi) ;
-    cette primitive ne bloque PAS sur l'achèvement de la copie (le skill poll le Location).
+    Le schéma des 3 tables (feuilles, tables nommées, en-têtes) DÉRIVE de
+    `contrats/socle/modele-donnees.md` §5.2 — le contrat FAIT FOI ; TABLES_GABARIT en est la projection.
+
+    NB : la primitive reste BÊTE — elle instancie, rien d'autre. L'instanciation SYSTÉMATIQUE d'un
+    gabarit manquant (décision gardien 14/07/2026 : plus jamais un geste humain) est orchestrée par le
+    SKILL consommateur `consolidation-pilotage`, PAS par cet outil.
 
     Args:
         code_mission: code de la mission (assaini côté serveur ; compose gabarit-<code>.xlsx).
 
     Returns:
-        dict {"code_mission", "nom_gabarit", "accepted": bool, "emplacement": <Location|None>}.
+        dict {"code_mission", "nom_gabarit", "item_id", "tables": {"T_Affectations": 0,
+        "T_Imputations": 0, "T_Echeancier": 0}} — les comptes prouvés count:0 à l'instanciation.
 
     Raises:
         ValueError: code_mission invalide.
         FileExistsError: un gabarit existe déjà pour ce code_mission (conflictBehavior=fail → 409).
-        FileNotFoundError: souche vierge canon introuvable dans « 06 - Gabarit ERP ».
         ConfigManquante: GRAPH_GABARIT_* absentes.
+        HTTPStatusError: échec Graph non intercepté (session, feuilles, tables, preuve interne) —
+            l'item créé par l'appel est alors supprimé (rollback borné) avant que l'erreur ne remonte.
     """
     _verifier_appelant(ctx)
     code = _assainir_code_mission(code_mission)
@@ -1680,39 +1718,138 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
     folder_id = cfg["gabarit_folder_id"]
     nom_gabarit = f"gabarit-{code}.xlsx"
     with httpx.Client(timeout=30) as client_http:
-        # Source = souche vierge canon, résolue par CHEMIN sous le dossier gabarit figé (jamais libre).
-        url_source = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_id}:/{GABARIT_VIERGE_NOM}"
-        reponse_source = client_http.get(url_source, headers=_entetes())
-        if reponse_source.status_code == 404:
-            raise FileNotFoundError(
-                f"souche vierge canon introuvable dans « 06 - Gabarit ERP » "
-                f"(fichier attendu : {GABARIT_VIERGE_NOM}). Souche unique à poser au runbook gardien."
-            )
-        reponse_source.raise_for_status()
-        item_vierge = reponse_source.json()["id"]
-        # Copie vers le MÊME dossier, nom gabarit-<code>.xlsx, FAIL-CLOSED (jamais d'écrasement).
-        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_vierge}/copy"
-        reponse = client_http.post(
-            url,
-            headers={**_entetes(), "Content-Type": "application/json"},
-            json={
-                "parentReference": {"driveId": drive_id, "id": folder_id},
-                "name": nom_gabarit,
-                "@microsoft.graph.conflictBehavior": "fail",
-            },
+        # --- 1) CRÉATION SERVICE-AUTHORED, FAIL-CLOSED (contenu vide, jamais d'écrasement) ---
+        url_creation = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_id}:/{nom_gabarit}:/content"
+        reponse_creation = client_http.put(
+            url_creation,
+            headers={**_entetes(), "Content-Type": "application/octet-stream"},
+            content=b"",
+            params={"@microsoft.graph.conflictBehavior": "fail"},
         )
         # Collision : un gabarit de même nom existe déjà — NE PAS réessayer, NE PAS écraser.
-        if reponse.status_code == 409:
+        # (Survient AVANT toute création par cet appel : aucun rollback, rien n'a été créé.)
+        if reponse_creation.status_code == 409:
             raise FileExistsError(
                 f"un gabarit existe déjà pour {code} dans « 06 - Gabarit ERP » ({nom_gabarit}) : "
                 "instanciation refusée (collision=fail). Aucun écrasement, aucune fusion."
             )
-        reponse.raise_for_status()
+        reponse_creation.raise_for_status()
+        item_id = reponse_creation.json()["id"]
+
+        # À partir d'ici l'item EXISTE : tout échec déclenche le rollback borné (suppression de CET item).
+        try:
+            base_wb = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/workbook"
+
+            # --- 2) SESSION Workbook (persistChanges) ---
+            reponse_session = client_http.post(
+                f"{base_wb}/createSession",
+                headers={**_entetes(), "Content-Type": "application/json"},
+                json={"persistChanges": True},
+            )
+            reponse_session.raise_for_status()
+            session_id = reponse_session.json()["id"]
+
+            def _wb_entetes(avec_json: bool = True) -> dict[str, str]:
+                """En-têtes Workbook : jeton frais + id de session sur TOUS les appels suivants."""
+                entetes = {**_entetes(), "workbook-session-id": session_id}
+                if avec_json:
+                    entetes["Content-Type"] = "application/json"
+                return entetes
+
+            # --- 3) FEUILLES : renommer la 1re feuille, ajouter les deux autres ---
+            reponse_feuilles = client_http.get(f"{base_wb}/worksheets", headers=_wb_entetes(avec_json=False))
+            reponse_feuilles.raise_for_status()
+            feuilles = reponse_feuilles.json().get("value", [])
+            if not feuilles:
+                raise RuntimeError("classeur créé sans aucune feuille — état Workbook inattendu.")
+            premiere_feuille_id = feuilles[0]["id"]
+            reponse_renommage = client_http.patch(
+                # id de feuille url-encodé (les ids Workbook portent des accolades « {…} »).
+                f"{base_wb}/worksheets/{quote(premiere_feuille_id, safe='')}",
+                headers=_wb_entetes(),
+                json={"name": TABLES_GABARIT[0][0]},
+            )
+            reponse_renommage.raise_for_status()
+            for feuille_nom, _table_nom, _entetes_table in TABLES_GABARIT[1:]:
+                reponse_ajout = client_http.post(
+                    f"{base_wb}/worksheets/add",
+                    headers=_wb_entetes(),
+                    json={"name": feuille_nom},
+                )
+                reponse_ajout.raise_for_status()
+
+            # --- 4) PAR TABLE : en-têtes (PATCH range) → tables/add (RETRY 504) → renommage T_* ---
+            for feuille_nom, table_nom, entetes_table in TABLES_GABARIT:
+                adresse = f"A1:{_colonne_excel(len(entetes_table))}1"
+                reponse_range = client_http.patch(
+                    f"{base_wb}/worksheets/{feuille_nom}/range(address='{adresse}')",
+                    headers=_wb_entetes(),
+                    json={"values": [list(entetes_table)]},
+                )
+                reponse_range.raise_for_status()
+                # tables/add : 504 occasionnel documenté (Graph) → RETRY borné (backoff 1 s puis 2 s,
+                # soit 1 appel + 2 réessais max) avant d'échouer.
+                reponse_table = client_http.post(
+                    f"{base_wb}/worksheets/{feuille_nom}/tables/add",
+                    headers=_wb_entetes(),
+                    json={"address": adresse, "hasHeaders": True},
+                )
+                for attente in (1, 2):
+                    if reponse_table.status_code != 504:
+                        break
+                    time.sleep(attente)
+                    reponse_table = client_http.post(
+                        f"{base_wb}/worksheets/{feuille_nom}/tables/add",
+                        headers=_wb_entetes(),
+                        json={"address": adresse, "hasHeaders": True},
+                    )
+                reponse_table.raise_for_status()
+                table_id = reponse_table.json()["id"]
+                reponse_nom_table = client_http.patch(
+                    f"{base_wb}/tables/{table_id}",
+                    headers=_wb_entetes(),
+                    json={"name": table_nom},
+                )
+                reponse_nom_table.raise_for_status()
+
+            # --- 5) PREUVE INTERNE anti-faux-vert : count:0 exigé sur les 3 tables ---
+            comptes: dict[str, int] = {}
+            for _feuille_nom, table_nom, _entetes_table in TABLES_GABARIT:
+                reponse_rows = client_http.get(
+                    f"{base_wb}/tables/{table_nom}/rows",
+                    headers=_wb_entetes(avec_json=False),
+                )
+                reponse_rows.raise_for_status()
+                nb_lignes = len(reponse_rows.json().get("value", []))
+                if nb_lignes != 0:
+                    raise RuntimeError(
+                        f"preuve interne échouée : la table {table_nom} porte {nb_lignes} ligne(s) de "
+                        "corps (count:0 attendu). Instanciation avortée — l'item créé est supprimé."
+                    )
+                comptes[table_nom] = 0
+
+            # --- 6) closeSession (best effort : ne pas faire échouer une instanciation réussie) ---
+            try:
+                client_http.post(f"{base_wb}/closeSession", headers=_wb_entetes())
+            except Exception:  # noqa: BLE001
+                logger.warning("closeSession en échec (best effort) pour %s — ignoré.", nom_gabarit)
+
+        except BaseException:
+            # --- 7) ROLLBACK BORNÉ : suppression du SEUL item créé par CET appel (best effort) ---
+            try:
+                client_http.delete(
+                    f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}",
+                    headers=_entetes(),
+                )
+            except Exception:  # noqa: BLE001
+                logger.warning("rollback (suppression de l'item %s) en échec — best effort.", item_id)
+            raise
+
     return {
         "code_mission": code,
         "nom_gabarit": nom_gabarit,
-        "accepted": reponse.status_code == 202,
-        "emplacement": reponse.headers.get("Location"),
+        "item_id": item_id,
+        "tables": comptes,
     }
 
 
