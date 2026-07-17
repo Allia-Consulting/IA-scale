@@ -137,9 +137,30 @@ avancement:
         Coût Masse salariale & Indep », + cas symétrique) : ROUGES sur le code d'avant, VERTS
         après. heft 83 -> 87 tests verts. RIEN DÉPLOYÉ, tenant intact. PR de reprise n°2
         « T-0035 — reprise n°2 : localisation drive (webUrl percent-encodé) » (non mergée).
+    - date: 2026-07-17
+      fait: >
+        Point 2 — REPRISE n°3 (CAUSE RACINE DU 403 WORKBOOK). La reprise n°2 ayant permis de LOCALISER
+        et d'appeler les tables, l'épreuve du réel (cockpit 1.4.2.0 déployé) a révélé le point de
+        rupture suivant : 8 tables en 403 sur la lecture /columns (Graph délégué, SANS session). CAUSE
+        RACINE confirmée sur le réel : les gabarits fabriqués par la primitive v2 (T-0033, amorçage
+        d'un classeur depuis un contenu 0 octet) sont lisibles en session CHAUDE mais NON ouvrables À
+        FROID par l'API Workbook — leur binaire au repos n'est pas canonique. PREUVE décisive : un
+        simple Ouvrir+Enregistrer de gabarit-1.xlsx dans Excel fait DISPARAÎTRE les 8 anomalies « … »
+        du cockpit (fraîcheur 14:23). Le faux-vert de T-0033 venait de preuves CHAUDES (preuve interne
+        /rows AVEC session ; workbook_lire_table juste après). CORRECTION dans la FABRICATION (jumelée
+        T-0033 ; workbook_instancier_gabarit, serveur 0.13.0 -> 0.14.0), voie A (service) retenue vs
+        voie B (moteur OOXML tiers) rejetée — rouvrirait le 501 openpyxl S35 : RÉ-ÉMISSION par le
+        service (2e session froide + écriture inerte = « Ouvrir+Enregistrer » machine) PUIS PREUVE
+        FROIDE SANS session (/columns, le chemin exact du cockpit) qui fait foi de l'ouvrabilité ;
+        échec froid -> rollback borné. 70 tests verts (nominal froid, lecture sans workbook-session-id,
+        403->rollback, corps≠0->rollback). Reproduction du 403 réel non faisable au banc (pas de Graph
+        réel, tenant intact) : simulée + procédure de vérification tenant documentée. RIEN mergé/
+        déployé, tenant intact. Détail : docs/epreuves/2026-07-17-t-0035-403-workbook-froid.md. PR de
+        reprise n°3 « T-0035 — reprise n°3 : cause racine du 403 Workbook (gabarit ouvrable à froid) »
+        (non mergée).
 
   reste_pour_solder:
-    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0) puis épreuve du réel le 17/07 qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), enfin CORRIGÉ (reprise n°2, 1.4.2.0) : localiserDansDrive normalise webUrl percent-encodé ↔ chemin en clair par segments décodés + ré-encodage du résiduel. RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN : déploiement du .sppkg 1.4.2.0 à l'App Catalog puis vérification navigateur des 3 bandeaux sur données réelles (staffing, rentabilité, factures) — les gabarits/référentiels doivent désormais être localisés et lus ; toute anomalie résiduelle nommera encore sa cause exacte"
+    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"

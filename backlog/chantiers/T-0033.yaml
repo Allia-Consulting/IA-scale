@@ -113,3 +113,23 @@ avancement:
         préalables avortés à l'étape 0 — sessions Claude Desktop sans la config MCP locale projet
         du CLI, jeton et serveur hors de cause, zéro effet tenant. Débloque le solde de T-0031
         (consolidation réelle). Détail : docs/epreuves/2026-07-17-t-0033-instanciation-v2-tenant.md.
+    - date: 2026-07-17
+      fait: >
+        FAIT NOUVEAU (jumelé T-0035 reprise n°3) — la fabrication v2 avait un FAUX-VERT. Les deux
+        preuves du solde ci-dessus étaient CHAUDES : la preuve interne lit /rows AVEC le
+        workbook-session-id de la session de fabrication, et workbook_lire_table a relu juste après
+        (classeur encore chargé côté service). Or un classeur amorcé depuis un contenu 0 octet est
+        lisible en session chaude mais son binaire AU REPOS n'est pas canonique : l'API Workbook
+        REFUSE son ouverture FROIDE ultérieure (403 sur /workbook/tables). Épreuve du réel (cockpit
+        T-0035, Graph délégué, /columns SANS session) : 8 tables en 403 ; PREUVE de la cause — un
+        simple Ouvrir+Enregistrer de gabarit-1.xlsx dans Excel fait DISPARAÎTRE les anomalies (le
+        moteur Workbook exige un classeur normalisé par Excel). CORRECTION portée par la fabrication
+        (workbook_instancier_gabarit, serveur 0.13.0 -> 0.14.0) : (voie A retenue vs voie B « moteur
+        OOXML tiers » rejetée — rouvrirait le 501 openpyxl de S35) RÉ-ÉMISSION par le service (2e
+        session froide + écriture inerte = « Ouvrir+Enregistrer » machine, sans binaire tiers) PUIS
+        PREUVE FROIDE SANS session (/columns, le chemin exact du cockpit) qui fait foi de
+        l'ouvrabilité ; échec froid -> rollback borné. 70 tests verts (dont nominal froid, preuve
+        sans session, 403->rollback, corps≠0->rollback). RIEN mergé/déployé, tenant intact. Restent
+        gestes gardien : build+déploiement 0.14.0 puis épreuve tenant (instancier ×2 -> lecture
+        FROIDE en Graph délégué count:0 ×6). La REQUALIFICATION éventuelle de ce solde (preuves
+        chaudes) appartient au gardien. Détail : docs/epreuves/2026-07-17-t-0035-403-workbook-froid.md.
