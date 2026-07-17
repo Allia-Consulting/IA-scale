@@ -132,6 +132,38 @@ describe('localiserDansDrive — chemin du fichier relatif à la racine de SON d
   });
 });
 
+// Reproduction du RÉEL (épreuve 2026-07-17) : Graph renvoie le webUrl des drives PERCENT-ENCODÉ
+// (« Documents%20partages ») alors que les chemins des props arrivent EN CLAIR (espaces, accents,
+// « & »). La comparaison de préfixe doit se faire sur des segments DÉCODÉS des deux côtés, puis le
+// résiduel doit être RÉ-ENCODÉ correctement pour l'API `root:{chemin}:`.
+describe('localiserDansDrive — webUrl percent-encodé vs chemin props en clair (cas réel)', () => {
+  const drives = [
+    // webUrl tel que renvoyé par Graph : espaces encodés en %20.
+    { id: 'DRIVE_DOCS', webUrl: 'https://h/sites/CA/Documents%20partages' }
+  ];
+
+  it('gabarit « 06 - Gabarit ERP » (espaces) : trouve le drive, résiduel ré-encodable', () => {
+    const loc = localiserDansDrive(drives, '/sites/CA/Documents partages/06 - Gabarit ERP/gabarit-1.xlsx');
+    expect(loc).toEqual({ driveId: 'DRIVE_DOCS', cheminDansDrive: '/06 - Gabarit ERP/gabarit-1.xlsx' });
+  });
+
+  it('référentiel « 07 - Coût de Structure » (accent) : trouve le drive', () => {
+    const loc = localiserDansDrive(drives, '/sites/CA/Documents partages/07 - Coût de Structure/referentiel-structure.xlsx');
+    expect(loc).toEqual({ driveId: 'DRIVE_DOCS', cheminDansDrive: '/07 - Coût de Structure/referentiel-structure.xlsx' });
+  });
+
+  it('référentiel « 08 - Coût Masse salariale & Indep » (accent + &) : trouve le drive', () => {
+    const loc = localiserDansDrive(drives, '/sites/CA/Documents partages/08 - Coût Masse salariale & Indep/referentiel-ressources.xlsx');
+    expect(loc).toEqual({ driveId: 'DRIVE_DOCS', cheminDansDrive: '/08 - Coût Masse salariale & Indep/referentiel-ressources.xlsx' });
+  });
+
+  it('symétrie : webUrl en clair + chemin props percent-encodé se correspondent aussi', () => {
+    const drivesClair = [{ id: 'DRIVE_DOCS', webUrl: 'https://h/sites/CA/Documents partages' }];
+    const loc = localiserDansDrive(drivesClair, '/sites/CA/Documents%20partages/06%20-%20Gabarit%20ERP/gabarit-1.xlsx');
+    expect(loc).toEqual({ driveId: 'DRIVE_DOCS', cheminDansDrive: '/06 - Gabarit ERP/gabarit-1.xlsx' });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Lecture bout-en-bout (lireContenus) avec un Graph injecté.
 // ---------------------------------------------------------------------------
