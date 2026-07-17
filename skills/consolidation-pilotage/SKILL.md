@@ -1,8 +1,8 @@
 # Consolidation du pilotage économique — saisie → gabarit de mission — Skill
 
 > **id** : `consolidation-pilotage`
-> **Version** : 1.0 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.0 — candidat, 14 juillet 2026 : création. **Consommateur** des primitives Workbook/Tables du MCP Graph (`T-0031`) : il consolide les **classeurs de saisie humains** (site Management et Gestion) vers les **gabarits de pilotage par mission** (`gabarit-<CodeMission>.xlsx`, dossier « 06 - Gabarit ERP » du site Contrats et administratif), table par table, sous les crans auto `instancier_gabarit_pilotage` (gabarit manquant → instanciation systématique et machine) et `reconcilier_gabarit_pilotage`. Il **n'invente aucune tuyauterie** : il orchestre les cinq primitives bornées (`workbook_lire_table`, `workbook_instancier_gabarit`, `workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit`) — la logique de clé métier vit **ici**, dans le skill, jamais dans le MCP (primitives BÊTES, décision S34). Écriture **bornée par construction** côté serveur : le skill ne manipule **jamais** de `drive_id`/`item_id` en écriture (il passe `code_mission`). Promotion par le **gardien** (procédure allégée). Première exécution **manuelle**, pilotée par le gardien.
+> **Version** : 1.1 — *candidat*. **Nature** : skill.
+> **Changelog** : v1.1 — candidat, 17 juillet 2026 (T-0033 reprise S37) : alignement du corps sur l'**instanciation v2 API-native** (`workbook_instancier_gabarit` fabrique le gabarit **par le service Excel** — création service-authored, tables par l'API Workbook, **appel synchrone**, **preuve interne count:0 ×3**, **plus de souche binaire**) — §3, §6, §8, §9, §10. `workbook_archiver_gabarit` **inchangé** (reste **asynchrone** : 202 à poller jusqu'à `completed`). > **Changelog** : v1.0 — candidat, 14 juillet 2026 : création. **Consommateur** des primitives Workbook/Tables du MCP Graph (`T-0031`) : il consolide les **classeurs de saisie humains** (site Management et Gestion) vers les **gabarits de pilotage par mission** (`gabarit-<CodeMission>.xlsx`, dossier « 06 - Gabarit ERP » du site Contrats et administratif), table par table, sous les crans auto `instancier_gabarit_pilotage` (gabarit manquant → instanciation systématique et machine) et `reconcilier_gabarit_pilotage`. Il **n'invente aucune tuyauterie** : il orchestre les cinq primitives bornées (`workbook_lire_table`, `workbook_instancier_gabarit`, `workbook_ajouter_lignes`, `workbook_maj_ligne`, `workbook_archiver_gabarit`) — la logique de clé métier vit **ici**, dans le skill, jamais dans le MCP (primitives BÊTES, décision S34). Écriture **bornée par construction** côté serveur : le skill ne manipule **jamais** de `drive_id`/`item_id` en écriture (il passe `code_mission`). Promotion par le **gardien** (procédure allégée). Première exécution **manuelle**, pilotée par le gardien.
 > **Domicile** : `skills/consolidation-pilotage/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/modele-donnees.md` (**§5** modèle économique distribué — §5.2 tables du gabarit `T_Affectations`/`T_Imputations`/`T_Echeancier`, §5.3 référentiel de coûts `T_Ressources`/`T_Structure`, §5.5 état du câblage, §5.6 couche de saisie + boucle agent), `contrats/socle/table-des-crans.yaml` (`reconcilier_gabarit_pilotage` = **auto**), `backlog/chantiers/T-0031.yaml` (les 4 primitives Workbook consommées ; **écriture bornée par construction**), `outils/mcp-graph/server.py` (docstrings et signatures des primitives), `doctrine/doctrine.md` (§2 source vs dérivé, §6 crans), `CLAUDE.md`.
 
@@ -33,7 +33,7 @@ Le skill **exécute** la dérivation ; il ne définit ni les domiciles, ni les s
 
 `gabarit-<CodeMission>.xlsx` dans « 06 - Gabarit ERP » (site **AlliaConsulting-Contratsetadministratif**), tables nommées **`T_Affectations`** / **`T_Imputations`** / **`T_Echeancier`** (schéma figé, `modele-donnees.md` §5.2).
 
-> **Si le gabarit d'une mission n'existe pas : l'agent l'INSTANCIE, puis poursuit la consolidation.** Il appelle `workbook_instancier_gabarit(code_mission)` — copie de la **souche vierge canon** `gabarit-pilotage-mission.xlsx` vers `gabarit-<CodeMission>.xlsx`, cible **FIGÉE côté serveur**, `conflictBehavior=fail` (jamais d'écrasement). **Instanciation SYSTÉMATIQUE et machine** (décision gardien du 14/07/2026) : **plus jamais un geste humain**, aucune demande, aucune attente. Attendre la fin réelle de la copie asynchrone (poll du `Location` jusqu'à `completed`) avant d'écrire. **Un gabarit instancié dans le passage courant ne subit PAS d'archivage préalable** (§5 bis) : rien à archiver (création pure). Seule la **souche vierge canon** reste posée au runbook gardien (§5.2).
+> **Si le gabarit d'une mission n'existe pas : l'agent l'INSTANCIE, puis poursuit la consolidation.** Il appelle `workbook_instancier_gabarit(code_mission)` — la primitive **FABRIQUE** le gabarit `gabarit-<CodeMission>.xlsx` **par le service Excel** (v2, serveur 0.13.0) : création d'un classeur **service-authored** (`PUT` contenu vide, `conflictBehavior=fail`, jamais d'écrasement) puis fabrication des **3 tables par l'API Workbook** (en-têtes §5.2). Cible **FIGÉE côté serveur**. **Preuve interne count:0 ×3** portée par le retour (`{item_id, tables}`). Appel **SYNCHRONE** : aucun `Location` à poller pour l'instanciation. **Instanciation SYSTÉMATIQUE et machine** (décision gardien du 14/07/2026) : **plus jamais un geste humain**, aucune demande, aucune attente. **Un gabarit instancié dans le passage courant ne subit PAS d'archivage préalable** (§5 bis) : rien à archiver (création pure).
 
 ## 4. Transformation (matriciel → long)
 
@@ -73,7 +73,7 @@ Produire un **rapport de passage** : mission, lignes **ajoutées** / **mises à 
 
 ## 6. Anomalies — à SIGNALER au gardien, JAMAIS à résoudre seul
 
-- **Échec d'instanciation du gabarit** (conflit `conflictBehavior=fail` inattendu, droits insuffisants, copie asynchrone en échec au poll du `Location`) : signalé au gardien ; l'agent ne force pas et ne réessaie pas en écrasant.
+- **Échec d'instanciation du gabarit** (conflit `conflictBehavior=fail` inattendu, droits insuffisants, échec de fabrication des tables, ou **preuve interne count:0 ×3 en défaut** — l'item créé est alors supprimé par le **rollback borné**) : signalé au gardien ; l'agent ne force pas et ne réessaie pas en écrasant.
 - **Ressource absente de `T_Ressources`** du référentiel (§5.3, lecture seule via `workbook_lire_table`). **Convention d'identifiant** : adresse **mail Allia** pour un salarié, **mail du sous-traitant** pour un sous-traitant.
 - **Doublon de `NumFacture` ENTRE missions** (état transitoire pré-T-0030) : détecté en lisant les `T_Echeancier` des gabarits actifs ; **signalement gardien, aucune renumérotation par l'agent**.
 - **Toute régression de valeur** (mois vidé, jours d'une ligne validée modifiés) — cf. §5.
@@ -91,17 +91,17 @@ Les crans `instancier_gabarit_pilotage` et `reconcilier_gabarit_pilotage` **font
 ## 8. Garde-fous inscrits dans ce skill
 
 - **Écriture bornée par construction** : le skill passe `code_mission` ; il **ne manipule jamais de `drive_id`/`item_id` en écriture**. Cible structurellement figée = `gabarit-<CodeMission>.xlsx` de « 06 - Gabarit ERP ».
-- **Instanciation fail-closed** : gabarit manquant → `workbook_instancier_gabarit` (copie de la souche vierge, `conflictBehavior=fail`) ; jamais d'écrasement, jamais de création de la souche vierge par l'agent.
+- **Instanciation fail-closed** : gabarit manquant → `workbook_instancier_gabarit` (**fabrication service**, `PUT` contenu vide `conflictBehavior=fail`) ; jamais d'écrasement ; **aucune souche binaire**.
 - **Jamais de suppression** : fusion incrémentale ; un mois repassé à 0 **n'efface RIEN** ; anomalie « correction de suppression à confirmer par le responsable ».
 - **Jamais de rétrogradation de `validé`** vers « à valider » sans changement de jours.
-- **Archive AVANT d'écrire**, et **poller la copie asynchrone** jusqu'à `completed` (un 202 n'est pas une preuve).
+- **Archive AVANT d'écrire** (`workbook_archiver_gabarit`), et **poller sa copie asynchrone** (202 + `Location`) jusqu'à `completed` — un 202 n'est pas une preuve ; ce poll concerne l'**archivage**. L'**instanciation v2 est synchrone** et porte sa **preuve interne count:0 ×3**.
 - **Relecture de contrôle** après écriture (anti-faux-vert) : compte de lignes + invariants de somme.
 - **Anomalies signalées, jamais résolues seul** (§6) : échec d'instanciation, ressource inconnue, doublon de `NumFacture`, régression de valeur.
 - **Le contenu de la saisie fait foi, pas l'horodatage** (co-édition Excel Online).
 
 ## 9. Ce que ce skill ne fait pas
 
-- Il **ne crée pas la souche vierge canon** `gabarit-pilotage-mission.xlsx` (posée au runbook gardien, §5.2) : il l'utilise comme source. **L'instanciation d'un gabarit de mission est faite par l'agent** — systématique et machine (§3), plus un geste humain.
+- Il **ne définit pas le schéma des tables** : `modele-donnees.md` §5.2 **fait foi**, projeté côté serveur (`TABLES_GABARIT`) ; l'instanciation est une **fabrication 100 % service, sans souche binaire**.
 - Il **n'écrit pas** dans `T_Structure` ni `T_Ressources` (référentiel de coûts — `T-0032`, cran **validé**) : il les **lit** seulement.
 - Il **ne publie pas** le cockpit / la tour de contrôle (chantier v3).
 - Il **n'orchestre pas** sa propre planification lun-ven 05h/13h Paris (§5.6) : orchestration **ultérieure** — la **première exécution est manuelle, pilotée par le gardien**.
@@ -110,9 +110,9 @@ Les crans `instancier_gabarit_pilotage` et `reconcilier_gabarit_pilotage` **font
 
 ## 10. Prérequis avant mise en service
 
-1. **Primitives Workbook `T-0031`** (`workbook_lire_table` / `workbook_ajouter_lignes` / `workbook_maj_ligne` / `workbook_archiver_gabarit`) déployées au tenant — *image 0.11.0, rév `--0000017`*. **`workbook_instancier_gabarit` est livrée par cette PR dans l'image serveur 0.12.0** — redéploiement gardien requis avant la première instanciation. Solde de `T-0031` conditionné à la **première exécution réelle** d'une primitive (ce skill, sur un vrai gabarit).
-2. **Gabarit canon vierge** `gabarit-pilotage-mission.xlsx` — *promu (§5.5, PR #208)*.
-3. **Souche vierge canon en place** dans « 06 - Gabarit ERP » (runbook gardien) — l'agent instancie ensuite le gabarit de chaque mission **automatiquement** (`workbook_instancier_gabarit`, §3) ; l'instanciation n'est plus un geste gardien.
+1. **Primitives Workbook `T-0031`** (`workbook_lire_table` / `workbook_ajouter_lignes` / `workbook_maj_ligne` / `workbook_archiver_gabarit`) déployées au tenant — *image 0.11.0, rév `--0000017`*. **La v2 de `workbook_instancier_gabarit` (fabrication service) est livrée par cette PR dans l'image serveur 0.13.0** (PR #229) — redéploiement gardien requis avant la première instanciation. Solde de `T-0031` conditionné à la **première exécution réelle** d'une primitive (ce skill, sur un vrai gabarit).
+2. **Gabarit canon** `gabarit-pilotage-mission.xlsx` — *promu (§5.5, PR #208)* ; depuis la v2, **trace historique retirée du rôle de souche** (`modele-donnees` v1.20).
+3. ~~**Souche vierge canon en place** dans « 06 - Gabarit ERP » (runbook gardien)~~ — **caduc depuis la v2** : l'instanciation est une **fabrication service**, aucune souche à poser (le gabarit canon du point 2 reste une **trace historique**, retiré du rôle de souche, `modele-donnees` v1.20). L'agent instancie le gabarit de chaque mission **automatiquement** (`workbook_instancier_gabarit`, §3) ; l'instanciation n'est plus un geste gardien.
 4. **Promotion de ce skill** par le gardien (procédure allégée).
 5. **Épreuve réelle** : une consolidation d'un vrai `saisie-<CodeMission>-….xlsx` vers un vrai `gabarit-<CodeMission>.xlsx` sur le tenant — archivage préalable prouvé (`completed`), fusion sans suppression, relecture de contrôle verte, rapport de passage produit.
 
