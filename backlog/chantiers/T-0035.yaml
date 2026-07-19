@@ -214,9 +214,32 @@ avancement:
         remplacer à la mise en service ; bonne version dans « 00 - Old » (gabarit-1-20260717T135949Z.xlsx,
         18977 o) ; gabarit-2.xlsx intact. RIEN mergé/déployé, tenant intact. Détail :
         docs/epreuves/2026-07-17-t-0035-reprise-5-recalibration-preuve.md. PR de reprise n°5 (non mergée).
+    - date: 2026-07-19
+      fait: >
+        POINT 2 SOLDÉ — cockpit câblé Graph Workbook, vivant sur données réelles (S39). Image serveur
+        0.16.0 déployée (révision ACA --0000023, Healthy). TROIS PREUVES : (1) ÉPREUVE DE RÉGÉNÉRATION
+        M1+M2 VERTE (séquence normative du skill consolidation-pilotage v1.4) — M1 gabarit-1/Siteflow :
+        archiver-déplacer le défectueux (item 01BWFCBZHMHXN46WR2EFDJQFBLFKT7NXNP -> « 00 - Old »/
+        gabarit-1-20260719T112151Z.xlsx, nom libéré) -> ré-instancier (nouvel item
+        01BWFCBZHH7KJ2MPLVIJAK6LIV76UPMHEL, preuve froide vierge 3× lignes_vides:1) -> repeupler 8/2/8
+        -> contrôle 148 j / 133 200 € ; M2 gabarit-2/Datalab : archiver (item 01BWFCBZATQHKNZ6BWHRBJF6E52CL2OBF4
+        -> gabarit-2-20260719T112706Z.xlsx) -> ré-instancier (item 01BWFCBZHFTVTA2XI7HJDK5AOTY4VAHZVB)
+        -> repeupler 6/(0 sauté)/6 -> contrôle 120 j / 84 000 € ; fin 19/07 13:28 locale ; zéro retouche
+        manuelle, rollback non mobilisé. (2) LECTURE FROIDE DIFFÉRÉE VERTE (binaires au repos, Graph
+        délégué /columns SANS session) : 6/6 tables, en-têtes §5.2, 148 j/133 200 € et 120 j/84 000 €.
+        (3) REJEU COCKPIT VERT le 19/07 à 16:28 : 8 appels Workbook 200, bandeaux Staffing/Rentabilité/
+        Factures justes sur données réelles. CORRECTIFS PORTEURS : le rejeu était d'abord ROUGE (8× 403
+        « Could not obtain a WAC access token » sur la forme d'adressage PAR CHEMIN) ; cause rectifiée
+        (binaires hors de cause, prouvé : même jeton/fichier, item id -> 200) et corrigée par PR #238
+        (ajout du scope délégué Files.ReadWrite.All, requis même en lecture) puis PR #239 (adressage par
+        ITEM ID + filtre ligne d'insertion vide, 1.4.4.0 déployée). Détail :
+        docs/epreuves/2026-07-19-s39-epreuve-t0035-cockpit.md (dont rectification du diagnostic S38,
+        leçon durable Workbook, et deux chantiers à ouvrir : honnêteté du cockpit sur 403 gabarit actif,
+        classifieur de gouvernance des surfaces de sécurité). RESTENT les points 3-5 (gestes d'écriture
+        guidée CRM / recrutement / facturation) -> statut du chantier maintenu en_cours.
 
   reste_pour_solder:
-    - "Point 2 — câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"
+    - "Point 2 — SOLDÉ le 19/07/2026 (S39) : régénération M1+M2 verte, lecture froide différée verte, rejeu cockpit vert le 19/07 à 16:28 (8 appels Workbook 200, bandeaux justes) ; correctifs porteurs PR #238 (scope Files.ReadWrite.All) + PR #239 (adressage par item id, 1.4.4.0 déployée) ; voir avancement.journal 2026-07-19 et docs/epreuves/2026-07-19-s39-epreuve-t0035-cockpit.md. HISTORIQUE DE LA REPRISE conservé ci-dessous : câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"
     - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
