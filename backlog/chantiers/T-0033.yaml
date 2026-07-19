@@ -170,3 +170,18 @@ avancement:
         d'incomplet). Le fail-closed (conflictBehavior=fail) et le bornage sont INCHANGÉS. 76 tests verts.
         RIEN mergé/déployé, tenant intact. Détails :
         docs/epreuves/2026-07-17-t-0035-reprise-5-recalibration-preuve.md (récit complet côté T-0035).
+    - date: 2026-07-19
+      fait: >
+        REQUALIFICATION SUR LE RÉEL — le solde de T-0033 (qui portait la réserve « preuves CHAUDES »
+        des entrées jumelées reprises n°3-5) est désormais assis sur une PREUVE FROIDE tenant. Image
+        serveur 0.16.0 DÉPLOYÉE (révision ACA --0000023, Healthy). Fabrication service ré-exécutée sur
+        le réel en S39 (workbook_instancier_gabarit ×2, missions 1 Siteflow / 2 Datalab) : nouveaux
+        gabarits fabriqués 100 % service, preuve « vierge » recalibrée verte (3× lignes_vides:1 par
+        gabarit — la ligne d'insertion Excel, tolérée). Critère d'acceptation « count:0 (vierge) sur les
+        6 tables des deux gabarits ré-instanciés » SATISFAIT À FROID : la lecture froide différée (Graph
+        délégué /columns SANS session, le chemin du cockpit) a lu les 6/6 tables aux en-têtes §5.2, et
+        les gabarits PEUPLÉS relisent juste (148 j/133 200 € ; 120 j/84 000 €). Le faux-vert « chaud »
+        du 17/07 est ainsi refermé : le binaire de fabrication service EST ouvrable à froid ; les 403
+        Workbook antérieurs relevaient de l'adressage PAR CHEMIN côté cockpit (échec WAC), non du binaire
+        (rectification consignée). RIEN écrit par cette clôture côté serveur ; statut INCHANGÉ (soldé),
+        réserve levée. Détail : docs/epreuves/2026-07-19-s39-epreuve-t0035-cockpit.md.
