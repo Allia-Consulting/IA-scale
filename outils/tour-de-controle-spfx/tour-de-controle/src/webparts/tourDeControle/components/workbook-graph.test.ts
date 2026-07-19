@@ -1,8 +1,9 @@
 // Tests unitaires de la lecture Graph Workbook (cockpit v2 point 2, T-0035). Aucune dépendance
 // SPFx / réseau : la primitive `GrapheGet` est injectée par un faux. Couvre les NORMALISATIONS de
 // lecture éprouvées T-0031 (date série Excel, CodeMission coercé en entier), le parsing des
-// colonnes, la résolution site→drive→driveItem par chemin, et la remontée d'anomalies (schéma
-// cassé) / d'état d'accès référentiel (403 → restreint).
+// colonnes (dont l'IGNORANCE de la ligne d'insertion Excel vide), la résolution
+// site→drive→id du driveItem puis la lecture Workbook PAR ITEM ID (la forme chemin échoue à WAC,
+// mesuré S39), et la remontée d'anomalies (schéma cassé) / d'état d'accès référentiel (403 → restreint).
 
 import {
   versDate,
@@ -103,6 +104,15 @@ describe('parserTableColonnes — transpose colonnes → lignes, repère les en-
     expect(lignes).toHaveLength(0);
     expect(entetesManquants).toEqual([...ENTETES_AFFECTATIONS]);
   });
+
+  it('table avec unique ligne d’insertion vide → zéro ligne de données, aucune anomalie (en-têtes présents)', () => {
+    // Fait mesuré S39 : toute table Excel matérialise une ligne de corps entièrement vide (ligne
+    // d'insertion), y compris un T_Imputations sans réalisé. Elle ne doit PAS devenir une ligne.
+    const corps = colonnes(ENTETES_AFFECTATIONS, [['', '', '', '']]);
+    const { lignes, entetesManquants } = parserTableColonnes(corps, ENTETES_AFFECTATIONS);
+    expect(lignes).toHaveLength(0);
+    expect(entetesManquants).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -182,6 +192,13 @@ function fauxGraphe(regles: ReadonlyArray<{ readonly quand: (c: string) => boole
 const REP_SITE: ReponseGraphe = { ok: true, status: 200, corps: { id: 'SITE1' } };
 const REP_DRIVES: ReponseGraphe = { ok: true, status: 200, corps: { value: [{ id: 'DRIVE1', name: 'Documents partages', webUrl: RACINE_DRIVE }] } };
 
+// Étape 3 : résolution de l'id du driveItem par chemin (`/drives/{id}/root:{chemin}`, SANS /workbook).
+// Les appels Workbook passent ensuite par `/drives/{id}/items/{id}/workbook/...` (adressage par id).
+const REGLE_ITEM = {
+  quand: (c: string) => c.indexOf('root:') >= 0 && c.indexOf('/workbook') < 0,
+  rep: { ok: true, status: 200, corps: { id: 'ITEM1' } } as ReponseGraphe
+};
+
 function repColonnes(headers: ReadonlyArray<string>, rows: ReadonlyArray<ReadonlyArray<unknown>>): ReponseGraphe {
   return { ok: true, status: 200, corps: colonnes(headers, rows) };
 }
@@ -192,6 +209,7 @@ describe('lireContenus — nominal, un gabarit (normalisation appliquée)', () =
       { quand: c => c.indexOf('/workbook/tables/T_Affectations/columns') >= 0, rep: repColonnes(ENTETES_AFFECTATIONS, [[1, 'r@allia', 46143, 17]]) },
       { quand: c => c.indexOf('/workbook/tables/T_Imputations/columns') >= 0, rep: repColonnes(['CodeMission', 'Ressource', 'Mois', 'JoursRealises', 'StatutValidation'], [[1, 'r@allia', 46143, 17, 'à valider']]) },
       { quand: c => c.indexOf('/workbook/tables/T_Echeancier/columns') >= 0, rep: repColonnes(['NumFacture', 'CodeMission', 'MoisCA', 'MontantHT', 'Echeance', 'Statut', 'LienFacture'], [['F-1', 1, 46143, 15300, 46160, 'à émettre', 'https://teams/f1.pdf']]) },
+      REGLE_ITEM,
       { quand: c => c.indexOf('/drives?') >= 0, rep: REP_DRIVES },
       { quand: c => c.indexOf('$select=id') >= 0 && c.indexOf('/drives/') < 0, rep: REP_SITE }
     ]);
@@ -213,11 +231,30 @@ describe('lireContenus — nominal, un gabarit (normalisation appliquée)', () =
   });
 });
 
+describe('lireContenus — T_Imputations sans réalisé (unique ligne d’insertion vide)', () => {
+  it('gabarit sans réalisé → 0 imputation, aucune anomalie (ligne d’insertion ignorée)', async () => {
+    const graphe = fauxGraphe([
+      { quand: c => c.indexOf('/workbook/tables/T_Affectations/columns') >= 0, rep: repColonnes(ENTETES_AFFECTATIONS, [[2, 'r@allia', 46143, 23]]) },
+      // T_Imputations renvoie l'unique ligne d'insertion, toutes cellules vides (cas mesuré S39).
+      { quand: c => c.indexOf('/workbook/tables/T_Imputations/columns') >= 0, rep: repColonnes(['CodeMission', 'Ressource', 'Mois', 'JoursRealises', 'StatutValidation'], [['', '', '', '', '']]) },
+      { quand: c => c.indexOf('/workbook/tables/T_Echeancier/columns') >= 0, rep: repColonnes(['NumFacture', 'CodeMission', 'MoisCA', 'MontantHT', 'Echeance', 'Statut', 'LienFacture'], []) },
+      REGLE_ITEM,
+      { quand: c => c.indexOf('/drives?') >= 0, rep: REP_DRIVES },
+      { quand: c => c.indexOf('$select=id') >= 0 && c.indexOf('/drives/') < 0, rep: REP_SITE }
+    ]);
+    const res = await lireContenus(graphe, SITE_URL, [{ codeMission: '2', url: URL_GAB1 }]);
+    expect(res.anomalies).toHaveLength(0);
+    expect(res.gabarits[0].imputations).toHaveLength(0);
+    expect(res.gabarits[0].affectations).toHaveLength(1);
+  });
+});
+
 describe('lireContenus — schéma cassé et référentiel restreint', () => {
   it('table au schéma inattendu (en-tête manquant) → anomalie SIGNALÉE (jamais un zéro tu)', async () => {
     const graphe = fauxGraphe([
       { quand: c => c.indexOf('/workbook/tables/T_Affectations/columns') >= 0, rep: repColonnes(['CodeMission', 'Ressource', 'Mois'], [[1, 'r@allia', 46143]]) }, // JoursPrevus manquant
       { quand: c => c.indexOf('/workbook/tables/') >= 0, rep: repColonnes(['x'], []) },
+      REGLE_ITEM,
       { quand: c => c.indexOf('/drives?') >= 0, rep: REP_DRIVES },
       { quand: c => c.indexOf('$select=id') >= 0 && c.indexOf('/drives/') < 0, rep: REP_SITE }
     ]);
@@ -231,6 +268,7 @@ describe('lireContenus — schéma cassé et référentiel restreint', () => {
       { quand: c => c.indexOf('/workbook/tables/T_Ressources/columns') >= 0, rep: { ok: false, status: 403 } },
       { quand: c => c.indexOf('/workbook/tables/T_Structure/columns') >= 0, rep: { ok: false, status: 403 } },
       { quand: c => c.indexOf('/workbook/tables/') >= 0, rep: repColonnes(ENTETES_AFFECTATIONS, []) },
+      REGLE_ITEM,
       { quand: c => c.indexOf('/drives?') >= 0, rep: REP_DRIVES },
       { quand: c => c.indexOf('$select=id') >= 0 && c.indexOf('/drives/') < 0, rep: REP_SITE }
     ]);

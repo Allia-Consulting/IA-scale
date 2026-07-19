@@ -52,6 +52,8 @@ function fauxGraph(apiPaths: string[]): { getClient: jest.Mock } {
     // aussi l'appel `/drives?$select=id,...`).
     if (p.indexOf('/drives?') >= 0) { return { value: [{ id: 'DRIVE1', name: 'Documents partages', webUrl: RACINE_DRIVE }] }; }
     if (p.indexOf('$select=id') >= 0 && p.indexOf('/drives/') < 0) { return { id: 'SITE1' }; }
+    // Étape 3 : résolution de l'id du driveItem par chemin (`/drives/{id}/root:{chemin}`, sans /workbook).
+    if (p.indexOf('root:') >= 0 && p.indexOf('/workbook') < 0) { return { id: 'ITEM1' }; }
     if (p.indexOf('T_Affectations/columns') >= 0) { return colonnes(['CodeMission', 'Ressource', 'Mois', 'JoursPrevus'], [[1, 'r@allia', 46143, 17]]); }
     if (p.indexOf('T_Imputations/columns') >= 0) { return colonnes(['CodeMission', 'Ressource', 'Mois', 'JoursRealises', 'StatutValidation'], [[1, 'r@allia', 46143, 15, 'validé']]); }
     if (p.indexOf('T_Echeancier/columns') >= 0) { return colonnes(['NumFacture', 'CodeMission', 'MoisCA', 'MontantHT', 'Echeance', 'Statut', 'LienFacture'], [['F1', 1, 46143, 15300, 46160, 'à émettre', 'https://teams/f1.pdf']]); }
@@ -83,7 +85,8 @@ async function monter(props: ITourDeControleProps): Promise<{ container: HTMLDiv
   document.body.appendChild(container);
   await act(async () => { ReactDOM.render(React.createElement(TourDeControle, props), container); });
   // Plusieurs tours de boucle pour drainer la chaîne asynchrone complète de chargerCockpit
-  // (REST de découverte → getClient → résolution site→drives → Promise.all des tables) puis re-render.
+  // (REST de découverte → getClient → résolution site→drives→id du driveItem → Promise.all des
+  // tables par item id) puis re-render.
   for (let i = 0; i < 8; i++) {
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
   }
