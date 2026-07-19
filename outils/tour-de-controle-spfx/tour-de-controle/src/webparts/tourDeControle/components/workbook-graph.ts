@@ -6,9 +6,10 @@
 // l'identité de l'utilisateur (Graph délégué — SSO SPFx, permission Sites.Read.All approuvée par
 // le gardien). Aucun secret, aucune élévation.
 //
-// Isolé de React et de MSGraphClientV3 à dessein : la résolution (site → drive → driveItem par
-// chemin), le parsing des tables et les NORMALISATIONS de lecture sont testables sans réseau. La
-// primitive réseau `GrapheGet` est INJECTÉE par listes-reelles.ts (adaptateur MSGraphClientV3).
+// Isolé de React et de MSGraphClientV3 à dessein : la résolution (site → drive → id du driveItem,
+// puis lecture Workbook par item id), le parsing des tables et les NORMALISATIONS de lecture sont
+// testables sans réseau. La primitive réseau `GrapheGet` est INJECTÉE par listes-reelles.ts
+// (adaptateur MSGraphClientV3).
 //
 // Faits de lecture ÉPROUVÉS (épreuve T-0031, 2026-07-17) que ce module normalise :
 //   - les dates écrites `AAAA-MM-JJ` reviennent en SÉRIE Excel (ex. 46143 = 2026-05-01) ;
@@ -166,6 +167,11 @@ function estColonnes(corps: unknown): corps is { value: ReadonlyArray<ColonneGra
   return !!corps && typeof corps === 'object' && Array.isArray((corps as { value?: unknown }).value);
 }
 
+/** Cellule sans donnée : absente, nulle, ou chaîne vide (après strip). Un 0 numérique reste une donnée. */
+function celluleVide(v: unknown): boolean {
+  return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+}
+
 /**
  * Transpose la réponse `columns` en lignes de corps + repère les en-têtes attendus manquants.
  * La cellule d'en-tête de chaque colonne est `values[0][0]`, ses cellules de corps `values[r][0]`.
@@ -191,6 +197,10 @@ export function parserTableColonnes(
       const values = parNom.get(e);
       ligne[e] = values && values[r] ? values[r][0] : undefined;
     }
+    // Ligne d'INSERTION Excel (toute table matérialise une ligne de corps entièrement vide même sans
+    // réalisé — fait mesuré S39, ex. T_Imputations d'un gabarit sans imputation) : aucune valeur ≠
+    // donnée → on l'IGNORE (jamais une ligne fantôme, jamais une anomalie).
+    if (entetesAttendus.every(e => celluleVide(ligne[e]))) { continue; }
     lignes.push(ligne);
   }
   return { lignes, entetesManquants };
@@ -214,13 +224,20 @@ function mapStructure(l: Record<string, unknown>): LigneStructure {
 }
 
 // ---------------------------------------------------------------------------
-// Résolution site → drive → driveItem PAR CHEMIN (Microsoft Graph v1.0, grounded Learn 2026-07-17).
-//   1. site : GET /sites/{hôte}:{cheminSite}?$select=id
+// Résolution site → drive → id du driveItem, puis lecture Workbook PAR ITEM ID (Microsoft Graph
+// v1.0, grounded Learn 2026-07-17 ; adressage par id mesuré S39 2026-07-19).
+//   1. site  : GET /sites/{hôte}:{cheminSite}?$select=id
 //   2. drives : GET /sites/{siteId}/drives?$select=id,name,webUrl
-//   3. table : GET /drives/{driveId}/root:{cheminDansDrive}:/workbook/tables/{table}/columns
-// Le driveItem est adressé par chemin relatif à la racine du drive porteur (celui dont le webUrl
-// préfixe l'URL server-relative du fichier). Aucune coordonnée en dur (tout vient du site + du
-// chemin server-relative découvert / des props référentiel).
+//   3. id    : GET /drives/{driveId}/root:{cheminDansDrive}  → métadonnées, dont l'`id` du driveItem
+//   4. table : GET /drives/{driveId}/items/{id}/workbook/tables/{table}/columns
+// Le driveItem est localisé par chemin relatif à la racine du drive porteur (celui dont le webUrl
+// préfixe l'URL server-relative du fichier), puis son ID est résolu (étape 3) — car l'API Workbook
+// DOIT être adressée par ITEM ID : la forme CHEMIN `root:{chemin}:/workbook/...` échoue à l'échange
+// WAC (« Could not obtain a WAC access token », HTTP 403), alors que `items/{id}/workbook/...`
+// réussit (contournement officiel Microsoft, Q&A 1190965/1191649 ; les SIX 403 mesurés au rejeu S39
+// du 2026-07-19 disparaissent ainsi). La forme chemin reste RÉSERVÉE à la résolution d'id (étape 3,
+// qui, elle, fonctionne). Aucune coordonnée en dur (tout vient du site + du chemin server-relative
+// découvert / des props référentiel).
 // ---------------------------------------------------------------------------
 
 /** Décompose une URL absolue de site en (hôte, chemin server-relative). */
@@ -327,19 +344,49 @@ interface LectureTable {
   readonly acces: EtatAcces;
 }
 
-async function lireTable(
+/** driveItem résolu : (driveId, itemId). L'API Workbook DOIT être adressée par cet id (étape 4). */
+interface ItemResolu { readonly driveId: string; readonly itemId: string; }
+
+/**
+ * Étape 3 de la chaîne : résout l'ID du driveItem d'un fichier PAR CHEMIN
+ * (`GET /drives/{driveId}/root:{cheminEncodé}` → métadonnées, dont `id`). L'encodage du chemin est
+ * ALIGNÉ sur celui de la localisation (`encoderChemin`, segment par segment). Cette forme chemin
+ * fonctionne pour la résolution d'id ; elle ÉCHOUE en revanche sur l'API Workbook (WAC), d'où
+ * l'adressage par id ensuite. 403/404 = accès restreint (fichier absent / non visible) → non
+ * bloquant, sans anomalie. Ne lève jamais.
+ */
+async function resoudreItem(
   grapheGet: GrapheGet,
   drives: ReadonlyArray<Drive>,
-  fichierServerRelative: string,
+  fichierServerRelative: string
+): Promise<{ readonly item?: ItemResolu; readonly acces: EtatAcces; readonly cause?: string }> {
+  const loc = localiserDansDrive(drives, fichierServerRelative);
+  if (!loc) { return { acces: 'indisponible', cause: 'chemin hors des drives du site' }; }
+  const rep = await grapheGet(`/drives/${loc.driveId}/root:${encoderChemin(loc.cheminDansDrive)}`);
+  if (rep.status === 403 || rep.status === 404) { return { acces: 'restreint' }; }
+  const id = rep.ok && rep.corps && typeof (rep.corps as { id?: unknown }).id === 'string'
+    ? (rep.corps as { id: string }).id : undefined;
+  if (!id) { return { acces: 'indisponible', cause: `identifiant du classeur introuvable (HTTP ${rep.status})` }; }
+  return { item: { driveId: loc.driveId, itemId: id }, acces: 'accessible' };
+}
+
+/** Traduit un échec de résolution d'item en LectureTable : anomalie SIGNALÉE si 'indisponible', muet si 'restreint'. */
+function echecResolution(acces: EtatAcces, libelleSource: string, cause?: string): LectureTable {
+  if (acces === 'indisponible') {
+    return { lignes: [], acces, anomalie: { source: libelleSource, raison: `classeur introuvable ou illisible (${cause})`, cause: cause || 'item non résolu' } };
+  }
+  return { lignes: [], acces };
+}
+
+async function lireTable(
+  grapheGet: GrapheGet,
+  item: ItemResolu,
   libelleSource: string,
   table: string,
   entetesAttendus: ReadonlyArray<string>
 ): Promise<LectureTable> {
-  const loc = localiserDansDrive(drives, fichierServerRelative);
-  if (!loc) {
-    return { lignes: [], acces: 'indisponible', anomalie: { source: libelleSource, raison: 'classeur hors des bibliothèques du site', cause: 'chemin hors des drives du site' } };
-  }
-  const chemin = `/drives/${loc.driveId}/root:${encoderChemin(loc.cheminDansDrive)}:/workbook/tables/${encodeURIComponent(table)}/columns`;
+  // Adressage PAR ITEM ID (étape 4) : la forme chemin `root:…:/workbook/…` échoue à l'échange WAC.
+  const chemin = `/drives/${item.driveId}/items/${item.itemId}/workbook/tables/${encodeURIComponent(table)}/columns`;
   const rep = await grapheGet(chemin);
   if (rep.status === 403 || rep.status === 404) {
     // Référentiel non visible pour cet utilisateur, ou classeur/table absent → restreint (non bloquant).
@@ -399,10 +446,19 @@ export async function lireContenus(
 
   for (const cible of cibles) {
     const src = `gabarit-${cible.codeMission}.xlsx`;
+    // Id du driveItem résolu UNE FOIS par gabarit (étape 3), puis 3 tables lues par item id (étape 4).
+    const resu = await resoudreItem(grapheGet, drives, cible.url);
+    if (!resu.item) {
+      if (resu.acces === 'indisponible') {
+        anomalies.push({ source: src, raison: `classeur introuvable ou illisible (${resu.cause})`, cause: resu.cause || 'item non résolu' });
+      }
+      gabarits.push({ codeMission: cible.codeMission, affectations: [], imputations: [], echeancier: [] });
+      continue;
+    }
     const [aff, imp, ech] = await Promise.all([
-      lireTable(grapheGet, drives, cible.url, src, TABLE_AFFECTATIONS, ENTETES_AFFECTATIONS),
-      lireTable(grapheGet, drives, cible.url, src, TABLE_IMPUTATIONS, ENTETES_IMPUTATIONS),
-      lireTable(grapheGet, drives, cible.url, src, TABLE_ECHEANCIER, ENTETES_ECHEANCIER)
+      lireTable(grapheGet, resu.item, src, TABLE_AFFECTATIONS, ENTETES_AFFECTATIONS),
+      lireTable(grapheGet, resu.item, src, TABLE_IMPUTATIONS, ENTETES_IMPUTATIONS),
+      lireTable(grapheGet, resu.item, src, TABLE_ECHEANCIER, ENTETES_ECHEANCIER)
     ]);
     for (const r of [aff, imp, ech]) { if (r.anomalie) { anomalies.push(r.anomalie); } }
     gabarits.push({
@@ -417,9 +473,14 @@ export async function lireContenus(
   let contenuRef: ContenuReferentiel | undefined;
   let referentielEtat: EtatAcces = 'restreint';
   if (referentiel && referentiel.ressources && referentiel.structure) {
+    // Chaque classeur du référentiel : id résolu (étape 3) puis sa table unique lue par item id (étape 4).
+    const lireClasseur = async (chemin: string, libelle: string, table: string, entetes: ReadonlyArray<string>): Promise<LectureTable> => {
+      const r = await resoudreItem(grapheGet, drives, chemin);
+      return r.item ? lireTable(grapheGet, r.item, libelle, table, entetes) : echecResolution(r.acces, libelle, r.cause);
+    };
     const [res, str] = await Promise.all([
-      lireTable(grapheGet, drives, referentiel.ressources, 'référentiel T_Ressources', TABLE_RESSOURCES, ENTETES_RESSOURCES),
-      lireTable(grapheGet, drives, referentiel.structure, 'référentiel T_Structure', TABLE_STRUCTURE, ENTETES_STRUCTURE)
+      lireClasseur(referentiel.ressources, 'référentiel T_Ressources', TABLE_RESSOURCES, ENTETES_RESSOURCES),
+      lireClasseur(referentiel.structure, 'référentiel T_Structure', TABLE_STRUCTURE, ENTETES_STRUCTURE)
     ]);
     for (const r of [res, str]) { if (r.anomalie) { anomalies.push(r.anomalie); } }
     // Accès : accessible seulement si les DEUX classeurs sont lus ; 'indisponible' l'emporte sur
