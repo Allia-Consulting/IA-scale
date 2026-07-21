@@ -235,3 +235,33 @@ def test_rapport_delegue_juste_avant_risque_verdict(tmp_path):
     assert lignes[-3].strip() == "DELEGUE: oui"
     assert lignes[-2].strip().startswith("RISQUE:")
     assert lignes[-1].strip().startswith("VERDICT:")
+
+
+# ---------------------------------------------------------------------------
+# (f) NON-RÉGRESSION anomalie S38 : un diff server.py (surface MCP de
+#     production) est TOUJOURS « large », même sans consommateur canonique —
+#     il ne peut plus être auto-mergé (fix T-0037, chemins sensibles).
+# ---------------------------------------------------------------------------
+def test_server_py_sensible_toujours_large_meme_isole(tmp_path):
+    root = str(tmp_path)
+    # server.py seul, zéro consommateur déclaré : avant le fix -> « faible »
+    # (car sous outils/, LOW_PREFIXES) et donc auto-mergeable. C'est #236.
+    _ecrire(root, "outils/mcp-graph/server.py",
+            "# serveur MCP Graph (surface de production)\n")
+    res = impact.analyze(root, ["outils/mcp-graph/server.py"])
+    assert res["risque"] == "large", res
+    fiche = res["par_fichier"]["outils/mcp-graph/server.py"]
+    assert fiche["risque"] == "large", fiche
+
+
+# ---------------------------------------------------------------------------
+# (g) GRANULARITÉ préservée : un AUTRE fichier sous outils/ (non listé
+#     sensible), isolé, reste « faible » — on n'a pas élevé tout outils/.
+# ---------------------------------------------------------------------------
+def test_autre_fichier_outils_isole_reste_faible(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "outils/gabarit-pilotage/generer_souche.py",
+            "# script utilitaire, pas une surface de production\n")
+    res = impact.analyze(root, ["outils/gabarit-pilotage/generer_souche.py"])
+    fiche = res["par_fichier"]["outils/gabarit-pilotage/generer_souche.py"]
+    assert fiche["risque"] == "faible", fiche
