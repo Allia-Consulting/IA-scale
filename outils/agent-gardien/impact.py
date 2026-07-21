@@ -42,6 +42,24 @@ REQUIRED_WORKFLOWS = frozenset({
 })
 # Seuils explicites (déterministes, ajustables par promotion).
 N_CONSOMMATEURS_LARGE = 3   # au-delà : un fichier « mid » devient large
+
+# Chemins de PRODUCTION sensibles : surfaces exécutables dont un diff engage
+# le tenant, les données ou la sécurité. Testés AVANT toute heuristique de
+# préfixe ; un chemin listé ici est TOUJOURS « large » et ne peut JAMAIS être
+# déclassé par une règle de préfixe ou de rareté de consommateurs.
+#
+# Doctrine : le risque se déclare par CHEMIN, jamais dérivé de la taille du
+# diff ni du nombre de consommateurs (pillage Lumina — voir la veille
+# docs/veille/2026-07-21--lumina-command-center-comparatif.md et le chantier
+# T-0037). Cause racine corrigée : « outils/ » est en LOW_PREFIXES, donc
+# outils/mcp-graph/server.py (serveur MCP de production) sortait « faible » et
+# échappait à la porte humaine (anomalie S38, PR #236 auto-mergée).
+#
+# Règle de maintenance : toute nouvelle surface de production exécutable
+# (serveur, script de tenant, pipeline de secrets) s'ajoute ICI par promotion.
+CHEMINS_SENSIBLES_LARGE = (
+    "outils/mcp-graph/server.py",
+)
 N_RAYON_LARGE = 3           # au-delà de N artefacts touchés : rayon large
 
 # Arbres de dépôt reconnus dans les chemins canoniques.
@@ -198,7 +216,13 @@ def _sous(prefixes, chemin):
 
 
 def _risque_fichier(chemin, consommateurs_transitifs, index):
-    """Règle de risque déterministe (doctrine §3/§6)."""
+    """Règle de risque déterministe (doctrine §3/§6).
+
+    Chemins sensibles testés EN PREMIER : un chemin de production listé ne peut
+    jamais être déclassé par une heuristique de préfixe (fix anomalie S38).
+    """
+    if chemin in CHEMINS_SENSIBLES_LARGE:
+        return "large"
     if _sous(SOCLE_PREFIXES, chemin):
         return "large"
     if chemin in REQUIRED_WORKFLOWS:

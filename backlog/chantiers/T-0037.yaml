@@ -1,0 +1,30 @@
+---
+id: T-0037
+titre: "Durcir la porte de risque de l'agent-gardien : table de chemins de production sensibles (fix anomalie S38)"
+capacite: "Socle d'exploitation — autonomie graduée & garde-fous / contrôle de conformité"
+phase: 1
+type_action: outil
+cran: valide   # touche outils/agent-gardien/impact.py, cœur de la porte de conformité — rayon firme
+produit:
+  - "(fait dans cette PR) CHEMINS_SENSIBLES_LARGE dans impact.py : outils/mcp-graph/server.py est toujours « large », testé en premier, non déclassable par un préfixe"
+  - "(fait dans cette PR) deux tests de non-régression : server.py isolé -> large (rejoue #236), autre fichier outils/ isolé -> faible (granularité préservée)"
+depend_de: []
+contrats_concernes:
+  - "doctrine/doctrine.md"   # §6 crans — le fix applique « rayon large -> validé » à une surface qui y échappait
+criteres_acceptation:
+  - "Un diff outils/mcp-graph/server.py sort systématiquement RISQUE: large, donc passe la porte humaine (jamais auto-merge)"
+  - "Un autre fichier sous outils/ isolé reste faible : la granularité fine n'est pas sacrifiée"
+  - "Les tests garde-fous rejouent l'anomalie #236 et échouent si la règle régresse"
+rayon_impact: firme
+statut: fait
+note: >
+  Pillage Lumina (dépôt smhkb08/lumina-authz-reference, ARCHITECTURE.md +
+  AGENT_CAPABILITY_MATRIX.md) : transposition de l'invariant « le risque se
+  déclare par chemin, jamais dérivé de la taille du diff ; l'oubli casse la CI,
+  pas la production ». Cause racine S38 : « outils/ » en LOW_PREFIXES faisait
+  sortir server.py « faible ». Veille source :
+  docs/veille/2026-07-21--lumina-command-center-comparatif.md (§2.2, reco 1).
+  Chantier plus large à instruire au prochain audit : table de politiques
+  EXHAUSTIVE type Lumina (bijection surfaces <-> catégories, test de couverture
+  qui casse la CI si une surface n'a pas d'entrée) — ici on a posé la brique
+  minimale (une table sensible), pas la table exhaustive.
