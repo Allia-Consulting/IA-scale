@@ -265,3 +265,30 @@ def test_autre_fichier_outils_isole_reste_faible(tmp_path):
     res = impact.analyze(root, ["outils/gabarit-pilotage/generer_souche.py"])
     fiche = res["par_fichier"]["outils/gabarit-pilotage/generer_souche.py"]
     assert fiche["risque"] == "faible", fiche
+
+
+# ---------------------------------------------------------------------------
+# (h) NON-RÉGRESSION T-0037b : la PORTE elle-même est sensible. Un diff de
+#     impact.py (organe de décision du risque) est TOUJOURS « large », donc
+#     jamais auto-mergeable. Rejoue la régression vécue par la PR #243.
+# ---------------------------------------------------------------------------
+def test_porte_agent_gardien_toujours_large(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "outils/agent-gardien/impact.py",
+            "# logique de risque de la porte\n")
+    res = impact.analyze(root, ["outils/agent-gardien/impact.py"])
+    assert res["risque"] == "large", res
+    fiche = res["par_fichier"]["outils/agent-gardien/impact.py"]
+    assert fiche["risque"] == "large", fiche
+
+
+# ---------------------------------------------------------------------------
+# (i) Toute la surface de la porte est sensible, pas seulement impact.py.
+# ---------------------------------------------------------------------------
+def test_tests_de_la_porte_aussi_larges(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "outils/agent-gardien/tests/test_impact.py",
+            "# tests de la porte\n")
+    res = impact.analyze(root, ["outils/agent-gardien/tests/test_impact.py"])
+    fiche = res["par_fichier"]["outils/agent-gardien/tests/test_impact.py"]
+    assert fiche["risque"] == "large", fiche
