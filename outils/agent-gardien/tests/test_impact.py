@@ -292,3 +292,29 @@ def test_tests_de_la_porte_aussi_larges(tmp_path):
     res = impact.analyze(root, ["outils/agent-gardien/tests/test_impact.py"])
     fiche = res["par_fichier"]["outils/agent-gardien/tests/test_impact.py"]
     assert fiche["risque"] == "large", fiche
+
+
+# ---------------------------------------------------------------------------
+# (j) NON-RÉGRESSION #245 : les rapports scratch du workflow (impact.md /
+#     impact.json), laissés à la racine entre les deux runs de la CI, NE
+#     doivent PAS être indexés comme consommateurs. Sans exclusion, un
+#     impact.md mentionnant le chemin d'un fichier SUPPRIMÉ le fait compter
+#     comme référence pendante -> fausse casse structurelle -> fail.
+# ---------------------------------------------------------------------------
+def test_rapports_scratch_exclus_pas_de_fausse_casse(tmp_path):
+    root = str(tmp_path)
+    # Un fichier canonique supprimé par le diff (n'existe pas sur le disque),
+    # passé comme modifié (une suppression est un changement).
+    supprime = "backlog/chantiers/T-0040.yaml"
+    # Le rapport scratch du 1er run, laissé à la racine, mentionne ce chemin.
+    _ecrire(root, "impact.md",
+            "# Avis impact\n- " + supprime + " (supprime)\nRISQUE: faible\nVERDICT: pass\n")
+    _ecrire(root, "impact.json", '{"fichiers": ["' + supprime + '"]}\n')
+    res = impact.analyze(root, [supprime])
+    # Le scratch ne doit pas apparaitre comme consommateur du fichier supprime.
+    pf = res["par_fichier"][supprime]
+    assert "impact.md" not in pf["consommateurs"], pf
+    assert "impact.json" not in pf["consommateurs"], pf
+    # Et donc aucune fausse casse structurelle : la suppression est propre.
+    assert res["casse_structurelle"] is False, res
+    assert res["verdict"] == "pass", res

@@ -85,7 +85,7 @@ _CHANTIER_ID_RE = re.compile(r"\bT-\d{4}[a-z]?(?:-[a-z0-9]+)?\b")
 _IGNORE_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache"}
 # Artefacts de travail transitoires du workflow, jamais canoniques : exclus de
 # l'index pour ne pas être comptés comme faux consommateurs (T-0020-c marche 2).
-_ARTEFACTS_TRAVAIL = frozenset({"changed-files.txt"})
+_ARTEFACTS_TRAVAIL = frozenset({"changed-files.txt", "impact.md", "impact.json"})
 
 # Propriétaire « gardien » au sens CODEOWNERS. Un périmètre est DÉLÉGUÉ dès qu'un
 # propriétaire AUTRE que le gardien y figure (organisation.md §4.1) : il relève
