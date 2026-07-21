@@ -49,9 +49,8 @@ N_CONSOMMATEURS_LARGE = 3   # au-delà : un fichier « mid » devient large
 # déclassé par une règle de préfixe ou de rareté de consommateurs.
 #
 # Doctrine : le risque se déclare par CHEMIN, jamais dérivé de la taille du
-# diff ni du nombre de consommateurs (pillage Lumina — voir la veille
-# docs/veille/2026-07-21--lumina-command-center-comparatif.md et le chantier
-# T-0037). Cause racine corrigée : « outils/ » est en LOW_PREFIXES, donc
+# diff ni du nombre de consommateurs (voir le chantier T-0037).
+# Cause racine corrigée : « outils/ » est en LOW_PREFIXES, donc
 # outils/mcp-graph/server.py (serveur MCP de production) sortait « faible » et
 # échappait à la porte humaine (anomalie S38, PR #236 auto-mergée).
 #

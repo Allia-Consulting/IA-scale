@@ -18,13 +18,11 @@ criteres_acceptation:
 rayon_impact: firme
 statut: fait
 note: >
-  Pillage Lumina (dépôt smhkb08/lumina-authz-reference, ARCHITECTURE.md +
-  AGENT_CAPABILITY_MATRIX.md) : transposition de l'invariant « le risque se
-  déclare par chemin, jamais dérivé de la taille du diff ; l'oubli casse la CI,
-  pas la production ». Cause racine S38 : « outils/ » en LOW_PREFIXES faisait
-  sortir server.py « faible ». Veille source :
-  docs/veille/2026-07-21--lumina-command-center-comparatif.md (§2.2, reco 1).
-  Chantier plus large à instruire au prochain audit : table de politiques
-  EXHAUSTIVE type Lumina (bijection surfaces <-> catégories, test de couverture
-  qui casse la CI si une surface n'a pas d'entrée) — ici on a posé la brique
-  minimale (une table sensible), pas la table exhaustive.
+  Fix de l'anomalie S38 : « outils/ » en LOW_PREFIXES faisait sortir
+  outils/mcp-graph/server.py « faible », donc auto-mergeable, alors que c'est
+  une surface de production. Invariant posé : le risque se déclare par CHEMIN,
+  jamais dérivé de la taille du diff ni du nombre de consommateurs. Brique
+  minimale posée ici (table de chemins/préfixes sensibles). Chantier plus large
+  à instruire au prochain audit : table de politiques EXHAUSTIVE (bijection
+  surfaces <-> catégories, test de couverture qui casse la CI si une surface
+  n'a pas d'entrée) — pas encore construite.
