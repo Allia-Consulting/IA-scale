@@ -1,27 +1,27 @@
 ---
 id: T-0038
-titre: "Filtre concurrent / garde NDA sur la réutilisation inter-missions du capital méthodologique"
-capacite: "Socle d'exploitation — confidentialité & apprentissage intermissions"
+titre: "CRM par dérivation : stade et score relationnel déduits de l'historique, jamais saisis"
+capacite: "Cœur de métier — développement commercial / qualification & pipeline"
 phase: 2
 type_action: contrat
-cran: valide   # évolution de doctrine §9 + anonymisation.md — rayon firme, promotion gardien
+cran: valide   # nouveau contrat de capacité CRM — promotion gardien
 produit:
-  - "(à construire) règle : tout actif promu conserve la traçabilité de sa mission d'origine (source_engagement) et est exclu de tout contexte servant un client concurrent du client source"
-  - "(à construire) liste de concurrence posée par le gardien, jamais inférée ni suggérée par un agent ; symétrique (X concurrent de Y => Y concurrent de X)"
-  - "(à construire) point d'application unique côté récupération de contexte, pour que tous les consommateurs héritent du filtre sans duplication"
+  - "(à construire) doctrine CRM : le stade d'un contact est DÉDUIT de l'historique d'interactions (dernier message/rendez-vous), un override manuel prime, le retour en auto restaure la dérivation"
+  - "(à construire) score relationnel dérivé : fraîcheur, dormance pondérée par l'enjeu (sponsor actif silencieux > dormant sans enjeu), Mendelow influence x intérêt — jamais saisi à la main"
+  - "(à construire) principe « absence de donnée = inconnu, jamais faible » ; une seule source de forecast (pas de seconde grille de probabilité contradictoire)"
 depend_de: []
 contrats_concernes:
-  - "doctrine/doctrine.md"          # §9 confidentialité & apprentissage inter-missions
-  - "contrats/socle/anonymisation.md"
+  - "contrats/socle/modele-donnees.md"
 criteres_acceptation:
-  - "Un actif issu d'une mission du client X n'entre jamais dans un contexte (RAG, prompt, proposition) servant un concurrent déclaré de X"
-  - "La traçabilité vers la mission d'origine survit à la promotion/anonymisation (garde NDA)"
-  - "La liste de concurrence est une donnée posée manuellement par le gardien, jamais dérivée par un agent"
+  - "Aucun stade ni score n'est un champ saisi à la main : tout est dérivé de l'historique observé (override explicite excepté)"
+  - "L'absence d'interaction produit un état « inconnu / non contacté », jamais un jugement négatif"
+  - "Une seule source de probabilité de gain dans toute la firme (pas de double forecast)"
 rayon_impact: firme
 statut: à_faire
 note: >
-  Pillage Lumina (docs/METHOD_GOVERNANCE.md §1, « filtre concurrent »). Comble un
-  angle mort de la doctrine §9, qui exclut aujourd'hui l'anonymisation sur la
-  réutilisation inter-client interne (« reste nominative »). À spécifier AVANT
-  d'avoir plusieurs clients concurrents, pas après. Veille source :
-  docs/veille/2026-07-21--lumina-command-center-comparatif.md (§2.5, reco 3).
+  Pillage Lumina (src/lib/v2/contact-stage.ts, relationship-score.ts —
+  « la maladie chronique de tout CRM : les stages pourrissent parce que personne
+  ne les met à jour »). À intégrer à la conception des gestes guidés pipe
+  (branche CRM, priorité 3 de l'ordre de bataille) plutôt qu'en chantier isolé.
+  Les fonctions pures d'origine sont quasi transposables. Veille source :
+  docs/veille/2026-07-21--lumina-command-center-comparatif.md (§2.6, reco 4).

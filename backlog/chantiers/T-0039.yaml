@@ -1,27 +1,23 @@
 ---
 id: T-0039
-titre: "CRM par dérivation : stade et score relationnel déduits de l'historique, jamais saisis"
-capacite: "Cœur de métier — développement commercial / qualification & pipeline"
+titre: "Plafond de dette de décision sur la Zone-de-proposition (file de candidats à promouvoir)"
+capacite: "Socle d'exploitation — promotion & propagation / boucle de promotion"
 phase: 2
 type_action: contrat
-cran: valide   # nouveau contrat de capacité CRM — promotion gardien
+cran: notifie   # règle d'hygiène de file, réversible, interne — notifié
 produit:
-  - "(à construire) doctrine CRM : le stade d'un contact est DÉDUIT de l'historique d'interactions (dernier message/rendez-vous), un override manuel prime, le retour en auto restaure la dérivation"
-  - "(à construire) score relationnel dérivé : fraîcheur, dormance pondérée par l'enjeu (sponsor actif silencieux > dormant sans enjeu), Mendelow influence x intérêt — jamais saisi à la main"
-  - "(à construire) principe « absence de donnée = inconnu, jamais faible » ; une seule source de forecast (pas de seconde grille de probabilité contradictoire)"
+  - "(à construire) plafond configurable de candidats simultanés en attente de promotion ; au-delà, l'alimentation de la file se met en pause (« on ne crée pas de dette de décision »)"
+  - "(à construire) reprise automatique quand la file redescend sous le plafond"
 depend_de: []
 contrats_concernes:
-  - "contrats/socle/modele-donnees.md"
+  - "doctrine/doctrine.md"   # §7 boucle de promotion
 criteres_acceptation:
-  - "Aucun stade ni score n'est un champ saisi à la main : tout est dérivé de l'historique observé (override explicite excepté)"
-  - "L'absence d'interaction produit un état « inconnu / non contacté », jamais un jugement négatif"
-  - "Une seule source de probabilité de gain dans toute la firme (pas de double forecast)"
-rayon_impact: firme
+  - "Un plafond explicite borne le nombre de candidats en attente ; le dépasser met l'ingestion en pause, pas en échec"
+  - "La reprise est automatique sous le plafond, sans geste du gardien"
+rayon_impact: local
 statut: à_faire
 note: >
-  Pillage Lumina (src/lib/v2/contact-stage.ts, relationship-score.ts —
-  « la maladie chronique de tout CRM : les stages pourrissent parce que personne
-  ne les met à jour »). À intégrer à la conception des gestes guidés pipe
-  (branche CRM, priorité 3 de l'ordre de bataille) plutôt qu'en chantier isolé.
-  Les fonctions pures d'origine sont quasi transposables. Veille source :
-  docs/veille/2026-07-21--lumina-command-center-comparatif.md (§2.6, reco 4).
+  Pillage Lumina (docs/METHOD_GOVERNANCE.md §3, plafond 15 par défaut).
+  Protection directe du gardien mono-personne contre la dette d'approbation.
+  Veille source : docs/veille/2026-07-21--lumina-command-center-comparatif.md
+  (§2.5, reco 5).
