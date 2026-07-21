@@ -304,8 +304,12 @@ def test_tests_de_la_porte_aussi_larges(tmp_path):
 def test_rapports_scratch_exclus_pas_de_fausse_casse(tmp_path):
     root = str(tmp_path)
     # Un fichier canonique supprimé par le diff (n'existe pas sur le disque),
-    # passé comme modifié (une suppression est un changement).
-    supprime = "backlog/chantiers/T-0040.yaml"
+    # passé comme modifié (une suppression est un changement). On utilise l'id
+    # bidon conventionnel T-9999 (jamais un chantier réel, cf. test (b)) : ainsi
+    # cette chaîne de fixture ne désigne aucun fichier qu'une PR voisine pourrait
+    # supprimer, donc impact.py ne peut pas la lire comme une référence pendante
+    # (déblocage #245 — un vrai id ici piégeait la porte sur la PR qui le retire).
+    supprime = "backlog/chantiers/T-9999.yaml"
     # Le rapport scratch du 1er run, laissé à la racine, mentionne ce chemin.
     _ecrire(root, "impact.md",
             "# Avis impact\n- " + supprime + " (supprime)\nRISQUE: faible\nVERDICT: pass\n")
