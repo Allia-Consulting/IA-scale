@@ -60,6 +60,16 @@ N_CONSOMMATEURS_LARGE = 3   # au-delà : un fichier « mid » devient large
 CHEMINS_SENSIBLES_LARGE = (
     "outils/mcp-graph/server.py",
 )
+
+# PRÉFIXES de production sensibles : dossiers entiers dont TOUT diff est « large ».
+# La PORTE ELLE-MÊME en fait partie — un changement de la logique de risque de
+# l'agent-gardien ne peut jamais s'auto-approuver (fix de la régression T-0037 :
+# la PR #243 s'était auto-mergée parce que outils/agent-gardien/ était « faible »).
+# Doctrine : un agent ne peut structurellement pas approuver un changement de son
+# propre organe de décision. Testés AVANT toute heuristique de préfixe LOW/MID.
+PREFIXES_SENSIBLES_LARGE = (
+    "outils/agent-gardien/",
+)
 N_RAYON_LARGE = 3           # au-delà de N artefacts touchés : rayon large
 
 # Arbres de dépôt reconnus dans les chemins canoniques.
@@ -222,6 +232,8 @@ def _risque_fichier(chemin, consommateurs_transitifs, index):
     jamais être déclassé par une heuristique de préfixe (fix anomalie S38).
     """
     if chemin in CHEMINS_SENSIBLES_LARGE:
+        return "large"
+    if _sous(PREFIXES_SENSIBLES_LARGE, chemin):
         return "large"
     if _sous(SOCLE_PREFIXES, chemin):
         return "large"
