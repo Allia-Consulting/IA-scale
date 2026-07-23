@@ -7,20 +7,26 @@ import {
   opportunitesEnProposition,
   montantPropose,
   pipePondere,
+  projeterOpportunites,
   compterCandidatsEtape,
   formaterEuros,
   optionsEcriture,
   champsCreationOpportunite,
   champsChangementEtape,
+  champsChangementMontant,
   creerOpportunite,
   changerEtapeOpportunite,
+  changerMontantOpportunite,
   QUERY_RECRUTEMENT,
   Ecrivain,
+  ETAPE_QUALIFICATION,
   COL_ETAPE_CRM,
   COL_MONTANT_CRM,
   COL_STATUT_COMPTE,
   COL_ETAPE_CANDIDAT,
-  COL_NOM_OPPORTUNITE
+  COL_NOM_OPPORTUNITE,
+  COL_COMPTE,
+  COL_ECHEANCE
 } from './pipe-recrutement';
 
 describe('pipe commercial — pondération', () => {
@@ -124,12 +130,25 @@ describe('ecrireListe — en-têtes (optionsEcriture, source unique de vérité)
   });
 });
 
-describe('gestes pipe — creerOpportunite / changerEtapeOpportunite (prêts à brancher)', () => {
-  it('champsCreationOpportunite mappe les noms internes de colonnes', () => {
-    const corps = champsCreationOpportunite({ nom: 'O-009', montant: 5000, etape: 'Qualification' });
+describe('gestes pipe — creerOpportunite / changerEtapeOpportunite / changerMontantOpportunite', () => {
+  it('champsCreationOpportunite mappe noms internes + rattachement CompteId + échéance', () => {
+    const corps = champsCreationOpportunite({ nom: 'O-009', compteId: 7, montant: 5000, etape: 'Proposition', echeance: '2026-09-01' });
     expect(corps[COL_NOM_OPPORTUNITE]).toBe('O-009');
+    // Un lookup s'écrit par son champ id numérique `<NomInterne>Id`.
+    expect(corps[`${COL_COMPTE}Id`]).toBe(7);
     expect(corps[COL_MONTANT_CRM]).toBe(5000);
-    expect(corps[COL_ETAPE_CRM]).toBe('Qualification');
+    expect(corps[COL_ETAPE_CRM]).toBe('Proposition');
+    expect(corps[COL_ECHEANCE]).toBe('2026-09-01');
+    // Manques documentés (hors périmètre) : ni Title (O-NNN), ni Responsable, ni CodeMission.
+    expect(corps.Title).toBeUndefined();
+    expect(corps.Responsable).toBeUndefined();
+    expect(corps.CodeMission).toBeUndefined();
+  });
+
+  it('champsCreationOpportunite : étape par défaut Qualification, échéance omise si absente', () => {
+    const corps = champsCreationOpportunite({ nom: 'O-012', compteId: 3, montant: 100 });
+    expect(corps[COL_ETAPE_CRM]).toBe(ETAPE_QUALIFICATION);
+    expect(COL_ECHEANCE in corps).toBe(false);
   });
 
   it('champsChangementEtape ne touche que l’étape', () => {
@@ -138,18 +157,25 @@ describe('gestes pipe — creerOpportunite / changerEtapeOpportunite (prêts à 
     expect(Object.keys(corps)).toEqual([COL_ETAPE_CRM]);
   });
 
+  it('champsChangementMontant ne touche que le montant', () => {
+    const corps = champsChangementMontant(8000);
+    expect(corps[COL_MONTANT_CRM]).toBe(8000);
+    expect(Object.keys(corps)).toEqual([COL_MONTANT_CRM]);
+  });
+
   it('creerOpportunite délègue à l’Ecrivain sur la liste CRM, sans id (création)', async () => {
     const appels: Array<{ titre: string; champs: Record<string, unknown>; id?: number }> = [];
     const ecrire: Ecrivain = async (titre, champs, id) => {
       appels.push({ titre, champs, id });
       return { etat: 'ok' } as Ecriture;
     };
-    const r = await creerOpportunite(ecrire, { nom: 'O-010', montant: 12000, etape: 'Proposition' });
+    const r = await creerOpportunite(ecrire, { nom: 'O-010', compteId: 5, montant: 12000, etape: 'Proposition' });
     expect(r.etat).toBe('ok');
     expect(appels).toHaveLength(1);
     expect(appels[0].titre).toBe('CRM');
     expect(appels[0].id).toBeUndefined();
     expect(appels[0].champs[COL_NOM_OPPORTUNITE]).toBe('O-010');
+    expect(appels[0].champs[`${COL_COMPTE}Id`]).toBe(5);
   });
 
   it('changerEtapeOpportunite délègue avec l’id (mise à jour)', async () => {
@@ -164,9 +190,51 @@ describe('gestes pipe — creerOpportunite / changerEtapeOpportunite (prêts à 
     expect(appels[0].champs[COL_ETAPE_CRM]).toBe('Gagnée');
   });
 
+  it('changerMontantOpportunite délègue avec l’id + le seul champ Montant', async () => {
+    const appels: Array<{ titre: string; champs: Record<string, unknown>; id?: number }> = [];
+    const ecrire: Ecrivain = async (titre, champs, id) => {
+      appels.push({ titre, champs, id });
+      return { etat: 'ok' } as Ecriture;
+    };
+    await changerMontantOpportunite(ecrire, 7, 9000);
+    expect(appels[0].titre).toBe('CRM');
+    expect(appels[0].id).toBe(7);
+    expect(appels[0].champs[COL_MONTANT_CRM]).toBe(9000);
+    expect(Object.keys(appels[0].champs)).toEqual([COL_MONTANT_CRM]);
+  });
+
   it('propage un refus d’écriture (403 → refuse) sans lever', async () => {
     const ecrire: Ecrivain = async () => ({ etat: 'refuse' } as Ecriture);
-    const r = await creerOpportunite(ecrire, { nom: 'O-011', montant: 1, etape: 'Qualification' });
+    const r = await creerOpportunite(ecrire, { nom: 'O-011', compteId: 1, montant: 1, etape: 'Qualification' });
     expect(r.etat).toBe('refuse');
+  });
+});
+
+describe('projection OpportuniteLigne', () => {
+  it('mappe Id + colonnes, avec compte rattaché (expand Compte/Title)', () => {
+    const lignes = [
+      { Id: 3, NomOpportunite: 'O-003', Etape: 'Proposition', Montant: 4000, Compte: { Title: 'CPT-002' } }
+    ];
+    const [o] = projeterOpportunites(lignes);
+    expect(o.id).toBe(3);
+    expect(o.nom).toBe('O-003');
+    expect(o.etape).toBe('Proposition');
+    expect(o.montant).toBe(4000);
+    expect(o.compte).toBe('CPT-002');
+  });
+
+  it('tolère les champs absents (id 0, nom de repli, étape vide, montant 0, compte indéfini)', () => {
+    const [o] = projeterOpportunites([{}]);
+    expect(o.id).toBe(0);
+    expect(o.nom).toBe('(sans nom)');
+    expect(o.etape).toBe('');
+    expect(o.montant).toBe(0);
+    expect(o.compte).toBeUndefined();
+  });
+
+  it('coerce un Montant string et lit un Id string (robustesse SharePoint)', () => {
+    const [o] = projeterOpportunites([{ ID: '11', Montant: '2500' }]);
+    expect(o.id).toBe(11);
+    expect(o.montant).toBe(2500);
   });
 });
