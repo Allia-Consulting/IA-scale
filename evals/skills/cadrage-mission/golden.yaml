@@ -26,3 +26,13 @@ cas:
     description: "Le staffing proposé reste une proposition, jamais une décision de l'agent."
     contient:
       - "Le staffing proposé n'est pas le staffing décidé"
+  - id: ancre-06
+    type: invariant
+    description: "Couture fermée : l'opportunité Gagnée (Liste CRM) est une entrée reconnue du cadrage."
+    contient:
+      - "Opportunité Gagnée"
+  - id: ancre-07
+    type: invariant
+    description: "La réécriture de CodeMission dans CRM est une promotion GARDIEN, jamais une écriture agent."
+    contient:
+      - "hors écriture agent"
