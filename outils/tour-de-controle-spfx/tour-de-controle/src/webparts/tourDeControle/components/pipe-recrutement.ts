@@ -26,6 +26,7 @@ export const COL_ECHEANCE = 'Echeance';          // Liste « CRM » — date (si
 export const COL_RESPONSABLE = 'Responsable';    // Liste « CRM » — personne (hors périmètre du formulaire minimal)
 export const COL_CODEMISSION = 'CodeMission';    // Liste « CRM » — renseigné à la bascule « Gagnée » (hors périmètre)
 export const COL_STATUT_COMPTE = 'Statut';       // Liste « Comptes » — choix unique
+export const COL_NOM_COMPTE = 'NomCompte';       // Liste « Comptes » — nom LISIBLE du client (≠ Title/code)
 export const COL_ETAPE_CANDIDAT = 'Etape';       // Liste « Candidats » — choix unique
 
 /** Domicile des opportunités (couture Missions par CodeMission à la bascule Gagnée). */
@@ -147,12 +148,17 @@ function idLigne(l: Ligne): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Libellé du compte rattaché, lu depuis l'expansion du lookup (`Compte/Title`). */
+/**
+ * Nom LISIBLE du client rattaché — la colonne `NomCompte` du compte (« Arabelle Solutions »),
+ * lue depuis l'expansion du lookup. Le `Title` (code « CPT-001 ») N'EST PAS un repli : l'aperçu
+ * de bascule Gagnée exige le nom lisible (modele-donnees.md §2 bis). À défaut de `NomCompte`, on
+ * renvoie `undefined` (fallback sobre « · » côté table, refus d'aperçu) — jamais le code en douce.
+ */
 function compteRattache(l: Ligne): string | undefined {
   const c = l[COL_COMPTE];
-  if (c && typeof c === 'object' && 'Title' in c) {
-    const t = (c as { Title?: unknown }).Title;
-    return typeof t === 'string' && t ? t : undefined;
+  if (c && typeof c === 'object') {
+    const nom = (c as { NomCompte?: unknown }).NomCompte;
+    if (typeof nom === 'string' && nom) { return nom; }
   }
   return undefined;
 }
