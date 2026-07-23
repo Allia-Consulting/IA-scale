@@ -172,6 +172,59 @@ export function projeterOpportunites(lignes: ReadonlyArray<Ligne>): ReadonlyArra
 }
 
 // ---------------------------------------------------------------------------
+// Apercu du nom d'espace de mission (bascule Gagnee) — MIROIR EXACT de
+// `_composer_nom_espace` (outils/mcp-graph/server.py) : memes validations, meme ordre.
+// A 3 SEGMENTS « AAAA - Client - Nom de la mission » — le 4e segment (code mission)
+// N'EXISTE PAS a la bascule : le code est attribue A L'OUVERTURE (modele-donnees.md §2 bis,
+// geste gardien / T-0024), jamais par le cockpit. Un apercu qui divergerait mentirait.
+// ---------------------------------------------------------------------------
+
+/** Caracteres interdits dans une composante (miroir server.py `_CARACTERES_INTERDITS_ESPACE`). */
+const CARACTERES_INTERDITS_ESPACE = new Set('"*:<>?/\\|#%,');
+
+/** Resultat d'apercu : le nom compose, ou une raison de refus (pour un refus sobre AVANT ecriture). */
+export type ApercuNom =
+  | { readonly ok: true; readonly nom: string }
+  | { readonly ok: false; readonly raison: string };
+
+/** Valide une composante (client / nom de mission) comme le serveur ; renvoie sa forme normalisee. */
+function validerComposante(valeur: string, etiquette: string): { ok: true; v: string } | { ok: false; raison: string } {
+  // Reduction des espaces multiples + strip des extremites (miroir de `" ".join(valeur.split())`).
+  const v = (typeof valeur === 'string' ? valeur : '').replace(/\s+/g, ' ').trim();
+  if (!v) { return { ok: false, raison: `${etiquette} manquant` }; }
+  if (v.length > 60) { return { ok: false, raison: `${etiquette} trop long (60 caracteres maximum)` }; }
+  for (const c of v) {
+    if (CARACTERES_INTERDITS_ESPACE.has(c) || c.charCodeAt(0) < 32) {
+      return { ok: false, raison: `${etiquette} : caractere interdit` };
+    }
+  }
+  if (v.indexOf('..') >= 0) { return { ok: false, raison: `${etiquette} : la sequence « .. » est interdite` }; }
+  if (v.startsWith('.') || v.endsWith('.')) { return { ok: false, raison: `${etiquette} : pas de point en tete ni en fin` }; }
+  return { ok: true, v };
+}
+
+/**
+ * Apercu du nom d'espace « AAAA - Client - Nom de la mission » (3 SEGMENTS), MIROIR EXACT
+ * de `_composer_nom_espace` (server.py). Le 4e segment (code mission) n'existe PAS ici : il
+ * est attribue a l'ouverture (§2 bis, geste gardien / T-0024). Renvoie `{ok:false, raison}`
+ * sur composante invalide — jamais un faux nom affiche.
+ */
+export function apercuNomMission(annee: string, client: string, nomOpportunite: string): ApercuNom {
+  if (typeof annee !== 'string' || !/^\d{4}$/.test(annee)) {
+    return { ok: false, raison: 'annee invalide (4 chiffres attendus)' };
+  }
+  const a = Number(annee);
+  if (a < 2020 || a > 2100) {
+    return { ok: false, raison: 'annee hors bornes (2020..2100)' };
+  }
+  const c = validerComposante(client, 'client');
+  if (!c.ok) { return { ok: false, raison: c.raison }; }
+  const n = validerComposante(nomOpportunite, 'nom de la mission');
+  if (!n.ok) { return { ok: false, raison: n.raison }; }
+  return { ok: true, nom: `${annee} - ${c.v} - ${n.v}` };
+}
+
+// ---------------------------------------------------------------------------
 // Recrutement (tour-de-controle.md v2.0 §3 bandeau 3, option A RGPD).
 // ---------------------------------------------------------------------------
 

@@ -8,6 +8,7 @@ import {
   montantPropose,
   pipePondere,
   projeterOpportunites,
+  apercuNomMission,
   compterCandidatsEtape,
   formaterEuros,
   optionsEcriture,
@@ -236,5 +237,51 @@ describe('projection OpportuniteLigne', () => {
     const [o] = projeterOpportunites([{ ID: '11', Montant: '2500' }]);
     expect(o.id).toBe(11);
     expect(o.montant).toBe(2500);
+  });
+});
+
+describe('apercuNomMission — miroir 3 segments de _composer_nom_espace', () => {
+  it('cas nominal → « AAAA - Client - Nom » (3 segments, sans code)', () => {
+    const r = apercuNomMission('2026', 'Arabelle Solutions', 'Leader M365');
+    expect(r).toEqual({ ok: true, nom: '2026 - Arabelle Solutions - Leader M365' });
+  });
+
+  it('accents et espaces internes autorisés', () => {
+    const r = apercuNomMission('2026', 'Éléa Conseil', 'Revue à mi-parcours');
+    expect(r).toEqual({ ok: true, nom: '2026 - Éléa Conseil - Revue à mi-parcours' });
+  });
+
+  it('réduit les espaces multiples et strippe les extrémités', () => {
+    const r = apercuNomMission('2026', '  Arabelle   Solutions  ', ' Leader   M365 ');
+    expect(r).toEqual({ ok: true, nom: '2026 - Arabelle Solutions - Leader M365' });
+  });
+
+  it('caractère interdit dans une composante → refus (ok:false, raison)', () => {
+    const r = apercuNomMission('2026', 'Arabelle/Solutions', 'Leader M365');
+    expect(r.ok).toBe(false);
+    if (!r.ok) { expect(r.raison).toMatch(/interdit/); }
+  });
+
+  it('composante vide (client absent) → refus', () => {
+    const r = apercuNomMission('2026', '   ', 'Leader M365');
+    expect(r.ok).toBe(false);
+  });
+
+  it('composante > 60 caractères → refus (cap 60)', () => {
+    const r = apercuNomMission('2026', 'A'.repeat(61), 'Leader M365');
+    expect(r.ok).toBe(false);
+  });
+
+  it('séquence « .. » et point en tête/fin → refus', () => {
+    expect(apercuNomMission('2026', 'Arabelle', 'a..b').ok).toBe(false);
+    expect(apercuNomMission('2026', 'Arabelle', '.leader').ok).toBe(false);
+    expect(apercuNomMission('2026', 'Arabelle', 'leader.').ok).toBe(false);
+  });
+
+  it('année invalide (non 4 chiffres) ou hors bornes [2020..2100] → refus', () => {
+    expect(apercuNomMission('20260', 'Arabelle', 'Leader').ok).toBe(false);
+    expect(apercuNomMission('abcd', 'Arabelle', 'Leader').ok).toBe(false);
+    expect(apercuNomMission('1999', 'Arabelle', 'Leader').ok).toBe(false);
+    expect(apercuNomMission('2101', 'Arabelle', 'Leader').ok).toBe(false);
   });
 });

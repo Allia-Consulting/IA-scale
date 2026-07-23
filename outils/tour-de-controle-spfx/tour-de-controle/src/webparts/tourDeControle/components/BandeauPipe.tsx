@@ -3,7 +3,7 @@ import styles from './TourDeControle.module.scss';
 import pipe from './BandeauPipe.module.scss';
 import type { SPHttpClient } from '@microsoft/sp-http';
 import type { Compteur, DetailItem, CompteOption, Ecriture } from './types';
-import { ETAPES_CRM, ETAPE_QUALIFICATION, ETAPE_GAGNEE, formaterEuros, type OpportuniteLigne } from './pipe-recrutement';
+import { ETAPES_CRM, ETAPE_QUALIFICATION, ETAPE_GAGNEE, formaterEuros, apercuNomMission, type OpportuniteLigne } from './pipe-recrutement';
 import { creerOpportunite, changerEtapeOpportunite, changerMontantOpportunite } from './listes-reelles';
 
 const { useState, useCallback } = React;
@@ -69,6 +69,12 @@ export default function BandeauPipe(props: IBandeauPipeProps): React.ReactElemen
   // Brouillons de montant par id d'opportunité (édition en ligne, non encore enregistrée).
   const [montants, setMontants] = useState<Readonly<Record<number, string>>>({});
 
+  // Bascule « Gagnée » : geste PROPOSANT sur confirmation (§3) — l'opportunité en attente
+  // de confirmation (aucune écriture tant qu'elle est posée). Année courante côté client
+  // pour l'aperçu du nom (le serveur borne [2020..2100]).
+  const [pendingGagnee, setPendingGagnee] = useState<OpportuniteLigne | null>(null);
+  const anneeCourante = String(new Date().getFullYear());
+
   // Formulaire « nouvelle opportunité ».
   const [nom, setNom] = useState('');
   const [compteId, setCompteId] = useState(0);
@@ -99,7 +105,18 @@ export default function BandeauPipe(props: IBandeauPipeProps): React.ReactElemen
 
   const enregistrerEtape = useCallback((o: OpportuniteLigne, etape: string): void => {
     if (etape === o.etape) { return; }
+    // « Gagnée » : geste PROPOSANT sur confirmation (tour-de-controle.md §3) — on ouvre une
+    // confirmation, on N'ÉCRIT PAS directement. Les autres étapes restent en écriture directe.
+    if (etape === ETAPE_GAGNEE) { setPendingGagnee(o); return; }
     appliquer(`row-${o.id}`, () => changerEtapeOpportunite(spHttpClient, dataSiteUrl, o.id, etape)).catch(() => undefined);
+  }, [appliquer, spHttpClient, dataSiteUrl]);
+
+  // Confirmation de la bascule « Gagnée » : écrit SEULEMENT l'étape (la source), sous SSO.
+  // N'ALLOUE PAS le code mission (attribué à l'ouverture, geste gardien / T-0024) et NE CRÉE
+  // PAS l'espace (dérivation agent-mission). Relecture via appliquer (anti-faux-vert).
+  const confirmerGagnee = useCallback(async (o: OpportuniteLigne): Promise<void> => {
+    await appliquer(`row-${o.id}`, () => changerEtapeOpportunite(spHttpClient, dataSiteUrl, o.id, ETAPE_GAGNEE));
+    setPendingGagnee(null);
   }, [appliquer, spHttpClient, dataSiteUrl]);
 
   const enregistrerMontant = useCallback(async (o: OpportuniteLigne): Promise<void> => {
@@ -183,8 +200,11 @@ export default function BandeauPipe(props: IBandeauPipeProps): React.ReactElemen
               const brut = montants[o.id];
               const valeurMontant = brut !== undefined ? brut : String(o.montant);
               const montantChange = brut !== undefined && Number.isFinite(Number(brut)) && Number(brut) !== o.montant;
+              const enConfirmation = pendingGagnee?.id === o.id;
+              const apercu = enConfirmation ? apercuNomMission(anneeCourante, o.compte ?? '', o.nom) : null;
               return (
-                <div key={o.id} className={pipe.oppRow}>
+                <React.Fragment key={o.id}>
+                <div className={pipe.oppRow}>
                   <span className={pipe.oppNom}>
                     <span className={pipe.oppTitre}>{o.nom}</span>
                     <span className={pipe.oppCompte}>{o.compte ? o.compte : '·'}</span>
@@ -221,13 +241,63 @@ export default function BandeauPipe(props: IBandeauPipeProps): React.ReactElemen
                   ) : null}
                   {messageRetour(slot)}
                 </div>
+                {enConfirmation ? (
+                  <div className={pipe.confirm}>
+                    {apercu && apercu.ok ? (
+                      <>
+                        <p className={pipe.confirmText}>
+                          Passer « {o.nom} » en « {ETAPE_GAGNEE} » ouvrira la mission{' '}
+                          <span className={pipe.confirmNom}>{apercu.nom}</span>.
+                        </p>
+                        <p className={pipe.confirmMention}>
+                          Le code mission sera attribué à l’ouverture ; l’espace est créé par l’agent-mission.
+                        </p>
+                        <div className={pipe.confirmActions}>
+                          <button
+                            type="button"
+                            className={pipe.btn}
+                            disabled={busy}
+                            onClick={() => { confirmerGagnee(o).catch(() => undefined); }}
+                          >
+                            Confirmer
+                          </button>
+                          <button
+                            type="button"
+                            className={pipe.btnSecondaire}
+                            disabled={busy}
+                            onClick={() => setPendingGagnee(null)}
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className={pipe.refus}>
+                          Nom de mission invalide : {apercu ? apercu.raison : '—'}. Aucune écriture.
+                        </p>
+                        <div className={pipe.confirmActions}>
+                          <button
+                            type="button"
+                            className={pipe.btnSecondaire}
+                            onClick={() => setPendingGagnee(null)}
+                          >
+                            Fermer
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+                </React.Fragment>
               );
             })}
           </div>
         )}
         <p className={pipe.note}>
-          Le passage en « {ETAPE_GAGNEE} » enregistre l’étape ; la création de la mission et de
-          son espace (cascade) est à venir.
+          Le passage en « {ETAPE_GAGNEE} » propose l’ouverture de la mission et demande confirmation,
+          puis enregistre l’étape. Le code mission est attribué à l’ouverture et l’espace est créé
+          par l’agent-mission (non automatique depuis le cockpit).
         </p>
       </div>
 
