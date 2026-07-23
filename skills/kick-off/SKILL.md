@@ -2,8 +2,8 @@
 # Kick-off de mission — Skill
 
 > **id** : `kick-off`
-> **Version** : 1.1 — *promu*. **Nature** : skill.
-> **Changelog** : v1.1 — promu, 2 juillet 2026 : corps aligné post-promotion (§8.3 prérequis promotion marqué levé, §9 statut candidat → promu). v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0022`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0022`, deuxième marche de la tranche verticale métier, plan §6 T-1.2). Décrit le skill qui, du BRIEF VALIDÉ (produit par `cadrage-mission`), génère la PROPOSITION et le SUPPORT DE KICK-OFF en consommant le design system par référence, journalise en Zone-de-proposition, notifie l'équipe (notifié) ; l'ENVOI au client reste une porte humaine (validé).
+> **Version** : 1.2 — *candidat*. **Nature** : skill.
+> **Changelog** : v1.2 — candidat, 23 juillet 2026 (T-0035, unification du « code mission ») : §2 — note que `<code mission>` (titres `BRIEF-`/`KICKOFF-`) est l'**identifiant ENTIER** de la mission défini en `modele-donnees.md` §2 bis. Aucun autre changement. v1.1 — promu, 2 juillet 2026 : corps aligné post-promotion (§8.3 prérequis promotion marqué levé, §9 statut candidat → promu). v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0022`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0022`, deuxième marche de la tranche verticale métier, plan §6 T-1.2). Décrit le skill qui, du BRIEF VALIDÉ (produit par `cadrage-mission`), génère la PROPOSITION et le SUPPORT DE KICK-OFF en consommant le design system par référence, journalise en Zone-de-proposition, notifie l'équipe (notifié) ; l'ENVOI au client reste une porte humaine (validé).
 > **Domicile** : `skills/kick-off/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `skills/cadrage-mission/SKILL.md` (v1.1 promu — produit le brief d'entrée), `contrats/socle/design-system.md` (tokens, composants, voix §7 — consommé par référence), `contrats/socle/anonymisation.md` (§1 — matière d'un client tiers dans un livrable client = porte automatique), `contrats/socle/table-des-crans.yaml` (`ecrire_fait_derive_zone_proposition` = **auto** ; `notifier_equipe` = **notifié** ; `envoyer_livrable_client` = **validé**, grade habilité — organisation.md §4 bis ; `reutiliser_matiere_interne` = **auto**), `contrats/socle/modele-donnees.md` (§2 bis — Bibliothèques Propositions/Livrables/Capitalisation ; §3 — Zone-de-proposition), `backlog/chantiers/T-0022.yaml`, `backlog/chantiers/T-0024.yaml` (outillage de dépôt à cible figée), `CLAUDE.md`.
 
@@ -21,6 +21,8 @@ Du **brief validé** (« le brief suffit », skill `cadrage-mission`), produire 
 | Compte / Client | Liste « Comptes » | adressage de la proposition |
 
 > **Garde-fou d'entrée — brief requis.** Ne générer QUE si un `BRIEF-<code mission>` validé existe en Zone-de-proposition. Sans brief : refus explicite et renvoi vers `cadrage-mission`. Le kick-off ne cadre pas ; il exécute un cadrage validé.
+
+> **Code mission = entier.** `<code mission>` dans les titres `BRIEF-<code mission>` / `KICKOFF-<code mission>-<AAAAMMJJ>` est l'**identifiant ENTIER** de la mission défini en `modele-donnees.md` §2 bis (même valeur que le 4e segment du nom d'espace « AAAA - Client - Nom - CodeMission »).
 
 ## 3. Sorties (générées à la volée — aucun binaire versionné)
 
