@@ -44,6 +44,7 @@ import {
   COL_MONTANT_CRM,
   COL_NOM_OPPORTUNITE,
   COL_COMPTE,
+  COL_NOM_COMPTE,
   QUERY_RECRUTEMENT,
   ETAPE_CANDIDAT_E1,
   ETAPE_CANDIDAT_E2,
@@ -214,7 +215,7 @@ async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Pro
     // par l'Id numérique) ; Statut reste lu pour le compteur « Comptes actifs ».
     lireListe(sp, dataSiteUrl, 'Comptes', `$select=${COL_STATUT_COMPTE},Id,Title,NomCompte&$top=1000`),
     // CRM : Id (clé des mises à jour) + rattachement Compte via $expand pour la table éditable.
-    lireListe(sp, dataSiteUrl, 'CRM', `$select=Id,${COL_NOM_OPPORTUNITE},${COL_ETAPE_CRM},${COL_MONTANT_CRM},${COL_COMPTE}/Title&$expand=${COL_COMPTE}&$top=2000`)
+    lireListe(sp, dataSiteUrl, 'CRM', `$select=Id,${COL_NOM_OPPORTUNITE},${COL_ETAPE_CRM},${COL_MONTANT_CRM},${COL_COMPTE}/Title,${COL_COMPTE}/${COL_NOM_COMPTE}&$expand=${COL_COMPTE}&$top=2000`)
   ]);
 
   // Comptes actifs (Statut = Client).

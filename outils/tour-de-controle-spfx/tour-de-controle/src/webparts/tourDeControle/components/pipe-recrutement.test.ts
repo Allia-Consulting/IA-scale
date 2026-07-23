@@ -212,16 +212,22 @@ describe('gestes pipe — creerOpportunite / changerEtapeOpportunite / changerMo
 });
 
 describe('projection OpportuniteLigne', () => {
-  it('mappe Id + colonnes, avec compte rattaché (expand Compte/Title)', () => {
+  it('mappe Id + colonnes, avec le NOM LISIBLE du compte (expand Compte/NomCompte)', () => {
     const lignes = [
-      { Id: 3, NomOpportunite: 'O-003', Etape: 'Proposition', Montant: 4000, Compte: { Title: 'CPT-002' } }
+      { Id: 3, NomOpportunite: 'O-003', Etape: 'Proposition', Montant: 4000, Compte: { Title: 'CPT-002', NomCompte: 'Arabelle Solutions' } }
     ];
     const [o] = projeterOpportunites(lignes);
     expect(o.id).toBe(3);
     expect(o.nom).toBe('O-003');
     expect(o.etape).toBe('Proposition');
     expect(o.montant).toBe(4000);
-    expect(o.compte).toBe('CPT-002');
+    // Nom LISIBLE (« Arabelle Solutions »), jamais le code Title (« CPT-002 »).
+    expect(o.compte).toBe('Arabelle Solutions');
+  });
+
+  it('compte = undefined si seul le Title (code CPT-xxx) est présent — pas de repli silencieux', () => {
+    const [o] = projeterOpportunites([{ Compte: { Title: 'CPT-009' } }]);
+    expect(o.compte).toBeUndefined();
   });
 
   it('tolère les champs absents (id 0, nom de repli, étape vide, montant 0, compte indéfini)', () => {
