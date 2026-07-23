@@ -12,7 +12,7 @@
 // option A). La lecture ne sélectionne que la colonne `Etape` (cf. QUERY_RECRUTEMENT).
 
 import { SPHttpClient, SPHttpClientResponse, MSGraphClientFactory, MSGraphClientV3 } from '@microsoft/sp-http';
-import type { Zone, Compteur, DetailItem, Ecriture } from './types';
+import type { Zone, ZonePipe, CompteOption, Compteur, DetailItem, Ecriture } from './types';
 import {
   decouvrirGabarits,
   fusionnerContenus,
@@ -38,10 +38,12 @@ import {
   optionsEcriture,
   creerOpportunite as creerOpportunitePure,
   changerEtapeOpportunite as changerEtapeOpportunitePure,
+  changerMontantOpportunite as changerMontantOpportunitePure,
   COL_STATUT_COMPTE,
   COL_ETAPE_CRM,
   COL_MONTANT_CRM,
   COL_NOM_OPPORTUNITE,
+  COL_COMPTE,
   QUERY_RECRUTEMENT,
   ETAPE_CANDIDAT_E1,
   ETAPE_CANDIDAT_E2,
@@ -53,6 +55,7 @@ import {
   montantOpportunite,
   nomOpportunite,
   pipePondere,
+  projeterOpportunites,
   compterCandidatsEtape,
   formaterEuros
 } from './pipe-recrutement';
@@ -60,7 +63,7 @@ import {
 export interface CockpitData {
   /** T-0020-d — les 3 KPI d'organisation (mesure de valeur, dernier maillon Phase 2). */
   readonly indicateurs: Zone;
-  readonly pipeCommercial: Zone;
+  readonly pipeCommercial: ZonePipe;
   readonly recrutement: Zone;
   /** Cockpit v2 — présence/absence des sources économiques (gabarits actifs + référentiel). */
   readonly gabarits: EtatGabarits;
@@ -156,15 +159,21 @@ function ecrivainPour(sp: SPHttpClient, dataSiteUrl: string): Ecrivain {
 }
 
 /**
- * Gestes d'écriture guidée du bandeau pipe — PRÊTS À BRANCHER (le câblage UI reste
- * hors de cette PR : l'ossature de rendu n'expose pas encore de formulaire). La logique
- * pure (payloads + délégation) est dans pipe-recrutement.ts et unit-testée ; ces
- * enveloppes ne font que fournir l'Ecrivain lié au contexte SPFx.
+ * Gestes d'écriture guidée du bandeau pipe — BRANCHÉS par BandeauPipe.tsx (table éditable
+ * + formulaire « nouvelle opportunité »). La logique pure (payloads + délégation) est dans
+ * pipe-recrutement.ts et unit-testée ; ces enveloppes ne font que fournir l'Ecrivain lié
+ * au contexte SPFx (SSO utilisateur, aucune élévation, digest injecté automatiquement).
  */
 export function creerOpportunite(
   sp: SPHttpClient,
   dataSiteUrl: string,
-  params: { readonly nom: string; readonly montant: number; readonly etape: string }
+  params: {
+    readonly nom: string;
+    readonly compteId: number;
+    readonly montant: number;
+    readonly etape?: string;
+    readonly echeance?: string;
+  }
 ): Promise<Ecriture> {
   return creerOpportunitePure(ecrivainPour(sp, dataSiteUrl), params);
 }
@@ -176,6 +185,15 @@ export function changerEtapeOpportunite(
   etape: string
 ): Promise<Ecriture> {
   return changerEtapeOpportunitePure(ecrivainPour(sp, dataSiteUrl), id, etape);
+}
+
+export function changerMontantOpportunite(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  id: number,
+  montant: number
+): Promise<Ecriture> {
+  return changerMontantOpportunitePure(ecrivainPour(sp, dataSiteUrl), id, montant);
 }
 
 /** Compteur « — » sobre pour une source non lisible (non câblé / indisponible). */
@@ -190,10 +208,13 @@ function compteurAbsent(id: string, libelle: string, etat: 'non_cable' | 'indisp
  * Comptes actifs · Propositions en cours · Montant proposé · Pipe pondéré (60/15 figé).
  * Chaque source échoue indépendamment (fail-visible ; jamais de constante de démo).
  */
-async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
+async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Promise<ZonePipe> {
   const [comptes, crm] = await Promise.all([
-    lireListe(sp, dataSiteUrl, 'Comptes', `$select=${COL_STATUT_COMPTE},Id&$top=1000`),
-    lireListe(sp, dataSiteUrl, 'CRM', `$select=${COL_NOM_OPPORTUNITE},${COL_ETAPE_CRM},${COL_MONTANT_CRM}&$top=2000`)
+    // Comptes : Id + Title + NomCompte alimentent le sélecteur du formulaire (le lookup s'écrit
+    // par l'Id numérique) ; Statut reste lu pour le compteur « Comptes actifs ».
+    lireListe(sp, dataSiteUrl, 'Comptes', `$select=${COL_STATUT_COMPTE},Id,Title,NomCompte&$top=1000`),
+    // CRM : Id (clé des mises à jour) + rattachement Compte via $expand pour la table éditable.
+    lireListe(sp, dataSiteUrl, 'CRM', `$select=Id,${COL_NOM_OPPORTUNITE},${COL_ETAPE_CRM},${COL_MONTANT_CRM},${COL_COMPTE}/Title&$expand=${COL_COMPTE}&$top=2000`)
   ]);
 
   // Comptes actifs (Statut = Client).
@@ -245,7 +266,21 @@ async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Pro
     };
   }
 
-  return { compteurs: [cComptes, cProp, cMontant, cPondere] };
+  // Lignes d'opportunités projetées (table éditable) + comptes sélectionnables (formulaire).
+  // Source vide/illisible → tableaux vides (voir → creuser → agir dégrade en « rien à éditer »).
+  const opportunites = crm.etat === 'ok' ? projeterOpportunites(crm.valeurs) : [];
+  const comptesOptions: ReadonlyArray<CompteOption> = comptes.etat === 'ok'
+    ? comptes.valeurs
+        .map(c => ({
+          id: Number((c.Id ?? c.ID) ?? 0) || 0,
+          libelle: (typeof c.NomCompte === 'string' && c.NomCompte)
+            ? c.NomCompte
+            : (typeof c.Title === 'string' && c.Title) ? c.Title : '(compte)'
+        }))
+        .filter(o => o.id > 0)
+    : [];
+
+  return { compteurs: [cComptes, cProp, cMontant, cPondere], opportunites, comptes: comptesOptions };
 }
 
 /**

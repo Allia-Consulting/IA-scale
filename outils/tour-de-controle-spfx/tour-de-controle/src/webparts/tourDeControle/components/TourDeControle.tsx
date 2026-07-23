@@ -8,6 +8,7 @@ import BandeauStaffing from './BandeauStaffing';
 import BandeauRentabilite from './BandeauRentabilite';
 import BandeauFactures from './BandeauFactures';
 import BandeauFraicheur from './BandeauFraicheur';
+import BandeauPipe from './BandeauPipe';
 
 const { useState, useCallback, useEffect, useMemo } = React;
 
@@ -52,6 +53,17 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
       .then(d => { if (vivant) { setData(d); } })
       .catch(() => { /* fail-visible : data reste null → zones en « lecture indisponible » */ });
     return () => { vivant = false; };
+  }, [spHttpClient, dataSiteUrl, cfgGabarits, msGraphClientFactory]);
+
+  // Relecture après une écriture guidée (onMutation de BandeauPipe) : relance chargerCockpit
+  // et ne résout qu'une fois l'état persisté relu — c'est ce qui permet à BandeauPipe de
+  // n'annoncer « enregistré » qu'APRÈS relecture (anti-faux-vert). Fail-visible : sur échec,
+  // l'état reste inchangé (les bandeaux gardent la dernière lecture, jamais d'invention).
+  const recharger = useCallback(async (): Promise<void> => {
+    try {
+      const d = await chargerCockpit(spHttpClient, dataSiteUrl, cfgGabarits, msGraphClientFactory);
+      setData(d);
+    } catch { /* fail-visible : data inchangé */ }
   }, [spHttpClient, dataSiteUrl, cfgGabarits, msGraphClientFactory]);
 
   const basculer = useCallback((id: string): void => {
@@ -169,8 +181,16 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
             <p className={styles.zoneSub}>Comptes actifs, propositions, pipe pondéré</p>
           </div>
         </div>
-        {data ? renderCompteurs(data.pipeCommercial.compteurs) : chargement}
-        {actionInerte('Nouvelle opportunité')}
+        {data ? (
+          <BandeauPipe
+            spHttpClient={spHttpClient}
+            dataSiteUrl={dataSiteUrl}
+            compteurs={data.pipeCommercial.compteurs}
+            opportunites={data.pipeCommercial.opportunites}
+            comptes={data.pipeCommercial.comptes}
+            onMutation={recharger}
+          />
+        ) : chargement}
       </div>
 
       {/* 3 — Recrutement (agrégats par étape uniquement — page tenant-wide, RGPD) */}

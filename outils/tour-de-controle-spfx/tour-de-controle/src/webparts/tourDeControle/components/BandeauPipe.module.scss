@@ -1,0 +1,182 @@
+@import 'design-tokens';
+
+/* Bandeau 2 — Pipe commercial : table éditable + « nouvelle opportunité ».
+   Sobriété du design system : bordures fines, aucun code couleur d'alerte, l'ambre reste
+   un SIGNAL rare (refus de droits), jamais un décor. « · » sur absence de donnée. */
+
+.section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--color-stone-border);
+}
+
+.sectionTitre {
+  font-family: var(--font-structure);
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+  color: var(--color-ink);
+  margin: 0 0 8px;
+}
+
+.videText {
+  font-size: var(--text-body-sm);
+  color: var(--color-stone-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.note {
+  font-size: var(--text-label);
+  color: var(--color-stone-muted);
+  font-style: italic;
+  margin: 6px 0 0;
+}
+
+/* ---- Table des opportunités (édition en ligne) ---- */
+.oppRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: var(--text-body-sm);
+  border-bottom: 0.5px solid var(--color-stone-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.oppNom {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+.oppTitre {
+  font-family: var(--font-structure);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.oppCompte {
+  font-size: var(--text-label);
+  color: var(--color-stone-muted);
+}
+
+.champ {
+  font-family: var(--font-body);
+  font-size: var(--text-body-sm);
+  color: var(--color-ink);
+  background: #ffffff;
+  border: 0.5px solid var(--color-stone-border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-blue-bright);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    background: var(--color-ivory);
+    color: var(--color-stone-muted);
+    cursor: not-allowed;
+  }
+}
+
+.select {
+  min-width: 128px;
+}
+
+.montant {
+  width: 108px;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.euro {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  color: var(--color-stone-muted);
+}
+
+.btn {
+  font-family: var(--font-structure);
+  font-size: var(--text-label);
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-blue-wash);
+  border: 0.5px solid var(--color-blue-light-border);
+  color: var(--color-primary);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-blue-light-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-blue-bright);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Messages d'écriture — jamais bloquants, jamais de faux-vert (posés après relecture). */
+.msg {
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+.msgOk {
+  color: var(--color-stone-text);
+}
+
+.msgRefuse,
+.msgIndispo {
+  font-family: var(--font-mono);
+  color: var(--color-amber-deep);
+}
+
+/* ---- Formulaire « nouvelle opportunité » ---- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.formLabel {
+  font-size: var(--text-label);
+  color: var(--color-stone-text);
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

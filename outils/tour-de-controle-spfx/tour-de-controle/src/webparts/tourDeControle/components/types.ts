@@ -5,6 +5,8 @@
 // mime toujours une lecture de liste M365 (voir → creuser → agir) ; la source des
 // valeurs est désormais le tenant, jamais des constantes.
 
+import type { OpportuniteLigne } from './pipe-recrutement';
+
 export type Signal = 'info' | 'surveiller' | 'decision' | 'neutral';
 
 export interface DetailItem {
@@ -43,6 +45,26 @@ export interface Compteur {
 
 export interface Zone {
   readonly compteurs: ReadonlyArray<Compteur>;
+}
+
+/**
+ * Option de rattachement au compte pour le formulaire « nouvelle opportunité ».
+ * `id` = Id numérique de l'item Comptes (valeur écrite dans le lookup `CompteId`) ;
+ * `libelle` = NomCompte, avec repli sur Title.
+ */
+export interface CompteOption {
+  readonly id: number;
+  readonly libelle: string;
+}
+
+/**
+ * Zone « Pipe commercial » — enrichit la Zone (compteurs = voir → creuser) des lignes
+ * d'opportunités éditables et des comptes sélectionnables (agir). Les compteurs restent
+ * intacts (tour-de-controle.md v2.1 §3 bandeau 2).
+ */
+export interface ZonePipe extends Zone {
+  readonly opportunites: ReadonlyArray<OpportuniteLigne>;
+  readonly comptes: ReadonlyArray<CompteOption>;
 }
 
 /**

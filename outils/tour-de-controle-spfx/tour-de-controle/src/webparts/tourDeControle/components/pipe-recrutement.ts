@@ -21,6 +21,10 @@ export type Ligne = Record<string, unknown>;
 export const COL_ETAPE_CRM = 'Etape';            // Liste « CRM » — choix unique
 export const COL_MONTANT_CRM = 'Montant';        // Liste « CRM » — nombre, € HT
 export const COL_NOM_OPPORTUNITE = 'NomOpportunite'; // Liste « CRM » — texte
+export const COL_COMPTE = 'Compte';              // Liste « CRM » — lookup → Comptes (écrit via `CompteId`)
+export const COL_ECHEANCE = 'Echeance';          // Liste « CRM » — date (signature attendue)
+export const COL_RESPONSABLE = 'Responsable';    // Liste « CRM » — personne (hors périmètre du formulaire minimal)
+export const COL_CODEMISSION = 'CodeMission';    // Liste « CRM » — renseigné à la bascule « Gagnée » (hors périmètre)
 export const COL_STATUT_COMPTE = 'Statut';       // Liste « Comptes » — choix unique
 export const COL_ETAPE_CANDIDAT = 'Etape';       // Liste « Candidats » — choix unique
 
@@ -33,6 +37,14 @@ export const LISTE_CRM = 'CRM';
 export const ETAPE_QUALIFICATION = 'Qualification';
 export const ETAPE_PROPOSITION = 'Proposition';
 export const ETAPE_GAGNEE = 'Gagnée';
+export const ETAPE_PERDUE = 'Perdue';
+/** Les quatre étapes CRM, dans l'ordre figé de modele-donnees.md §2 ter (source du sélecteur). */
+export const ETAPES_CRM: ReadonlyArray<string> = [
+  ETAPE_QUALIFICATION,
+  ETAPE_PROPOSITION,
+  ETAPE_GAGNEE,
+  ETAPE_PERDUE
+];
 export const STATUT_COMPTE_CLIENT = 'Client';
 export const ETAPE_CANDIDAT_E1 = 'E1';
 export const ETAPE_CANDIDAT_E2 = 'E2';
@@ -112,6 +124,54 @@ export function formaterEuros(montant: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Projection des opportunités pour la table éditable (voir → creuser → agir).
+// ---------------------------------------------------------------------------
+
+/**
+ * Une opportunité projetée pour l'affichage/l'édition en ligne. `id` = Id numérique de
+ * l'item (clé des mises à jour MERGE) ; `compte` = libellé du compte rattaché (lu via
+ * `$expand=Compte/Title`). Forme volontairement plate, découplée du brut SharePoint.
+ */
+export interface OpportuniteLigne {
+  readonly id: number;
+  readonly nom: string;
+  readonly etape: string;
+  readonly montant: number;
+  readonly compte?: string;
+}
+
+/** Id numérique d'une ligne SharePoint (tolère `Id`/`ID`, number ou string). */
+function idLigne(l: Ligne): number {
+  const v = l.Id ?? l.ID;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Libellé du compte rattaché, lu depuis l'expansion du lookup (`Compte/Title`). */
+function compteRattache(l: Ligne): string | undefined {
+  const c = l[COL_COMPTE];
+  if (c && typeof c === 'object' && 'Title' in c) {
+    const t = (c as { Title?: unknown }).Title;
+    return typeof t === 'string' && t ? t : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Projette les lignes brutes de la Liste « CRM » en OpportuniteLigne[] — tolérante aux
+ * champs absents (chaque lecteur a son défaut). PURE : ne lit aucun canal, mappe seulement.
+ */
+export function projeterOpportunites(lignes: ReadonlyArray<Ligne>): ReadonlyArray<OpportuniteLigne> {
+  return lignes.map(l => ({
+    id: idLigne(l),
+    nom: nomOpportunite(l),
+    etape: etapeCrm(l),
+    montant: montantOpportunite(l),
+    compte: compteRattache(l)
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Recrutement (tour-de-controle.md v2.0 §3 bandeau 3, option A RGPD).
 // ---------------------------------------------------------------------------
 
@@ -155,20 +215,44 @@ export function optionsEcriture(mode: ModeEcriture, champs: Record<string, unkno
   return { headers, body: JSON.stringify(champs) };
 }
 
-/** Payload de création d'une opportunité en Liste « CRM » (écriture guidée). */
+/**
+ * Payload de création d'une opportunité en Liste « CRM » (écriture guidée).
+ * Rattachement au compte OBLIGATOIRE : un lookup SharePoint s'écrit par son champ id
+ * numérique `<NomInterne>Id` (ici `CompteId`) = Id de l'item Comptes cible (réf. Microsoft
+ * Learn « working-with-lists-and-list-items-with-rest »). Étape par défaut Qualification.
+ * L'échéance n'est écrite que si fournie (champ optionnel du formulaire).
+ * NON écrits ici (manques documentés, hors périmètre de cette PR) : `Title` (l'identifiant
+ * O-NNN, laissé à SharePoint), `Responsable` (Person), `CodeMission` (bascule « Gagnée »).
+ */
 export function champsCreationOpportunite(
-  params: { readonly nom: string; readonly montant: number; readonly etape: string }
+  params: {
+    readonly nom: string;
+    readonly compteId: number;
+    readonly montant: number;
+    readonly etape?: string;
+    readonly echeance?: string;
+  }
 ): Record<string, unknown> {
-  return {
+  const champs: Record<string, unknown> = {
     [COL_NOM_OPPORTUNITE]: params.nom,
+    [`${COL_COMPTE}Id`]: params.compteId,
     [COL_MONTANT_CRM]: params.montant,
-    [COL_ETAPE_CRM]: params.etape
+    [COL_ETAPE_CRM]: params.etape || ETAPE_QUALIFICATION
   };
+  if (params.echeance) {
+    champs[COL_ECHEANCE] = params.echeance;
+  }
+  return champs;
 }
 
 /** Payload de changement d'étape d'une opportunité existante. */
 export function champsChangementEtape(etape: string): Record<string, unknown> {
   return { [COL_ETAPE_CRM]: etape };
+}
+
+/** Payload de changement du montant d'une opportunité existante. */
+export function champsChangementMontant(montant: number): Record<string, unknown> {
+  return { [COL_MONTANT_CRM]: montant };
 }
 
 /**
@@ -182,22 +266,34 @@ export type Ecrivain = (
   id?: number
 ) => Promise<Ecriture>;
 
-/**
- * Geste « nouvelle opportunité » — PRÊT À BRANCHER (le câblage UI reste hors de cette
- * PR : l'ossature de rendu n'expose pas encore de formulaire, cf. corps de la PR).
- */
+/** Geste « nouvelle opportunité » — création avec rattachement au compte (CompteId). */
 export function creerOpportunite(
   ecrire: Ecrivain,
-  params: { readonly nom: string; readonly montant: number; readonly etape: string }
+  params: {
+    readonly nom: string;
+    readonly compteId: number;
+    readonly montant: number;
+    readonly etape?: string;
+    readonly echeance?: string;
+  }
 ): Promise<Ecriture> {
   return ecrire(LISTE_CRM, champsCreationOpportunite(params));
 }
 
-/** Geste « changer l'étape d'une opportunité » (mise à jour MERGE) — prêt à brancher. */
+/** Geste « changer l'étape d'une opportunité » (mise à jour MERGE). */
 export function changerEtapeOpportunite(
   ecrire: Ecrivain,
   id: number,
   etape: string
 ): Promise<Ecriture> {
   return ecrire(LISTE_CRM, champsChangementEtape(etape), id);
+}
+
+/** Geste « changer le montant d'une opportunité » (mise à jour MERGE), symétrique. */
+export function changerMontantOpportunite(
+  ecrire: Ecrivain,
+  id: number,
+  montant: number
+): Promise<Ecriture> {
+  return ecrire(LISTE_CRM, champsChangementMontant(montant), id);
 }
