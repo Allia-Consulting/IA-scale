@@ -237,9 +237,36 @@ avancement:
         leçon durable Workbook, et deux chantiers à ouvrir : honnêteté du cockpit sur 403 gabarit actif,
         classifieur de gouvernance des surfaces de sécurité). RESTENT les points 3-5 (gestes d'écriture
         guidée CRM / recrutement / facturation) -> statut du chantier maintenu en_cours.
+    - date: 2026-07-24
+      fait: >
+        POINT 3 SOLDÉ — boucle pipe commercial -> mission fermée (gestes d'écriture guidée CRM). CONSTRUIT
+        & MERGÉ (PR #248-#254) : table d'opportunités éditable + « nouvelle opportunité » + édition en ligne
+        étape/montant (#248/#249) ; serveur MCP Graph — creer_espace_mission / deposer_document_mission
+        acceptent un 4e segment OPTIONNEL numérique (code mission), rétro-compatible, image 0.17.0 (#250) ;
+        canon modele-donnees §2 bis — CodeMission = ENTIER (>=1, sans zéro de tête) + allocation max(existants)+1
+        à l'ouverture, réécrit dans l'opportunité (#251) ; bascule « Gagnée » = geste PROPOSANT sur confirmation,
+        écrit l'étape et NON le code, bump 1.4.6.0 (#252) ; aperçu client = NomCompte lisible, défaut « CPT-001 »
+        corrigé, bump 1.4.7.0 (#253) ; cadrage-mission — entrée « Opportunité Gagnée » reconnue, réécriture
+        CodeMission -> CRM = geste GARDIEN (promotion), hors écriture agent (#254). MIS EN SERVICE (geste gardien) :
+        SPFx .sppkg 1.4.7.0 (App Catalog) ; image MCP Graph 0.17.0 (ACA ca-allia-mcp-graph, révision Healthy,
+        100% trafic). ÉPROUVÉ SUR LE RÉEL (chaque état relu persisté) : create/edit/suppression d'une opportunité
+        de test (item CRM id 3 : Qualification 1000 € compte Arabelle -> Proposition 2000 € -> corbeille) ;
+        confirmation Gagnée affichant « 2026 - Arabelle Solutions - Leader M365 », Annuler = AUCUNE écriture
+        (O-001 reste Qualification à la source) ; espace « 2026 - Arabelle Solutions - Leader PowerBI - 2 » créé
+        sous « Documents partagés/General/03 - Livrables de mission » (arbre figé 01 - Pilotage / 02 - Livrables),
+        couture cohérente avec O-002 (Gagnée, CodeMission=2). NOTE D'HONNÊTETÉ : l'espace a été matérialisé par un
+        GESTE GARDIEN (API SharePoint sous identité utilisateur) — chemin sanctionné par le canon tant que T-0024
+        n'est pas livré ; la logique 4-segments de la brique est prouvée par la CI (Tests garde-fous). GARDE-FOUS
+        TENUS : agent -> dérivés en Zone-de-proposition uniquement, sources écrites par l'humain ; porte humaine
+        sur toute PR de canon socle / surface sensible (auto-approbation skipped sur #250/#251/#254) ; anti-faux-vert
+        systématique. SIGNAL DE GOUVERNANCE : sur #252, l'auto-approbation s'est déclenchée (success) sur un
+        package-solution.json en version SEULE -> à verser au chantier « classifieur des surfaces de sécurité ».
+        RESTES NOMMÉS (non construits) : T-0024 (allocateur atomique du code + automatisation de la création
+        d'espace par l'agent) ; T-0035 point 4 (recrutement) et point 5 (facturation) ; T-0032 (rentabilité).
+        Détail : docs/epreuves/2026-07-24-t0035-cascade-crm-pipe-mission.md.
 
   reste_pour_solder:
     - "Point 2 — SOLDÉ le 19/07/2026 (S39) : régénération M1+M2 verte, lecture froide différée verte, rejeu cockpit vert le 19/07 à 16:28 (8 appels Workbook 200, bandeaux justes) ; correctifs porteurs PR #238 (scope Files.ReadWrite.All) + PR #239 (adressage par item id, 1.4.4.0 déployée) ; voir avancement.journal 2026-07-19 et docs/epreuves/2026-07-19-s39-epreuve-t0035-cockpit.md. HISTORIQUE DE LA REPRISE conservé ci-dessous : câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"
-    - "Point 3 — gestes CRM (écriture guidée + cascade « Gagnée » -> mission + espace, sur confirmation)"
+    - "Point 3 — SOLDÉ le 24/07/2026 : gestes d'écriture guidée CRM (table éditable + « nouvelle opportunité » + édition en ligne étape/montant, PR #248/#249) ; bascule « Gagnée » = geste PROPOSANT sur confirmation, écrit l'étape et NON le code (PR #252, 1.4.6.0), aperçu client = NomCompte lisible (PR #253, 1.4.7.0) ; couture opportunité -> mission par CodeMission ENTIER : 4e segment optionnel du nom d'espace côté serveur (PR #250, image 0.17.0), canon CodeMission entier + allocation max+1 (PR #251, modele-donnees §2 bis), entrée « Opportunité Gagnée » reconnue par cadrage-mission avec réécriture CodeMission -> CRM = geste GARDIEN (PR #254). ÉPROUVÉ SUR LE RÉEL (SPFx 1.4.7.0 + image 0.17.0 déployés) : create/edit/suppression d'une opportunité (item CRM id 3), confirmation Gagnée affichant « 2026 - Arabelle Solutions - Leader M365 » (Annuler = aucune écriture, O-001 reste Qualification), espace « 2026 - Arabelle Solutions - Leader PowerBI - 2 » cohérent avec O-002 (Gagnée, CodeMission=2). RÉSERVE HONNÊTE : l'espace a été matérialisé par un GESTE GARDIEN (API SharePoint) — la logique 4-segments de la brique est prouvée par la CI, l'automatisation agent reste T-0024. Détail : docs/epreuves/2026-07-24-t0035-cascade-crm-pipe-mission.md."
     - "Point 4 — gestes recrutement (ajout candidat, changement d'étape, cascade « Acceptée » -> Ressources-Profil + affectation, sur confirmation)"
     - "Point 5 — facturation (statut « émise » écrit dans le classeur de saisie, hors cockpit ; re-dérivé par l'agent)"
