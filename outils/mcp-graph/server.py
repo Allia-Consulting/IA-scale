@@ -66,6 +66,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -664,8 +665,10 @@ def _config_notifications() -> dict[str, str]:
 _CARACTERES_INTERDITS_ESPACE = set('"*:<>?/\\|#%,')
 
 
-def _composer_nom_espace(annee: str, client: str, nom_mission: str) -> str:
-    """Valide (annee, client, nom_mission) et compose « AAAA - Client - Nom de la mission ».
+def _composer_nom_espace(
+    annee: str, client: str, nom_mission: str, code_mission: str | None = None
+) -> str:
+    """Valide les composantes et compose « AAAA - Client - Nom de la mission[ - CodeMission] ».
 
     Composition CÔTÉ SERVEUR (garde-fou structurel, décision gardien 2 juillet 2026) : l'appelant
     ne fournit JAMAIS le nom d'espace final, seulement ses trois composantes. Helper PARTAGÉ par
@@ -677,10 +680,15 @@ def _composer_nom_espace(annee: str, client: str, nom_mission: str) -> str:
         - `client` / `nom_mission` : après réduction des espaces (multiples → un seul) et strip des
           extrémités, 1..60 caractères ; refus des caractères " * : < > ? / \\ | # % , (et de tout
           caractère de contrôle), de la séquence « .. » et d'un point en tête ou en fin ; accents et
-          espaces internes AUTORISÉS.
+          espaces internes AUTORISÉS ;
+        - `code_mission` (OPTIONNEL, 4e segment ; décision gardien du 23 juillet 2026) : s'il est
+          fourni, il DOIT être une suite de chiffres non vide (le « code mission » numérique), et il
+          est ajouté en fin de nom : « AAAA - Client - Nom de la mission - CodeMission » (ex.
+          « 2026 - Arabelle Solutions - Siteflow - 14 »). Absent (None) → nom à 3 segments, INCHANGÉ
+          (rétro-compatible).
 
     Raises:
-        ValueError: toute composante invalide (message explicite).
+        ValueError: toute composante invalide (message explicite), ou `code_mission` non numérique.
     """
     # --- annee : exactement 4 chiffres, bornée ---
     if not isinstance(annee, str) or len(annee) != 4 or not all(c in "0123456789" for c in annee):
@@ -710,7 +718,13 @@ def _composer_nom_espace(annee: str, client: str, nom_mission: str) -> str:
 
     client_ok = _valider(client, "client")
     nom_ok = _valider(nom_mission, "nom_mission")
-    return f"{annee} - {client_ok} - {nom_ok}"
+    base = f"{annee} - {client_ok} - {nom_ok}"
+    if code_mission is None:
+        return base  # 3 segments — comportement historique, inchangé.
+    # 4e segment OPTIONNEL : le « code mission » NUMÉRIQUE (couture opportunité → mission).
+    if not isinstance(code_mission, str) or not re.fullmatch(r"\d+", code_mission):
+        raise ValueError("`code_mission` doit être une suite de chiffres (ex. « 14 »).")
+    return f"{base} - {code_mission}"
 
 
 def _credential():
@@ -915,7 +929,7 @@ def televerser_brouillon_offre(
 @mcp.tool()
 @_journal_appel("creer_espace_mission")
 def creer_espace_mission(
-    ctx: Context, annee: str, client: str, nom_mission: str
+    ctx: Context, annee: str, client: str, nom_mission: str, code_mission: str | None = None
 ) -> dict[str, Any]:
     """Crée l'ESPACE DE MISSION (arbre de dossiers figé) sous la racine « Missions », et nulle part ailleurs.
 
@@ -929,6 +943,9 @@ def creer_espace_mission(
     (décision gardien 2 juillet 2026) : « AAAA - Client - Nom de la mission » (ex.
     « 2026 - Arabelle Solutions - Siteflow ») via `_composer_nom_espace` — l'appelant fournit les trois
     composantes, jamais le nom final ; la racine « Missions » reste la seule cible possible.
+    Un 4e segment OPTIONNEL, le « code mission » NUMÉRIQUE, peut être ajouté en fin de nom (décision
+    gardien du 23 juillet 2026) : « AAAA - Client - Nom de la mission - CodeMission » (ex.
+    « 2026 - Arabelle Solutions - Siteflow - 14 »). Absent → nom à 3 segments, INCHANGÉ.
 
     Garde-fous inscrits dans le code (table-des-crans.yaml : creer_espace_mission, cran auto) :
         - `annee` / `client` / `nom_mission` VALIDÉS et le nom COMPOSÉ côté serveur (pas d'évasion :
@@ -943,6 +960,8 @@ def creer_espace_mission(
         annee: année de la mission (exactement 4 chiffres, [2020..2100]).
         client: nom du client (1..60 car., composante du nom d'espace ; jamais la cible).
         nom_mission: nom de la mission (1..60 car., composante du nom d'espace ; jamais la cible).
+        code_mission: OPTIONNEL — code mission NUMÉRIQUE ajouté en 4e segment du nom d'espace ;
+            absent (None) → nom à 3 segments (rétro-compatible).
 
     Returns:
         dict {"nom_espace", "web_url", "sous_dossiers"} décrivant l'espace créé.
@@ -954,7 +973,7 @@ def creer_espace_mission(
     """
     _verifier_appelant(ctx)
 
-    nom_espace = _composer_nom_espace(annee, client, nom_mission)
+    nom_espace = _composer_nom_espace(annee, client, nom_mission, code_mission)
 
     cfg = _config_mission()
     # Cible NON paramétrable par l'appelant : la racine « Missions », et elle seule.
@@ -1006,7 +1025,8 @@ def creer_espace_mission(
 @_journal_appel("deposer_document_mission")
 def deposer_document_mission(
     ctx: Context, annee: str, client: str, nom_mission: str,
-    sous_dossier: str, nom_fichier: str, contenu_base64: str, sha256_attendu: str
+    sous_dossier: str, nom_fichier: str, contenu_base64: str, sha256_attendu: str,
+    code_mission: str | None = None
 ) -> dict[str, Any]:
     """Dépose un BROUILLON INTERNE dans un sous-dossier FIGÉ d'un espace de mission, et nulle part ailleurs.
 
@@ -1016,8 +1036,9 @@ def deposer_document_mission(
     Même racine FIGÉE côté serveur que `creer_espace_mission` (GRAPH_MISSION_DRIVE_ID +
     GRAPH_MISSION_FOLDER_ID) : l'appelant ne choisit JAMAIS la cible. Le nom d'espace est RECOMPOSÉ
     côté serveur par le MÊME helper que `creer_espace_mission` (`_composer_nom_espace`) — zéro dérive
-    possible entre la création et le dépôt. Le dépôt vise UNIQUEMENT
-    <racine Missions>/<nom_espace>/<sous_dossier>/<nom_fichier> ; jamais un espace exposé au client.
+    possible entre la création et le dépôt. Le 4e segment OPTIONNEL (`code_mission` numérique) doit être
+    fourni À L'IDENTIQUE de la création pour viser le même espace (3 ou 4 segments). Le dépôt vise
+    UNIQUEMENT <racine Missions>/<nom_espace>/<sous_dossier>/<nom_fichier> ; jamais un espace exposé au client.
 
     Garde-fous inscrits dans le code (table-des-crans.yaml : deposer_document_mission_zone_travail,
     cran auto) :
@@ -1039,6 +1060,8 @@ def deposer_document_mission(
         annee: année de la mission (exactement 4 chiffres, [2020..2100]).
         client: nom du client (composante du nom d'espace ; jamais la cible).
         nom_mission: nom de la mission (composante du nom d'espace ; jamais la cible).
+        code_mission: OPTIONNEL — code mission NUMÉRIQUE (4e segment du nom d'espace) ; doit être
+            fourni à l'identique de creer_espace_mission pour retrouver le même espace.
         sous_dossier: sous-dossier de destination, dans SOUS_DOSSIERS_MISSION (liste blanche).
         nom_fichier: nom du fichier, extension dans EXTENSIONS_MISSION.
         contenu_base64: contenu du fichier encodé en base64.
@@ -1058,7 +1081,7 @@ def deposer_document_mission(
     _verifier_appelant(ctx)
 
     # Nom d'espace recomposé par le MÊME helper que creer_espace_mission (zéro dérive).
-    nom_espace = _composer_nom_espace(annee, client, nom_mission)
+    nom_espace = _composer_nom_espace(annee, client, nom_mission, code_mission)
 
     # --- sous_dossier : liste blanche figée (exactement l'un des sous-dossiers de mission) ---
     if sous_dossier not in SOUS_DOSSIERS_MISSION:

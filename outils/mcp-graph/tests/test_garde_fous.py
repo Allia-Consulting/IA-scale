@@ -174,6 +174,39 @@ def test_composer_nom_espace_accents_et_espaces_internes_autorises():
     assert resultat == "2026 - Éléa Conseil - Revue à mi-parcours"
 
 
+def test_composer_nom_espace_sans_code_reste_3_segments():
+    """(11) code_mission par défaut (None) → nom 3 segments INCHANGÉ (non-régression explicite)."""
+    attendu = "2026 - Siteflow - Cadrage"
+    assert server._composer_nom_espace("2026", "Siteflow", "Cadrage") == attendu
+    assert server._composer_nom_espace("2026", "Siteflow", "Cadrage", None) == attendu
+
+
+def test_composer_nom_espace_avec_code_numerique_4_segments():
+    """(12) code_mission numérique → 4e segment « - <code> » en fin de nom."""
+    assert (
+        server._composer_nom_espace("2026", "Arabelle Solutions", "Siteflow", "14")
+        == "2026 - Arabelle Solutions - Siteflow - 14"
+    )
+
+
+@pytest.mark.parametrize("mauvais_code", ["14a", "M-2026-014", "", "  ", "1.4", "-14", "0x14"])
+def test_composer_nom_espace_code_non_numerique_refuse(mauvais_code):
+    """(13) code_mission fourni mais non exclusivement numérique → ValueError."""
+    with pytest.raises(ValueError):
+        server._composer_nom_espace("2026", "Siteflow", "Cadrage", mauvais_code)
+
+
+def test_composer_nom_espace_creer_deposer_meme_nom():
+    """(14) creer_espace_mission et deposer_document_mission partagent le MÊME helper : mêmes
+    (annee, client, nom_mission, code_mission) ⇒ nom composé IDENTIQUE (zéro dérive, 3 ou 4 segments)."""
+    args = ("2026", "Arabelle Solutions", "Siteflow")
+    # 3 segments (sans code) : déterministe et identique des deux côtés.
+    assert server._composer_nom_espace(*args) == server._composer_nom_espace(*args)
+    # 4 segments (avec code) : identique des deux côtés, et conforme au format attendu.
+    assert server._composer_nom_espace(*args, "14") == server._composer_nom_espace(*args, "14")
+    assert server._composer_nom_espace(*args, "14") == "2026 - Arabelle Solutions - Siteflow - 14"
+
+
 # --------------------------------------------------------------------------------------------
 # deposer_document_mission — garde-fous en aval de la porte d'identité
 # (on neutralise _verifier_appelant pour isoler CHAQUE garde-fou métier)
