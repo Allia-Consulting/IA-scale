@@ -2,8 +2,8 @@
 # Cadrage de mission — Skill
 
 > **id** : `cadrage-mission`
-> **Version** : 1.2 — *candidat*. **Nature** : skill.
-> **Changelog** : v1.2 — candidat, 23 juillet 2026 (T-0035, unification du « code mission » numérique) : §3/§4 — l'exemple de code devient un **entier** (`BRIEF-14`), « code mission proposé » → « code mission **alloué** (entier, `modele-donnees.md` §2 bis) », et l'étape 5 précise l'appel réel `creer_espace_mission(annee, client, nom_mission, code_mission)` (nom d'espace à 4 segments, capacité PR #250). Aucun changement de cran ni de garde-fou. v1.1 — promu, 2 juillet 2026 : corps aligné post-promotion (§9 statut candidat → promu). v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0021`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0021`, première marche de la tranche verticale métier, plan §6 T-1.1). Décrit le skill qui, d'une PROPOSITION GAGNÉE, produit un BRIEF DE MISSION structuré, validé par l'utilisateur (« le brief suffit »), écrit en Zone-de-proposition via `create_list_item` ; la création réelle de l'espace de mission (cran auto) s'appuie sur l'outillage du chantier `T-0024`.
+> **Version** : 1.3 — *candidat*. **Nature** : skill.
+> **Changelog** : v1.3 — candidat, 24 juillet 2026 (T-0035, couture « opportunité Gagnée → ouverture de mission ») : §2 — ajout de l'entrée **Opportunité Gagnée** (Liste « CRM », Etape=Gagnée) comme matière du brief (nom de mission = `NomOpportunite`, client = `NomCompte` lisible, montant, échéance ; couture par `CodeMission` entier). §4 — l'étape « Créer l'espace » explicite l'appel à 4 segments (`code_mission` = max(existants)+1, capacité PR #250) et une étape distincte pose la **réécriture de `CodeMission` sur l'opportunité gagnée (Liste « CRM ») = PROMOTION, cran GARDIEN — hors écriture agent** ; §5 — cran ajouté. Garde-fous INCHANGÉS (écriture agent = Zone-de-proposition uniquement ; porte « le brief suffit » ; allocateur atomique = `T-0024`, geste gardien tracé d'ici là). v1.2 — candidat, 23 juillet 2026 (T-0035, unification du « code mission » numérique) : §3/§4 — l'exemple de code devient un **entier** (`BRIEF-14`), « code mission proposé » → « code mission **alloué** (entier, `modele-donnees.md` §2 bis) », et l'étape 5 précise l'appel réel `creer_espace_mission(annee, client, nom_mission, code_mission)` (nom d'espace à 4 segments, capacité PR #250). Aucun changement de cran ni de garde-fou. v1.1 — promu, 2 juillet 2026 : corps aligné post-promotion (§9 statut candidat → promu). v1.0 — promu, 2 juillet 2026 : promotion par le gardien (procédure allégée), chantier `T-0021`. v1.0 — candidat, 2 juillet 2026 : création (chantier `T-0021`, première marche de la tranche verticale métier, plan §6 T-1.1). Décrit le skill qui, d'une PROPOSITION GAGNÉE, produit un BRIEF DE MISSION structuré, validé par l'utilisateur (« le brief suffit »), écrit en Zone-de-proposition via `create_list_item` ; la création réelle de l'espace de mission (cran auto) s'appuie sur l'outillage du chantier `T-0024`.
 > **Domicile** : `skills/cadrage-mission/SKILL.md`. **Autorité de promotion** : gardien (procédure allégée).
 > **Adossé à** : `contrats/socle/modele-donnees.md` (§2 / §2 bis / §3 — entités Mission, Imputation, Compte ; Bibliothèques Propositions et Livrables ; Zone-de-proposition Title/Origine/Contenu), `contrats/socle/design-system.md` (templates consommés par référence), `contrats/socle/table-des-crans.yaml` (`creer_espace_mission` = **auto** ; `ecrire_fait_derive_zone_proposition` = **auto** ; `notifier_equipe` = **notifié** ; `merger_sur_main` / promotion = **gardien**), `contrats/socle/anonymisation.md` (§1 — réutilisation interne nominative), `backlog/chantiers/T-0021.yaml`, `backlog/chantiers/T-0024.yaml` (outillage de création d'espace), `CLAUDE.md`.
 
@@ -17,6 +17,7 @@ D'une **proposition gagnée**, produire un **BRIEF DE MISSION structuré**, le f
 
 | Donnée | Source | Usage |
 |---|---|---|
+| Opportunité Gagnée | Liste « CRM » (Etape = Gagnée) — modele-donnees §2 bis | matière du brief et **couture opportunité → mission** : **nom de mission = `NomOpportunite`**, **client = `NomCompte`** (le nom LISIBLE, jamais le `Title`/code CPT-xxx), montant, échéance ; le lien est porté par **`CodeMission`** (entier) |
 | Proposition gagnée | Bibliothèque « Propositions » (modele-donnees §2 bis) ou document fourni par l'utilisateur | matière du brief : contexte, périmètre vendu, jalons, budget |
 | Précisions utilisateur | échange conversationnel (l'associé qui affecte — scénario du document de bienvenue) | lever les ambiguïtés ; le skill NE devine PAS |
 | Compte / Client | Liste « Comptes » | rattachement de la mission |
@@ -50,9 +51,10 @@ create_list_item(fields = {
 2. **Dialoguer** avec l'utilisateur pour préciser le brief (le skill questionne, ne suppose pas).
 3. **Porte utilisateur — « le brief suffit »** : validation explicite de l'utilisateur ; SANS elle, rien ne s'exécute (ni écriture, ni espace, ni notification).
 4. **Écrire** le brief en Zone-de-proposition (auto — `ecrire_fait_derive_zone_proposition`).
-5. **Créer l'espace de mission** (auto — `creer_espace_mission(annee, client = NomCompte du compte lié, nom_mission = nom de l'opportunité gagnée, code_mission = <entier alloué>)` : les quatre composantes ; le nom d'espace porte alors 4 segments « AAAA - Client - Nom - CodeMission » (capacité livrée par PR #250). Outillage `T-0024` ; tant qu'il n'est pas livré, la création passe par le gardien avec réserve tracée).
-6. **Notifier l'équipe** (notifié — `notifier_equipe`).
-7. **Promotion tracée** des faits (fiche Mission, imputations) de la zone vers les sources : porte humaine, HORS de ce skill.
+5. **Créer l'espace de mission** (auto — `creer_espace_mission(annee = année d'ouverture, client = NomCompte du compte lié, nom_mission = NomOpportunite de l'opportunité gagnée, code_mission = <entier alloué = max(CodeMission existants) + 1>)` : les quatre composantes ; le nom d'espace porte alors 4 segments « AAAA - Client - Nom - CodeMission » (capacité PR #250, image serveur 0.17.0). L'**allocation atomique** du code relève de `T-0024` (allocateur non livré) ; d'ici là, l'attribution du code est un **geste gardien tracé**. Tant que l'outillage `T-0024` n'est pas livré, la création passe par le gardien avec réserve tracée).
+6. **Réécrire `CodeMission` sur l'opportunité gagnée** (Liste « CRM ») pour fermer la couture opportunité → mission : c'est une **PROMOTION** (décision → SOURCE `CRM`), cran **GARDIEN** — **hors écriture agent**. L'agent n'écrit JAMAIS cette source (il n'écrit ses dérivés qu'en Zone-de-proposition, §6) : il prépare, le gardien promeut. **Non automatique.**
+7. **Notifier l'équipe** (notifié — `notifier_equipe`).
+8. **Promotion tracée** des faits (fiche Mission, imputations) de la zone vers les sources : porte humaine, HORS de ce skill.
 
 ## 5. Crans (résolus via `table-des-crans.yaml`)
 
@@ -63,6 +65,7 @@ create_list_item(fields = {
 | Créer l'espace de mission | **auto** | `creer_espace_mission` (outillage `T-0024`) |
 | Notifier l'équipe | **notifié** | `notifier_equipe` — visible, engage l'image interne |
 | Promouvoir brief/imputations vers les sources | **validé — humain** | promotion tracée (modele-donnees §3) |
+| Réécrire `CodeMission` sur l'opportunité (Liste « CRM ») | **gardien — promotion** | source CRM : l'agent n'écrit qu'en Zone-de-proposition (modele-donnees §2 bis / §3) ; promotion = `merger_sur_main` (gardien) |
 | Sortie vers le client | **HORS PÉRIMÈTRE** | c'est le skill `kick-off` (`T-0022`) — `envoyer_livrable_client` = validé |
 
 ## 6. Garde-fous inscrits dans ce skill
