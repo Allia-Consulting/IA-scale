@@ -28,9 +28,26 @@ export const COL_CODEMISSION = 'CodeMission';    // Liste « CRM » — renseign
 export const COL_STATUT_COMPTE = 'Statut';       // Liste « Comptes » — choix unique
 export const COL_NOM_COMPTE = 'NomCompte';       // Liste « Comptes » — nom LISIBLE du client (≠ Title/code)
 export const COL_ETAPE_CANDIDAT = 'Etape';       // Liste « Candidats » — choix unique
+export const COL_NOM_CANDIDAT = 'NomCandidat';   // Liste « Candidats » — donnée personnelle (pertinente au poste)
+export const COL_GRADE = 'Grade';                // Candidats & Ressources-Profil — choix unique (attribut de poste, non identifiant)
+export const COL_SOURCE = 'Source';              // Liste « Candidats » — choix unique
+export const COL_EMAIL = 'Email';                // Liste « Candidats » — NE migre PAS vers Ressources-Profil (minimisation RGPD §3)
+export const COL_TELEPHONE = 'Telephone';        // Liste « Candidats » — optionnel ; NE migre PAS (minimisation RGPD §3)
+// Liste « Ressources-Profil » (modele-donnees.md §2 bis) — cible n°2 de la cascade « Acceptée ».
+export const COL_PRENOM = 'Prenom';
+export const COL_NOM = 'Nom';
+export const COL_IDENTIFIANT_ENTRA = 'IdentifiantEntra';
+// Disponibilité : colonne CRÉÉE LIBELLÉ-FIRST au tenant → nom interne encodé Graph `_x00e9_`
+// (contraire à la convention §2 ter « nom interne ASCII figé » ; état RÉEL constaté au 24/07, on
+// écrit sur le nom interne réel, jamais sur le libellé).
+export const COL_DISPONIBILITE = 'Disponibilit_x00e9_';
 
 /** Domicile des opportunités (couture Missions par CodeMission à la bascule Gagnée). */
 export const LISTE_CRM = 'CRM';
+/** Domicile des candidats (recrutement) — accès restreint (modele-donnees.md §2 bis). */
+export const LISTE_CANDIDATS = 'Candidats';
+/** Domicile des fiches ressource (profil) — cible de la cascade « Acceptée ». */
+export const LISTE_RESSOURCES_PROFIL = 'Ressources-Profil';
 
 // ---------------------------------------------------------------------------
 // Valeurs d'énumération (modele-donnees.md §2 bis / §2 ter).
@@ -51,6 +68,29 @@ export const ETAPE_CANDIDAT_E1 = 'E1';
 export const ETAPE_CANDIDAT_E2 = 'E2';
 export const ETAPE_CANDIDAT_E3 = 'E3';
 export const ETAPE_CANDIDAT_PROPOSITION = 'Proposition';
+export const ETAPE_CANDIDAT_ACCEPTEE = 'Acceptée';
+export const ETAPE_CANDIDAT_REFUSEE = 'Refusée';
+/**
+ * Les six étapes candidat, ordre figé de modele-donnees.md §2 ter (source du sélecteur en ligne).
+ * « Acceptée » figure ici pour le rendu du sélecteur, mais NE s'écrit JAMAIS par changement
+ * d'étape direct : elle ouvre la cascade (garde `champsChangementEtapeCandidat`, cascade-acceptee.ts).
+ */
+export const ETAPES_CANDIDAT: ReadonlyArray<string> = [
+  ETAPE_CANDIDAT_E1,
+  ETAPE_CANDIDAT_E2,
+  ETAPE_CANDIDAT_E3,
+  ETAPE_CANDIDAT_PROPOSITION,
+  ETAPE_CANDIDAT_ACCEPTEE,
+  ETAPE_CANDIDAT_REFUSEE
+];
+/** Grades visés (choix unique, sans ajout manuel — modele-donnees.md §2 ter). */
+export const GRADES_CANDIDAT: ReadonlyArray<string> = [
+  'Consultant Junior', 'Consultant', 'Consultant Senior', 'Manager', 'Senior Manager', 'Directeur', 'Associé'
+];
+/** Sources de candidature (choix unique, sans ajout manuel — modele-donnees.md §2 ter). */
+export const SOURCES_CANDIDAT: ReadonlyArray<string> = [
+  'Cooptation', 'Chasseur', 'Candidature spontanée', 'LinkedIn'
+];
 
 /**
  * Pondérations du pipe pondéré — FIGÉES au contrat tour-de-controle.md v2.0 §3
@@ -69,6 +109,17 @@ export const PONDERATIONS_PIPE: Readonly<Record<string, number>> = {
  * Telephone…) n'est jamais sélectionné ni lu. Seuls des AGRÉGATS par étape sortent.
  */
 export const QUERY_RECRUTEMENT = `$select=${COL_ETAPE_CANDIDAT}&$top=2000`;
+
+/**
+ * Requête des GESTES recrutement (édition en ligne + cascade) — DISTINCTE de QUERY_RECRUTEMENT.
+ * Sélectionne les champs NOMINATIFS nécessaires à l'action (Id, Title, NomCandidat, Grade, Etape).
+ * Elle est lue sous l'identité de l'utilisateur : son succès dépend de l'ACL de la liste
+ * « Candidats » (destinataires internes du recrutement — rgpd-recrutement-candidats.md §3). Un
+ * utilisateur non habilité obtient un 403 → gestes masqués, seuls les compteurs agrégés subsistent
+ * (QUERY_RECRUTEMENT reste, elle, strictement Etape). Le cockpit n'élève aucun droit (§1 régime 1).
+ */
+export const QUERY_GESTES_RECRUTEMENT =
+  `$select=Id,Title,${COL_NOM_CANDIDAT},${COL_GRADE},${COL_ETAPE_CANDIDAT}&$top=2000`;
 
 // ---------------------------------------------------------------------------
 // Lectures robustes (Nombre SharePoint peut arriver en number ou en string).
@@ -239,6 +290,103 @@ export function compterCandidatsEtape(candidats: ReadonlyArray<Ligne>, etape: st
   return candidats.filter(c => c[COL_ETAPE_CANDIDAT] === etape).length;
 }
 
+/**
+ * Alloue le prochain identifiant candidat au motif C-NNN : (max des Title conformes `^C-(\d+)$`) + 1,
+ * zéro-paddé sur 3 chiffres. Une liste SANS aucun motif C- (ou vide) démarre à `C-001`. Les Title
+ * non conformes (scorie nommée : candidats 1..7 au tenant) sont IGNORÉS du calcul du max (jamais
+ * une erreur). Le défaut Title du geste CRM (Title laissé à SharePoint, plan §13.2) n'est PAS
+ * reproduit : l'identifiant candidat est un id stable (modele-donnees.md §2 ter) alloué explicitement.
+ */
+export function prochainTitleCandidat(candidats: ReadonlyArray<Ligne>): string {
+  let max = 0;
+  for (const c of candidats) {
+    const t = c.Title ?? c.title;
+    if (typeof t === 'string') {
+      const m = /^C-(\d+)$/.exec(t.trim());
+      if (m) {
+        const n = Number(m[1]);
+        if (Number.isFinite(n) && n > max) { max = n; }
+      }
+    }
+  }
+  // Zéro-paddé sur 3 (sans String.padStart — lib TS antérieure à ES2017 dans ce projet).
+  const s = String(max + 1);
+  return `C-${s.length >= 3 ? s : ('000' + s).slice(-3)}`;
+}
+
+/**
+ * Une ligne candidat projetée pour l'édition en ligne (geste « changement d'étape »). Porte le
+ * strict nécessaire à l'action : `id` (clé MERGE), `title` (id stable C-NNN), `nom` (repère pour
+ * l'opérateur), `grade` (repris à l'acceptation), `etape`. Lue sous l'identité de l'utilisateur ;
+ * l'accès à ces champs nominatifs est gouverné par l'ACL de la liste « Candidats » (destinataires
+ * internes, rgpd-recrutement-candidats.md §3) — voir `chargerGestesRecrutement` (listes-reelles.ts).
+ */
+export interface CandidatLigne {
+  readonly id: number;
+  readonly title: string;
+  readonly nom: string;
+  readonly grade: string;
+  readonly etape: string;
+}
+
+/** Projette les lignes brutes de la Liste « Candidats » en CandidatLigne[] (mappage PUR, tolérant). */
+export function projeterCandidats(lignes: ReadonlyArray<Ligne>): ReadonlyArray<CandidatLigne> {
+  return lignes.map(l => ({
+    id: idLigne(l),
+    title: typeof l.Title === 'string' ? l.Title : (typeof l.title === 'string' ? l.title : ''),
+    nom: typeof l[COL_NOM_CANDIDAT] === 'string' ? (l[COL_NOM_CANDIDAT] as string) : '',
+    grade: typeof l[COL_GRADE] === 'string' ? (l[COL_GRADE] as string) : '',
+    etape: typeof l[COL_ETAPE_CANDIDAT] === 'string' ? (l[COL_ETAPE_CANDIDAT] as string) : ''
+  }));
+}
+
+/**
+ * Payload de création d'un candidat en Liste « Candidats » (geste « ajouter un candidat »).
+ * Étape posée à `E1` (candidat créé en début de tunnel, tour-de-controle.md §3 bandeau 3). `Title`
+ * alloué au motif C-NNN (`prochainTitleCandidat`) et écrit EXPLICITEMENT. Le téléphone n'est écrit
+ * que fourni (optionnel). Aucune donnée hors de celles pertinentes au poste (minimisation §3).
+ */
+export function champsCreationCandidat(
+  params: {
+    readonly title: string;
+    readonly nom: string;
+    readonly grade: string;
+    readonly source: string;
+    readonly email: string;
+    readonly telephone?: string;
+  }
+): Record<string, unknown> {
+  const champs: Record<string, unknown> = {
+    Title: params.title,
+    [COL_NOM_CANDIDAT]: params.nom,
+    [COL_GRADE]: params.grade,
+    [COL_SOURCE]: params.source,
+    [COL_EMAIL]: params.email,
+    [COL_ETAPE_CANDIDAT]: ETAPE_CANDIDAT_E1
+  };
+  if (params.telephone && params.telephone.trim()) {
+    champs[COL_TELEPHONE] = params.telephone.trim();
+  }
+  return champs;
+}
+
+/**
+ * Payload de changement d'étape d'un candidat — avec GARDE. La bascule vers « Acceptée » ne s'écrit
+ * JAMAIS par cette voie : elle passe par la cascade déterministe (annonce exhaustive + confirmation
+ * explicite, tour-de-controle.md §1 régime 2 / §3 bandeau 3). Toute tentative directe LÈVE — c'est
+ * un défaut d'appelant, pas un cas d'exécution (une cascade qui écrirait sans confirmation est un
+ * défaut, §6). Voir `cascade-acceptee.ts`.
+ */
+export function champsChangementEtapeCandidat(etape: string): Record<string, unknown> {
+  if (etape === ETAPE_CANDIDAT_ACCEPTEE) {
+    throw new Error(
+      'Bascule « Acceptée » interdite par changement d’étape direct : elle passe par la cascade ' +
+      '(annonce + confirmation, tour-de-controle.md §1 régime 2). Voir cascade-acceptee.ts.'
+    );
+  }
+  return { [COL_ETAPE_CANDIDAT]: etape };
+}
+
 // ---------------------------------------------------------------------------
 // Écriture guidée — constructeurs PURS (payloads + options HTTP).
 //
@@ -355,4 +503,31 @@ export function changerMontantOpportunite(
   montant: number
 ): Promise<Ecriture> {
   return ecrire(LISTE_CRM, champsChangementMontant(montant), id);
+}
+
+/** Geste « ajouter un candidat » — création en Liste « Candidats », étape E1, Title C-NNN alloué. */
+export function creerCandidat(
+  ecrire: Ecrivain,
+  params: {
+    readonly title: string;
+    readonly nom: string;
+    readonly grade: string;
+    readonly source: string;
+    readonly email: string;
+    readonly telephone?: string;
+  }
+): Promise<Ecriture> {
+  return ecrire(LISTE_CANDIDATS, champsCreationCandidat(params));
+}
+
+/**
+ * Geste « changer l'étape d'un candidat » (mise à jour MERGE). La garde de
+ * `champsChangementEtapeCandidat` interdit « Acceptée » par cette voie (cascade seule).
+ */
+export function changerEtapeCandidat(
+  ecrire: Ecrivain,
+  id: number,
+  etape: string
+): Promise<Ecriture> {
+  return ecrire(LISTE_CANDIDATS, champsChangementEtapeCandidat(etape), id);
 }

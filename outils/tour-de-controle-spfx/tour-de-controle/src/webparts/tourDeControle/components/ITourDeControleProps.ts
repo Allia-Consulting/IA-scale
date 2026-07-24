@@ -29,4 +29,12 @@ export interface ITourDeControleProps {
   referentielRessourcesPath: string;
   /** Chemin server-relative du classeur référentiel `T_Structure` (audience restreinte, §5.3). Vide = non câblé. */
   referentielStructurePath: string;
+  /**
+   * URL absolue du site de la couche de SAISIE (Management et Gestion, modele-donnees §5.6) —
+   * cible de la ligne d'affectation de la cascade « Acceptée ». Vide = affectation non câblée
+   * (pré-vol « introuvable », zéro écriture).
+   */
+  saisieSiteUrl: string;
+  /** Chemin server-relative du dossier des classeurs `saisie-<code>-….xlsx`. Vide = non câblé. */
+  saisieFolderPath: string;
 }

@@ -5,7 +5,7 @@
 // mime toujours une lecture de liste M365 (voir → creuser → agir) ; la source des
 // valeurs est désormais le tenant, jamais des constantes.
 
-import type { OpportuniteLigne } from './pipe-recrutement';
+import type { OpportuniteLigne, CandidatLigne } from './pipe-recrutement';
 
 export type Signal = 'info' | 'surveiller' | 'decision' | 'neutral';
 
@@ -65,6 +65,26 @@ export interface CompteOption {
 export interface ZonePipe extends Zone {
   readonly opportunites: ReadonlyArray<OpportuniteLigne>;
   readonly comptes: ReadonlyArray<CompteOption>;
+}
+
+/**
+ * Zone « Recrutement » — enrichit la Zone (compteurs agrégés par étape, RGPD option A) des lignes
+ * candidat éditables (gestes : étape en ligne + cascade Acceptée) et de la liste des Title déjà
+ * pris (allocation C-NNN du geste « ajouter »).
+ *
+ * `gestesAccessibles` : true seulement si la lecture nominative de « Candidats » a abouti sous
+ * l'identité de l'utilisateur. Sur 403 (utilisateur non habilité au recrutement, ACL de liste —
+ * rgpd-recrutement-candidats.md §3) ou source absente/illisible : false, `candidats` vide → l'UI
+ * n'affiche QUE les compteurs agrégés (aucun nom exposé, aucune erreur bloquante). Le cockpit
+ * n'élève aucun droit (tour-de-controle.md §1 régime 1, §6).
+ */
+export interface ZoneRecrutement extends Zone {
+  readonly candidats: ReadonlyArray<CandidatLigne>;
+  /** Title déjà attribués (conformes ou non) — base de l'allocation C-NNN du prochain candidat. */
+  readonly titresPris: ReadonlyArray<string>;
+  readonly gestesAccessibles: boolean;
+  /** CodeMission des missions réelles connues (gabarits actifs) — options du dialogue de cascade. */
+  readonly missionsConnues: ReadonlyArray<string>;
 }
 
 /**

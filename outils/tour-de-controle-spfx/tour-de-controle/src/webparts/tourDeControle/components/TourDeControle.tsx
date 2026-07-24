@@ -9,6 +9,7 @@ import BandeauRentabilite from './BandeauRentabilite';
 import BandeauFactures from './BandeauFactures';
 import BandeauFraicheur from './BandeauFraicheur';
 import BandeauPipe from './BandeauPipe';
+import BandeauRecrutement from './BandeauRecrutement';
 
 const { useState, useCallback, useEffect, useMemo } = React;
 
@@ -26,6 +27,7 @@ function statutNode(item: DetailItem): React.ReactElement {
 export default function TourDeControle(props: ITourDeControleProps): React.ReactElement {
   const { userDisplayName, spHttpClient, dataSiteUrl, msGraphClientFactory } = props;
   const { gabaritsSiteUrl, gabaritsFolderPath, referentielRessourcesPath, referentielStructurePath } = props;
+  const { saisieSiteUrl, saisieFolderPath } = props;
 
   // Un seul état, l'ensemble des panneaux ouverts (clé = id de compteur).
   // Modèle voir → creuser → agir : un compteur déplie/replie SON détail dans le cockpit.
@@ -127,19 +129,6 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
     <p className={styles.emptyText}>Lecture des listes…</p>
   );
 
-  // L'action est un geste SÉPARÉ et délibéré — inerte en v1 (jamais câblée à l'agent).
-  const actionInerte = (libelle: string): React.ReactElement => (
-    <button
-      type="button"
-      className={styles.action}
-      disabled
-      title="À venir — action non câblée en v1 (le câblage portera le cran de l'action sous-jacente)."
-    >
-      <span>{libelle}</span>
-      <span className={styles.actionTag}>à venir</span>
-    </button>
-  );
-
   return (
     <section className={styles.cockpit}>
       <div className={styles.header}>
@@ -193,17 +182,30 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
         ) : chargement}
       </div>
 
-      {/* 3 — Recrutement (agrégats par étape uniquement — page tenant-wide, RGPD) */}
+      {/* 3 — Recrutement : compteurs agrégés (RGPD option A) + gestes (T-0039) sous ACL de liste */}
       <div className={styles.zone}>
         <div className={styles.zoneHead}>
           <span className={styles.zoneNum}>3</span>
           <div>
             <p className={styles.zoneTitle}>Recrutement</p>
-            <p className={styles.zoneSub}>Entretiens en cours par étape (agrégat)</p>
+            <p className={styles.zoneSub}>Entretiens en cours par étape (agrégat) — gestes réservés au recrutement</p>
           </div>
         </div>
-        {data ? renderCompteurs(data.recrutement.compteurs) : chargement}
-        {actionInerte('Ajouter un candidat')}
+        {data ? (
+          <BandeauRecrutement
+            spHttpClient={spHttpClient}
+            dataSiteUrl={dataSiteUrl}
+            msGraphClientFactory={msGraphClientFactory}
+            saisieSiteUrl={saisieSiteUrl}
+            saisieFolderPath={saisieFolderPath}
+            compteurs={data.recrutement.compteurs}
+            candidats={data.recrutement.candidats}
+            titresPris={data.recrutement.titresPris}
+            gestesAccessibles={data.recrutement.gestesAccessibles}
+            missionsConnues={data.recrutement.missionsConnues}
+            onMutation={recharger}
+          />
+        ) : chargement}
       </div>
 
       {/* 4 — Rentabilité et résultats (lecture seule ; gabarits actifs + référentiel, §4) */}
