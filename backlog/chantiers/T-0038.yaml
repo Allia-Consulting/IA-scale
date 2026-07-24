@@ -21,7 +21,18 @@ criteres_acceptation:
   - "L'écriture ne vise JAMAIS que la colonne CodeMission de la Liste CRM figée (GRAPH_CRM_LIST_ID) ; l'appelant ne choisit pas la cible"
   - "Préconditions strictes : Etape=Gagnée ET CodeMission vide, sinon refus explicite, zéro écriture"
 rayon_impact: firme
-statut: en_cours
+statut: soldé   # PROPOSÉ — prononcé par le gardien au merge de la PR d'épreuve (chantier/t0038-epreuve-cascade)
+note_epreuve: >
+  Épreuve réelle du 24/07/2026 VERTE (docs/epreuves/2026-07-24-t0038-cascade-sans-geste-gardien.md,
+  HEAD e485786c, image 0.18.0 digest sha256:4ac1f68b…08952, révision ca-allia-mcp-graph--0000025).
+  Bascule « Gagnée » (Liste CRM item 4, Arabelle Solutions) → allouer_code_mission("4") = {code_mission:3,
+  tentatives:1} (cran notifié) puis creer_espace_mission (cran auto) = espace 4 segments « 2026 - Arabelle
+  Solutions - Épreuve T-0038 — cascade auto - 3 » + arbre 01 - Pilotage / 02 - Livrables — SANS aucun geste
+  gardien. 4 preuves relues sur le réel : (1) CodeMission=3 posé par l'identité managée id-allia-mcp-graph,
+  codes {2,3} uniques ; (2) espace vérifié en live (listing Graph des enfants) ; (3) journal d'observabilité
+  cran=notifie/succes ; (4) 2e allocation refusée fail-closed (ValueError, zéro écriture). Incident annexe :
+  Title vide sur item 4 (geste « nouvelle opportunité » cockpit) → hygiène CRM 1c, ne bloque pas. Purge
+  d'hygiène (espace + item 4) = clics gardien listés au journal. Solde PROPOSÉ, prononcé au merge.
 note: >
   Reprend le reste que le journal d'épreuve du 24/07 et modele-donnees.md §2 bis imputaient à T-0024.
   T-0024 est soldé sur son périmètre historique (vérifié S41) : les références « allocateur atomique =
