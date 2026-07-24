@@ -12,7 +12,7 @@
 // option A). La lecture ne sélectionne que la colonne `Etape` (cf. QUERY_RECRUTEMENT).
 
 import { SPHttpClient, SPHttpClientResponse, MSGraphClientFactory, MSGraphClientV3 } from '@microsoft/sp-http';
-import type { Zone, ZonePipe, CompteOption, Compteur, DetailItem, Ecriture } from './types';
+import type { Zone, ZonePipe, ZoneRecrutement, CompteOption, Compteur, DetailItem, Ecriture } from './types';
 import {
   decouvrirGabarits,
   fusionnerContenus,
@@ -24,7 +24,24 @@ import {
   type EtatAcces,
   type FichierDossier
 } from './gabarits';
-import { lireContenus, type GrapheGet, type CibleGabarit, type CiblesReferentiel } from './workbook-graph';
+import {
+  lireContenus,
+  resoudreDrives,
+  resoudreItem,
+  TABLE_AFFECTATIONS,
+  versTexte,
+  type GrapheGet,
+  type ReponseGraphe,
+  type CibleGabarit,
+  type CiblesReferentiel
+} from './workbook-graph';
+import {
+  choisirSaisie,
+  type CibleAffectation,
+  type ItemAffectation,
+  type ResultatEtape,
+  type DepsCascade
+} from './cascade-acceptee';
 import {
   COLONNE_STATUT_MISSION,
   compterMissionsActives,
@@ -46,6 +63,7 @@ import {
   COL_COMPTE,
   COL_NOM_COMPTE,
   QUERY_RECRUTEMENT,
+  QUERY_GESTES_RECRUTEMENT,
   ETAPE_CANDIDAT_E1,
   ETAPE_CANDIDAT_E2,
   ETAPE_CANDIDAT_E3,
@@ -57,17 +75,33 @@ import {
   nomOpportunite,
   pipePondere,
   projeterOpportunites,
+  projeterCandidats,
   compterCandidatsEtape,
-  formaterEuros
+  formaterEuros,
+  creerCandidat as creerCandidatPure,
+  changerEtapeCandidat as changerEtapeCandidatPure
 } from './pipe-recrutement';
 
 export interface CockpitData {
   /** T-0020-d — les 3 KPI d'organisation (mesure de valeur, dernier maillon Phase 2). */
   readonly indicateurs: Zone;
   readonly pipeCommercial: ZonePipe;
-  readonly recrutement: Zone;
+  readonly recrutement: ZoneRecrutement;
   /** Cockpit v2 — présence/absence des sources économiques (gabarits actifs + référentiel). */
   readonly gabarits: EtatGabarits;
+}
+
+/**
+ * Coordonnées du classeur de SAISIE (modele-donnees.md §5.6) — site « Management et Gestion »,
+ * racine de la bibliothèque « Documents ». Cible n°3 de la cascade « Acceptée » (ligne
+ * d'affectation dans T_Affectations). Posées par le gardien (property pane) ; vides = cascade
+ * non câblée sur l'affectation → pré-vol « introuvable », zéro écriture.
+ */
+export interface ConfigSaisie {
+  /** URL absolue du site de la saisie (base `_api` + `/sites/{host}:{path}` Graph). */
+  readonly siteUrl: string;
+  /** Chemin server-relative du dossier des classeurs `saisie-<code>-….xlsx`. */
+  readonly folderPath: string;
 }
 
 /**
@@ -197,6 +231,37 @@ export function changerMontantOpportunite(
   return changerMontantOpportunitePure(ecrivainPour(sp, dataSiteUrl), id, montant);
 }
 
+/**
+ * Gestes d'écriture guidée du bandeau RECRUTEMENT — même motif que les gestes pipe : la logique
+ * pure (payloads, garde « Acceptée », allocation C-NNN) vit dans pipe-recrutement.ts et est
+ * unit-testée ; ces enveloppes ne font que lier l'Ecrivain au contexte SPFx (SSO utilisateur,
+ * aucune élévation). La bascule « Acceptée » N'EST PAS ici (garde de `changerEtapeCandidatPure`) :
+ * elle passe par la cascade (`depsCascadePour` + `executerCascade`, cascade-acceptee.ts).
+ */
+export function creerCandidat(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  params: {
+    readonly title: string;
+    readonly nom: string;
+    readonly grade: string;
+    readonly source: string;
+    readonly email: string;
+    readonly telephone?: string;
+  }
+): Promise<Ecriture> {
+  return creerCandidatPure(ecrivainPour(sp, dataSiteUrl), params);
+}
+
+export function changerEtapeCandidat(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  id: number,
+  etape: string
+): Promise<Ecriture> {
+  return changerEtapeCandidatPure(ecrivainPour(sp, dataSiteUrl), id, etape);
+}
+
 /** Compteur « — » sobre pour une source non lisible (non câblé / indisponible). */
 function compteurAbsent(id: string, libelle: string, etat: 'non_cable' | 'indisponible'): Compteur {
   return { id, libelle, valeur: '—', items: [], note: etat === 'non_cable' ? NOTE_NON_CABLE : NOTE_INDISPONIBLE };
@@ -285,14 +350,25 @@ async function chargerPipeCommercial(sp: SPHttpClient, dataSiteUrl: string): Pro
 }
 
 /**
- * Bandeau « Recrutement » (tour-de-controle.md v2.0 §3 bandeau 3, option A RGPD).
- * Source RÉELLE : Liste « Candidats », colonne `Etape` UNIQUEMENT (QUERY_RECRUTEMENT) —
- * PAS « Candidats-Synthèses » (vide). RÈGLE INVIOLABLE : aucun champ nominatif lu ni
- * affiché ; aucune écriture dans ce bandeau (action candidat renvoyée à T-0013-b).
- * Quatre compteurs, purs agrégats : Entretien E1 · E2 · E3 · Décisions en cours.
+ * Bandeau « Recrutement » (tour-de-controle.md §3 bandeau 3).
+ *
+ * DEUX lectures INDÉPENDANTES de la Liste « Candidats », chacune faillant seule (fail-visible) :
+ *   1. COMPTEURS agrégés — `QUERY_RECRUTEMENT` (Etape UNIQUEMENT). RÈGLE INVIOLABLE conservée :
+ *      aucun champ nominatif n'est sélectionné pour l'agrégat (RGPD option A, page tenant-wide).
+ *   2. GESTES (T-0039) — `QUERY_GESTES_RECRUTEMENT` (Id, Title, NomCandidat, Grade, Etape). Lecture
+ *      NOMINATIVE nécessaire aux gestes « étape en ligne » et « cascade Acceptée ». Elle est gouvernée
+ *      par l'ACL de la liste sous l'identité de l'utilisateur (destinataires internes du recrutement,
+ *      rgpd-recrutement-candidats.md §3) : un 403 (non habilité) → `gestesAccessibles=false`, aucune
+ *      ligne exposée, seuls les compteurs subsistent. Le cockpit n'élève aucun droit (§1 régime 1, §6).
+ *      (Départ ASSUMÉ de l'ancienne posture « jamais de nominatif sur la page tenant-wide », désormais
+ *      que le contrat socle §3 bandeau 3 exige des gestes par candidat — à relire, gardien.)
+ * `missionsConnues` est rempli par `chargerCockpit` depuis les gabarits (ici : vide).
  */
-async function chargerRecrutement(sp: SPHttpClient, dataSiteUrl: string): Promise<Zone> {
-  const lecture = await lireListe(sp, dataSiteUrl, 'Candidats', QUERY_RECRUTEMENT);
+async function chargerRecrutement(sp: SPHttpClient, dataSiteUrl: string): Promise<ZoneRecrutement> {
+  const [agg, gestes] = await Promise.all([
+    lireListe(sp, dataSiteUrl, 'Candidats', QUERY_RECRUTEMENT),
+    lireListe(sp, dataSiteUrl, 'Candidats', QUERY_GESTES_RECRUTEMENT)
+  ]);
 
   const etapes: ReadonlyArray<{ readonly id: string; readonly libelle: string; readonly etape: string }> = [
     { id: 'rec-e1', libelle: 'Entretien E1', etape: ETAPE_CANDIDAT_E1 },
@@ -301,23 +377,22 @@ async function chargerRecrutement(sp: SPHttpClient, dataSiteUrl: string): Promis
     { id: 'rec-dec', libelle: 'Décisions en cours', etape: ETAPE_CANDIDAT_PROPOSITION }
   ];
 
-  if (lecture.etat !== 'ok') {
-    return { compteurs: etapes.map(e => compteurAbsent(e.id, e.libelle, lecture.etat as 'non_cable' | 'indisponible')) };
-  }
+  const compteurs: ReadonlyArray<Compteur> = agg.etat !== 'ok'
+    ? etapes.map(e => compteurAbsent(e.id, e.libelle, agg.etat as 'non_cable' | 'indisponible'))
+    // Agrégat pur — un NOMBRE par étape, aucun item nominatif (jamais de liste de candidats).
+    : etapes.map(e => {
+        const n = compterCandidatsEtape(agg.valeurs, e.etape);
+        return { id: e.id, libelle: e.libelle, valeur: String(n), items: [], note: n === 0 ? 'Aucun pour l’instant.' : undefined };
+      });
 
-  // Agrégat pur — un NOMBRE par étape, aucun item nominatif (jamais de liste de candidats).
-  return {
-    compteurs: etapes.map(e => {
-      const n = compterCandidatsEtape(lecture.valeurs, e.etape);
-      return {
-        id: e.id,
-        libelle: e.libelle,
-        valeur: String(n),
-        items: [],
-        note: n === 0 ? 'Aucun pour l’instant.' : undefined
-      };
-    })
-  };
+  // Gestes : disponibles seulement si la lecture nominative a abouti (ACL de liste, §3).
+  const gestesAccessibles = gestes.etat === 'ok';
+  const candidats = gestesAccessibles ? projeterCandidats(gestes.valeurs) : [];
+  const titresPris = gestesAccessibles
+    ? gestes.valeurs.map(v => (typeof v.Title === 'string' ? v.Title : '')).filter(t => t !== '')
+    : [];
+
+  return { compteurs, candidats, titresPris, gestesAccessibles, missionsConnues: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +472,129 @@ function grapheGetPour(client: MSGraphClientV3): GrapheGet {
       console.error('[tour-de-controle] échec GET Graph', { chemin: cheminApi, status, erreur: e instanceof Error ? e.message : String(e) });
       return { ok: false, status };
     }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Cascade « Acceptée » (T-0039) — primitives liées au contexte SPFx. Les listes s'écrivent en
+// SharePoint REST (identité utilisateur) ; l'affectation initiale s'écrit dans le classeur de
+// SAISIE via Graph Workbook délégué (Files.ReadWrite.All). Toutes ne lèvent JAMAIS.
+// ---------------------------------------------------------------------------
+
+/** Résout le client Graph délégué, ou `undefined` (fabrique absente / getClient échoué). Ne lève jamais. */
+async function clientGraphOuNul(graphFactory?: MSGraphClientFactory): Promise<MSGraphClientV3 | undefined> {
+  if (!graphFactory) { return undefined; }
+  try {
+    return await graphFactory.getClient('3');
+  } catch (e) {
+    console.error('[tour-de-controle] client Graph non résolu (cascade)', e instanceof Error ? e.message : String(e));
+    return undefined;
+  }
+}
+
+/** Adaptateur POST Graph (écriture Workbook, permission Files.ReadWrite.All). Ne lève jamais. */
+function graphePostPour(client: MSGraphClientV3): (chemin: string, corps: unknown) => Promise<ReponseGraphe> {
+  return async (chemin, corps) => {
+    try {
+      const rep: unknown = await client.api(chemin).post(corps);
+      return { ok: true, status: 200, corps: rep };
+    } catch (e) {
+      const brut = (e && typeof e === 'object' && 'statusCode' in e) ? Number((e as { statusCode?: unknown }).statusCode) : 0;
+      const status = isFinite(brut) ? brut : 0;
+      console.error('[tour-de-controle] échec POST Graph', { chemin, status, erreur: e instanceof Error ? e.message : String(e) });
+      return { ok: false, status };
+    }
+  };
+}
+
+/**
+ * Pré-vol de localisation du classeur de saisie de la mission (AUCUNE écriture) : listing REST du
+ * dossier, choix du classeur `saisie-<code>-…` (refus si ambigu), résolution Graph de son id, puis
+ * vérification de la présence de la table T_Affectations. Motifs d'échec PRÉCIS (introuvable /
+ * indisponible), jamais de zéro muet.
+ */
+function localiserAffectationPour(
+  sp: SPHttpClient,
+  cfgSaisie: ConfigSaisie,
+  graphFactory?: MSGraphClientFactory
+): (codeMission: string) => Promise<CibleAffectation> {
+  return async (codeMission) => {
+    if (!cfgSaisie.siteUrl || !cfgSaisie.folderPath) {
+      return { etat: 'introuvable', cause: 'classeur de saisie non câblé (site/dossier vides)' };
+    }
+    // 1. Listing REST du dossier de saisie (identité utilisateur) → noms + URLs server-relative.
+    const url = `${cfgSaisie.siteUrl}/_api/web/GetFolderByServerRelativePath(decodedUrl='${litteralOData(cfgSaisie.folderPath)}')`
+      + `/Files?$select=Name,ServerRelativeUrl&$top=2000`;
+    let fichiers: ReadonlyArray<Record<string, unknown>>;
+    try {
+      const res: SPHttpClientResponse = await sp.get(url, SPHttpClient.configurations.v1);
+      if (res.status === 404) { return { etat: 'introuvable', cause: 'dossier de saisie introuvable' }; }
+      if (!res.ok) { return { etat: 'indisponible', cause: `listing du dossier de saisie (HTTP ${res.status})` }; }
+      const body: { value?: ReadonlyArray<Record<string, unknown>> } = await res.json();
+      fichiers = body.value ?? [];
+    } catch {
+      return { etat: 'indisponible', cause: 'listing du dossier de saisie (échec réseau)' };
+    }
+
+    const noms = fichiers.map(f => versTexte(f.Name));
+    const choix = choisirSaisie(noms, codeMission);
+    if (!choix.nom) { return { etat: 'introuvable', cause: `aucun classeur « saisie-${codeMission}-… » dans le dossier` }; }
+    if (choix.ambigu) { return { etat: 'introuvable', cause: `plusieurs classeurs « saisie-${codeMission}-… » (ambigu) — refus fail-closed` }; }
+    const fichier = fichiers.find(f => versTexte(f.Name) === choix.nom);
+    const serverRel = versTexte(fichier ? fichier.ServerRelativeUrl : undefined);
+    if (!serverRel) { return { etat: 'indisponible', cause: 'URL du classeur de saisie introuvable' }; }
+
+    // 2. Résolution Graph : site → drives → id du driveItem (réutilise workbook-graph).
+    const client = await clientGraphOuNul(graphFactory);
+    if (!client) { return { etat: 'indisponible', cause: 'client Graph non résolu (fabrique absente ou getClient a échoué)' }; }
+    const grapheGet = grapheGetPour(client);
+    const drives = await resoudreDrives(grapheGet, cfgSaisie.siteUrl);
+    if (!drives) { return { etat: 'indisponible', cause: 'résolution site→drive du site de saisie échouée' }; }
+    const resu = await resoudreItem(grapheGet, drives, serverRel);
+    if (!resu.item) {
+      return resu.acces === 'restreint'
+        ? { etat: 'introuvable', cause: `classeur ${choix.nom} non visible (droits)` }
+        : { etat: 'indisponible', cause: resu.cause ?? 'classeur non résolu' };
+    }
+    // 3. Présence de la table T_Affectations (sinon « table absente » AVANT toute écriture).
+    const t = await grapheGet(`/drives/${resu.item.driveId}/items/${resu.item.itemId}/workbook/tables/${encodeURIComponent(TABLE_AFFECTATIONS)}`);
+    if (t.status === 404) { return { etat: 'introuvable', cause: `table ${TABLE_AFFECTATIONS} absente de ${choix.nom}` }; }
+    if (!t.ok) { return { etat: 'indisponible', cause: `accès à ${TABLE_AFFECTATIONS} (HTTP ${t.status})` }; }
+    return { etat: 'ok', item: { driveId: resu.item.driveId, itemId: resu.item.itemId, fichier: choix.nom } };
+  };
+}
+
+/** Ajout de la ligne d'affectation dans T_Affectations (Graph Workbook `rows/add`). Ne lève jamais. */
+function ajouterLigneAffectationPour(
+  graphFactory?: MSGraphClientFactory
+): (item: ItemAffectation, valeurs: ReadonlyArray<ReadonlyArray<unknown>>) => Promise<ResultatEtape> {
+  return async (item, valeurs) => {
+    const client = await clientGraphOuNul(graphFactory);
+    if (!client) { return { etat: 'indisponible', cause: 'client Graph non résolu' }; }
+    const post = graphePostPour(client);
+    const chemin = `/drives/${item.driveId}/items/${item.itemId}/workbook/tables/${encodeURIComponent(TABLE_AFFECTATIONS)}/rows/add`;
+    const rep = await post(chemin, { values: valeurs });
+    if (rep.ok) { return { etat: 'ok' }; }
+    if (rep.status === 403) { return { etat: 'refuse' }; }
+    return { etat: 'indisponible', cause: `ajout de ligne dans ${TABLE_AFFECTATIONS} (HTTP ${rep.status})` };
+  };
+}
+
+/**
+ * Construit les primitives de la cascade « Acceptée » liées au contexte SPFx : écriture de listes
+ * en SharePoint REST (SSO utilisateur) et écriture de l'affectation en Graph Workbook délégué
+ * (Files.ReadWrite.All). Consommé par BandeauRecrutement + `executerCascade` (cascade-acceptee.ts).
+ */
+export function depsCascadePour(
+  sp: SPHttpClient,
+  dataSiteUrl: string,
+  cfgSaisie: ConfigSaisie,
+  graphFactory?: MSGraphClientFactory
+): DepsCascade {
+  return {
+    ecrire: ecrivainPour(sp, dataSiteUrl),
+    localiserAffectation: localiserAffectationPour(sp, cfgSaisie, graphFactory),
+    ajouterLigneAffectation: ajouterLigneAffectationPour(graphFactory)
   };
 }
 
@@ -584,11 +782,14 @@ export async function chargerCockpit(
   cfgGabarits: ConfigGabarits,
   graphFactory?: MSGraphClientFactory
 ): Promise<CockpitData> {
-  const [indicateurs, pipeCommercial, recrutement, gabarits] = await Promise.all([
+  const [indicateurs, pipeCommercial, recrutementBase, gabarits] = await Promise.all([
     chargerIndicateursOrganisation(sp, dataSiteUrl),
     chargerPipeCommercial(sp, dataSiteUrl),
     chargerRecrutement(sp, dataSiteUrl),
     chargerGabarits(sp, cfgGabarits, graphFactory)
   ]);
+  // Missions réelles connues = CodeMission des gabarits actifs (options du dialogue de cascade).
+  const missionsConnues = gabarits.gabarits.map(g => g.codeMission).filter(c => c !== '');
+  const recrutement: ZoneRecrutement = { ...recrutementBase, missionsConnues };
   return { indicateurs, pipeCommercial, recrutement, gabarits };
 }

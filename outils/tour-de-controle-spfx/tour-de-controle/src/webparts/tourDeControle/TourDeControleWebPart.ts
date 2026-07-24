@@ -24,6 +24,10 @@ export interface ITourDeControleWebPartProps {
   referentielRessourcesPath: string;
   /** Chemin server-relative du classeur référentiel `T_Structure` (audience restreinte, §5.3). Vide = non câblé. */
   referentielStructurePath: string;
+  /** Site SharePoint de la couche de saisie (Management et Gestion, §5.6). Vide = non câblé. */
+  saisieSiteUrl: string;
+  /** Chemin server-relative du dossier des classeurs `saisie-<code>-….xlsx`. Vide = non câblé. */
+  saisieFolderPath: string;
 }
 
 export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDeControleWebPartProps> {
@@ -53,7 +57,11 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
         gabaritsSiteUrl: (this.properties.gabaritsSiteUrl && this.properties.gabaritsSiteUrl.trim()) || '',
         gabaritsFolderPath: (this.properties.gabaritsFolderPath && this.properties.gabaritsFolderPath.trim()) || '',
         referentielRessourcesPath: (this.properties.referentielRessourcesPath && this.properties.referentielRessourcesPath.trim()) || '',
-        referentielStructurePath: (this.properties.referentielStructurePath && this.properties.referentielStructurePath.trim()) || ''
+        referentielStructurePath: (this.properties.referentielStructurePath && this.properties.referentielStructurePath.trim()) || '',
+        // Coordonnées de la couche de saisie (Management et Gestion, §5.6) — cible de la ligne
+        // d'affectation de la cascade « Acceptée ». Vide = affectation non câblée (zéro écriture).
+        saisieSiteUrl: (this.properties.saisieSiteUrl && this.properties.saisieSiteUrl.trim()) || '',
+        saisieFolderPath: (this.properties.saisieFolderPath && this.properties.saisieFolderPath.trim()) || ''
       }
     );
 
@@ -154,6 +162,14 @@ export default class TourDeControleWebPart extends BaseClientSideWebPart<ITourDe
                 PropertyPaneTextField('referentielStructurePath', {
                   label: 'Référentiel T_Structure (server-relative)',
                   description: 'Chemin du classeur referentiel-structure.xlsx (audience restreinte, §5.3). Vide = non câblé.'
+                }),
+                PropertyPaneTextField('saisieSiteUrl', {
+                  label: 'URL du site de saisie',
+                  description: 'Site de la couche de saisie (Management et Gestion, §5.6) — cible de l’affectation de la cascade « Acceptée ». Vide = non câblé.'
+                }),
+                PropertyPaneTextField('saisieFolderPath', {
+                  label: 'Dossier des classeurs de saisie (server-relative)',
+                  description: 'Chemin du dossier des « saisie-<code>-….xlsx ». Vide = non câblé.'
                 })
               ]
             }

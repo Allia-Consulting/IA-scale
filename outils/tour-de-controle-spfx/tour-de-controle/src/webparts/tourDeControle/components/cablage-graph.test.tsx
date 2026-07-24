@@ -76,6 +76,8 @@ function propsCablees(over: Partial<ITourDeControleProps>): ITourDeControleProps
     gabaritsFolderPath: DOSSIER,
     referentielRessourcesPath: '',
     referentielStructurePath: '',
+    saisieSiteUrl: '',
+    saisieFolderPath: '',
     ...over
   };
 }

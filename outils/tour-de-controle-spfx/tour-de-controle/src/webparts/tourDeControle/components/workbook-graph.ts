@@ -311,14 +311,14 @@ export function localiserDansDrive(
 }
 
 /** Drive résolu (id + racine server-relative), une fois pour toutes les tables d'un même site. */
-type Drive = { readonly id: string; readonly webUrl: string };
+export type Drive = { readonly id: string; readonly webUrl: string };
 
 /**
  * Résout site → drives EN UN SEUL PASSAGE, en amont des lectures concurrentes (aucun état mutable
  * partagé après `await` : pas de course). Retourne la liste des drives, ou `undefined` si la
  * résolution échoue (site introuvable / drives illisibles).
  */
-async function resoudreDrives(grapheGet: GrapheGet, siteUrl: string): Promise<ReadonlyArray<Drive> | undefined> {
+export async function resoudreDrives(grapheGet: GrapheGet, siteUrl: string): Promise<ReadonlyArray<Drive> | undefined> {
   const hc = hoteEtCheminSite(siteUrl);
   if (!hc) { return undefined; }
   const site = await grapheGet(`/sites/${hc.hote}:${encoderChemin(hc.chemin)}?$select=id`);
@@ -345,7 +345,7 @@ interface LectureTable {
 }
 
 /** driveItem résolu : (driveId, itemId). L'API Workbook DOIT être adressée par cet id (étape 4). */
-interface ItemResolu { readonly driveId: string; readonly itemId: string; }
+export interface ItemResolu { readonly driveId: string; readonly itemId: string; }
 
 /**
  * Étape 3 de la chaîne : résout l'ID du driveItem d'un fichier PAR CHEMIN
@@ -355,7 +355,7 @@ interface ItemResolu { readonly driveId: string; readonly itemId: string; }
  * l'adressage par id ensuite. 403/404 = accès restreint (fichier absent / non visible) → non
  * bloquant, sans anomalie. Ne lève jamais.
  */
-async function resoudreItem(
+export async function resoudreItem(
   grapheGet: GrapheGet,
   drives: ReadonlyArray<Drive>,
   fichierServerRelative: string

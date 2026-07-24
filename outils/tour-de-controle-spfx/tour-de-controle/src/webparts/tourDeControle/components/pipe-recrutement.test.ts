@@ -19,6 +19,7 @@ import {
   changerEtapeOpportunite,
   changerMontantOpportunite,
   QUERY_RECRUTEMENT,
+  QUERY_GESTES_RECRUTEMENT,
   Ecrivain,
   ETAPE_QUALIFICATION,
   COL_ETAPE_CRM,
@@ -27,7 +28,22 @@ import {
   COL_ETAPE_CANDIDAT,
   COL_NOM_OPPORTUNITE,
   COL_COMPTE,
-  COL_ECHEANCE
+  COL_ECHEANCE,
+  COL_NOM_CANDIDAT,
+  COL_GRADE,
+  COL_SOURCE,
+  COL_EMAIL,
+  COL_TELEPHONE,
+  ETAPE_CANDIDAT_E1,
+  ETAPE_CANDIDAT_ACCEPTEE,
+  ETAPE_CANDIDAT_REFUSEE,
+  prochainTitleCandidat,
+  projeterCandidats,
+  champsCreationCandidat,
+  champsChangementEtapeCandidat,
+  creerCandidat,
+  changerEtapeCandidat,
+  LISTE_CANDIDATS
 } from './pipe-recrutement';
 
 describe('pipe commercial — pondération', () => {
@@ -104,11 +120,117 @@ describe('recrutement — agrégats par étape', () => {
     expect(compterCandidatsEtape(candidats, 'Proposition')).toBe(1);
   });
 
-  it('RGPD : la requête ne sélectionne QUE la colonne Etape — aucun champ nominatif', () => {
+  it('RGPD : la requête AGRÉGAT ne sélectionne QUE la colonne Etape — aucun champ nominatif', () => {
     expect(QUERY_RECRUTEMENT).toContain('$select=Etape');
     for (const nominatif of ['Title', 'NomCandidat', 'Owner', 'ResponsableAction', 'Email', 'Telephone', 'Interviewer']) {
       expect(QUERY_RECRUTEMENT).not.toContain(nominatif);
     }
+  });
+
+  it('RGPD : la requête des GESTES est distincte, borne les champs, et n’expose NI Email NI Telephone', () => {
+    // La requête nominative des gestes est ACL-gated (§3) ; elle ne tire que le strict nécessaire
+    // à l'action et JAMAIS Email/Telephone (qui ne migrent pas non plus vers Ressources-Profil).
+    expect(QUERY_GESTES_RECRUTEMENT).toContain('NomCandidat');
+    expect(QUERY_GESTES_RECRUTEMENT).toContain('Grade');
+    expect(QUERY_GESTES_RECRUTEMENT).not.toContain('Email');
+    expect(QUERY_GESTES_RECRUTEMENT).not.toContain('Telephone');
+    expect(QUERY_GESTES_RECRUTEMENT).not.toContain('ResponsableAction');
+  });
+});
+
+describe('recrutement — allocation C-NNN (prochainTitleCandidat)', () => {
+  it('max des ^C-(\\d+)$ + 1, zéro-paddé sur 3', () => {
+    const candidats = [{ Title: 'C-001' }, { Title: 'C-014' }, { Title: 'C-007' }];
+    expect(prochainTitleCandidat(candidats)).toBe('C-015');
+  });
+
+  it('liste vide → C-001', () => {
+    expect(prochainTitleCandidat([])).toBe('C-001');
+  });
+
+  it('liste SANS aucun motif C- (Title non conformes / absents) → C-001', () => {
+    // Scorie réelle : candidats 1..7 aux Title non conformes — ils sont IGNORÉS, jamais une erreur.
+    const candidats = [{ Title: 'Julie Martin' }, { Title: '' }, { NomCandidat: 'X' }, {}];
+    expect(prochainTitleCandidat(candidats)).toBe('C-001');
+  });
+
+  it('mélange conformes / non conformes → max des seuls conformes + 1', () => {
+    const candidats = [{ Title: 'Julie Martin' }, { Title: 'C-009' }, { Title: 'brouillon' }];
+    expect(prochainTitleCandidat(candidats)).toBe('C-010');
+  });
+
+  it('au-delà de 999, le padding ne tronque pas (C-1000)', () => {
+    expect(prochainTitleCandidat([{ Title: 'C-999' }])).toBe('C-1000');
+  });
+});
+
+describe('recrutement — projeterCandidats', () => {
+  it('mappe Id + Title + NomCandidat + Grade + Etape (tolérant aux absents)', () => {
+    const [c] = projeterCandidats([
+      { Id: 5, Title: 'C-005', [COL_NOM_CANDIDAT]: 'Julie Martin', [COL_GRADE]: 'Manager', [COL_ETAPE_CANDIDAT]: 'E2' }
+    ]);
+    expect(c).toEqual({ id: 5, title: 'C-005', nom: 'Julie Martin', grade: 'Manager', etape: 'E2' });
+  });
+
+  it('champs absents → défauts sobres (id 0, chaînes vides)', () => {
+    const [c] = projeterCandidats([{}]);
+    expect(c).toEqual({ id: 0, title: '', nom: '', grade: '', etape: '' });
+  });
+});
+
+describe('recrutement — geste « ajouter un candidat »', () => {
+  it('champsCreationCandidat : Title alloué, étape E1, téléphone inclus si fourni', () => {
+    const corps = champsCreationCandidat({
+      title: 'C-008', nom: 'Julie Martin', grade: 'Consultant', source: 'LinkedIn',
+      email: 'julie@example.com', telephone: '0600000000'
+    });
+    expect(corps.Title).toBe('C-008');
+    expect(corps[COL_NOM_CANDIDAT]).toBe('Julie Martin');
+    expect(corps[COL_GRADE]).toBe('Consultant');
+    expect(corps[COL_SOURCE]).toBe('LinkedIn');
+    expect(corps[COL_EMAIL]).toBe('julie@example.com');
+    expect(corps[COL_ETAPE_CANDIDAT]).toBe(ETAPE_CANDIDAT_E1);
+    expect(corps[COL_TELEPHONE]).toBe('0600000000');
+  });
+
+  it('champsCreationCandidat : téléphone OMIS si vide/absent (optionnel)', () => {
+    const corps = champsCreationCandidat({ title: 'C-009', nom: 'A B', grade: 'Consultant', source: 'Cooptation', email: 'a@b.c' });
+    expect(COL_TELEPHONE in corps).toBe(false);
+    const corps2 = champsCreationCandidat({ title: 'C-010', nom: 'A B', grade: 'Consultant', source: 'Cooptation', email: 'a@b.c', telephone: '   ' });
+    expect(COL_TELEPHONE in corps2).toBe(false);
+  });
+
+  it('creerCandidat délègue à l’Ecrivain sur la liste Candidats, sans id (création)', async () => {
+    const appels: Array<{ titre: string; champs: Record<string, unknown>; id?: number }> = [];
+    const ecrire: Ecrivain = async (titre, champs, id) => { appels.push({ titre, champs, id }); return { etat: 'ok' }; };
+    const r = await creerCandidat(ecrire, { title: 'C-011', nom: 'A B', grade: 'Manager', source: 'Chasseur', email: 'a@b.c' });
+    expect(r.etat).toBe('ok');
+    expect(appels[0].titre).toBe(LISTE_CANDIDATS);
+    expect(appels[0].id).toBeUndefined();
+    expect(appels[0].champs.Title).toBe('C-011');
+  });
+});
+
+describe('recrutement — geste « changement d’étape » avec garde « Acceptée »', () => {
+  it('champsChangementEtapeCandidat ne touche que l’étape (cas nominal)', () => {
+    const corps = champsChangementEtapeCandidat(ETAPE_CANDIDAT_REFUSEE);
+    expect(corps[COL_ETAPE_CANDIDAT]).toBe(ETAPE_CANDIDAT_REFUSEE);
+    expect(Object.keys(corps)).toEqual([COL_ETAPE_CANDIDAT]);
+  });
+
+  it('GARDE : « Acceptée » par cette voie LÈVE (la cascade seule y mène)', () => {
+    expect(() => champsChangementEtapeCandidat(ETAPE_CANDIDAT_ACCEPTEE)).toThrow(/cascade/i);
+  });
+
+  it('changerEtapeCandidat délègue avec l’id (mise à jour), et propage la garde « Acceptée »', async () => {
+    const appels: Array<{ titre: string; id?: number }> = [];
+    const ecrire: Ecrivain = async (titre, _champs, id) => { appels.push({ titre, id }); return { etat: 'ok' }; };
+    await changerEtapeCandidat(ecrire, 42, 'E3');
+    expect(appels[0].titre).toBe(LISTE_CANDIDATS);
+    expect(appels[0].id).toBe(42);
+    // La garde interdit « Acceptée » AVANT tout appel réseau (aucun nouvel appel enregistré).
+    await expect(async () => { await changerEtapeCandidat(ecrire, 42, ETAPE_CANDIDAT_ACCEPTEE); }).rejects.toThrow(/cascade/i);
+    expect(appels).toHaveLength(1);
   });
 });
 
