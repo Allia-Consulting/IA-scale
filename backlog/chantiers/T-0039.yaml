@@ -1,0 +1,19 @@
+---
+id: T-0039
+titre: "Gestes recrutement du cockpit — ajout candidat, changement d'étape en ligne, cascade « Acceptée » sur confirmation"
+capacite: "Généralisation ; cockpit utilisateur (Phase 4) / T-0035 point 4 — pipe recrutement"
+phase: 4
+type_action: infrastructure
+cran: "gestes = éditions humaines directes sous identité Entra de l'utilisateur (hors régime des crans — tour-de-controle.md §6) ; cascade « Acceptée » = cascade déterministe (annonce exhaustive + confirmation explicite obligatoires, §1 régime 2) ; la PR touche outils/tour-de-controle-spfx/** → porte humaine, pas d'auto-merge"
+produit:
+  - "(geste « ajouter un candidat ») formulaire minimal du bandeau Recrutement : NomCandidat, Grade, Source, Email, Telephone (optionnel) ; création dans la Liste « Candidats » via SharePoint REST sous identité utilisateur ; Etape posée à E1 ; Title alloué au motif C-NNN (max des ^C-(\\d+)$ existants + 1) — le défaut Title du geste CRM (plan §13.2) n'est PAS reproduit"
+  - "(geste « changement d'étape en ligne ») liste déroulante Etape par ligne candidat (E1/E2/E3/Proposition/Acceptée/Refusée), MERGE SharePoint REST — motif changerEtapeOpportunite ; la bascule vers « Acceptée » ne s'écrit JAMAIS directement : elle ouvre la cascade"
+  - "(cascade « Acceptée ») annonce EXHAUSTIVE des trois écritures puis confirmation explicite : (1) Candidats.Etape → Acceptée ; (2) création fiche Ressources-Profil (Prenom, Nom, IdentifiantEntra saisi, Grade repris du candidat, Disponibilité) — minimisation RGPD : Email/Telephone candidat ne migrent PAS ; (3) affectation initiale = ligne d'affectation {CodeMission choisi, Ressource=IdentifiantEntra, Mois, JoursPrevus} dans le classeur de saisie de la mission (Graph Workbook, Files.ReadWrite.All déjà accordé). Annulation = zéro écriture ; échec en cours = arrêt affiché, jamais de réparation silencieuse"
+  - "(tests) unités sur payloads, allocation C-NNN, garde de transition Acceptée ; build et CI 4 checks verts"
+arbitrages:
+  - "Cascade portée par le cockpit (décision gardien 24/07/2026, S42) : écritures sous identité utilisateur — SharePoint REST pour les listes, Graph Workbook pour l'affectation ; server.py NON touché, aucun scope nouveau (manifeste v1.4.7.0 suffisant, prouvé)"
+  - "La décision de recrutement reste humaine (rgpd-recrutement-candidats.md §1) : le geste ne fait qu'exécuter la décision, sur confirmation"
+scories_nommees_non_ouvertes:
+  - "Title des candidats 1..7 non conformes C-NNN — backfill = clics gardien (préalable à l'épreuve)"
+  - "Item 9 « TEST-PURGE-T0013D-opposition » — purge = clic gardien"
+statut: en_cours
