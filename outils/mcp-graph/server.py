@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose QUINZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -13,6 +13,7 @@ Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protoco
     - lire_annuaire               : LIT l'annuaire Entra (lecture seule) — résout un UPN en objectId et/ou liste les membres d'un groupe borné aux listes blanches.
     - creer_espace_mission        : CRÉE l'espace de mission (arbre de dossiers FIGÉ) UNIQUEMENT sous la racine « Missions ».
     - deposer_document_mission    : DÉPOSE un brouillon interne UNIQUEMENT dans un sous-dossier FIGÉ d'un espace de mission.
+    - allouer_code_mission        : ALLOUE atomiquement le CodeMission (max+1) d'une opportunité GAGNÉE et le réécrit sur elle — cible FIGÉE « CRM », colonne CodeMission uniquement, If-Match, préconditions fail-closed.
     - notifier_canal              : DÉPOSE une notification UNIQUEMENT dans la liste « Notifications » (relais vers Teams par flux M365).
     - workbook_lire_table         : LIT (lecture seule, NON bornée) les lignes d'une table nommée d'un classeur Excel (saisie / gabarit / réf. coûts).
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
@@ -20,7 +21,7 @@ Ce serveur expose QUATORZE opérations à un agent, via le Model Context Protoco
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
     - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve FROIDE « vierge » (en-têtes §5.2 + lignes de corps VIDES tolérées, la ligne d'insertion Excel — T-0035 reprise n°5), rollback borné ET VÉRIFIÉ. Plus aucune souche binaire.
 
-(Compte des opérations = 14 outils réellement décorés ; un `grep` du décorateur d'outil retourne 15,
+(Compte des opérations = 15 outils réellement décorés ; un `grep` du décorateur d'outil retourne 16,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
 
 Transport & santé :
@@ -138,6 +139,11 @@ CRAN_PAR_OUTIL = {
     "reconcilier_groupe_parc": "auto",
     "lire_annuaire": "auto",
     "notifier_canal": "notifie",
+    # Allocateur CodeMission (T-0038) : écriture SOURCE à cible figée (Liste « CRM », colonne
+    # CodeMission uniquement), préconditions strictes, If-Match — réversible et interne, mais elle
+    # ferme la couture opportunité → mission (largement visible) : cran NOTIFIE (l'agent agit,
+    # le gardien est informé). Remplace le geste gardien tracé de l'ancienne réécriture manuelle.
+    "allouer_code_mission": "notifie",
     # Primitives Workbook/Tables (T-0031) : lecture non bornée = auto par nature ; écritures
     # bornées au domicile gabarit = auto (type d'action reconcilier_gabarit_pilotage, table v1.10).
     "workbook_lire_table": "auto",
@@ -212,6 +218,7 @@ TABLES_GABARIT = (
     ("Echeancier", "T_Echeancier", ("NumFacture", "CodeMission", "MoisCA", "MontantHT", "Echeance", "Statut", "LienFacture")),
 )
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
+ENV_CRM_LIST_ID = "GRAPH_CRM_LIST_ID"  # liste « CRM » (SEULE cible de allouer_code_mission — écriture de la colonne CodeMission uniquement, T-0038)
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
 # Le support de kick-off se dépose dans « 01 - Pilotage » (décision gardien, amendement n°2 après test 0.8.0).
@@ -658,6 +665,37 @@ def _config_notifications() -> dict[str, str]:
             "Voir outils/mcp-graph/README.md."
         )
     return {"notifications_list_id": valeur}
+
+
+def _config_crm() -> dict[str, str]:
+    """Lit la configuration de la Liste « CRM » (cible FIGÉE de allouer_code_mission).
+
+    Config DÉDIÉE, sur le modèle de `_config_mission()` : les outils existants ne dépendent PAS
+    de ces variables (aucune régression de leur contrat). L'allocateur lit sa propre configuration
+    et échoue clairement (ConfigManquante) si l'une manque. Aucun secret (identité managée).
+
+    Deux cibles FIGÉES côté serveur (jamais choisies par l'appelant) :
+        - site_id     : site AlliaConsuling (partagé, GRAPH_SITE_ID) ;
+        - crm_list_id : Liste « CRM » (GRAPH_CRM_LIST_ID) — la seule liste que allouer_code_mission
+          lit et écrit, et sur laquelle il ne touche QUE la colonne CodeMission.
+    """
+    valeurs = {
+        "site_id": os.environ.get(ENV_SITE_ID, ""),
+        "crm_list_id": os.environ.get(ENV_CRM_LIST_ID, ""),
+    }
+    manquantes = [k for k, v in valeurs.items() if not v]
+    if manquantes:
+        noms_env = {
+            "site_id": ENV_SITE_ID,
+            "crm_list_id": ENV_CRM_LIST_ID,
+        }
+        absentes = ", ".join(noms_env[k] for k in manquantes)
+        raise ConfigManquante(
+            "Configuration « CRM » incomplète. Variables d'environnement manquantes : "
+            f"{absentes}. Liste « CRM » créée au runbook T-0026 ; id posé au runbook T-0038. "
+            "Voir outils/mcp-graph/README.md."
+        )
+    return valeurs
 
 
 # Caractères interdits dans un composant de nom d'espace (invalides SharePoint / dangereux pour le
@@ -1153,6 +1191,229 @@ def deposer_document_mission(
         "taille_octets": len(contenu),
         "sha256": sha256_recu,
     }
+
+
+# --- Allocateur CodeMission atomique (T-0038) — helpers dédiés -------------------------------
+# Statuts transitoires Graph : honorer Retry-After (leçon durable) — 429 (throttling) / 503.
+_STATUTS_TRANSITOIRES_CRM = (429, 503)
+
+
+def _delai_retry_after(reponse, defaut: float = 1.0) -> float:
+    """Délai (secondes) à respecter sur 429/503, lu dans l'en-tête Retry-After.
+
+    Retry-After en SECONDES (entier) est honoré ; un format non entier (date HTTP) ou une absence
+    d'en-tête retombe sur `defaut`. Borné à 30 s (garde-fou : ne jamais dormir sans borne)."""
+    val = reponse.headers.get("Retry-After", "")
+    try:
+        delai = float(val)
+    except (TypeError, ValueError):
+        delai = defaut
+    return max(0.0, min(delai, 30.0))
+
+
+def _get_crm_avec_backoff(client_http: httpx.Client, url: str, params=None):
+    """GET honorant Retry-After sur 429/503 (borné : 1 appel + 2 réessais). Lecture seule."""
+    reponse = client_http.get(url, headers=_entetes(), params=params)
+    for _ in range(2):
+        if reponse.status_code not in _STATUTS_TRANSITOIRES_CRM:
+            break
+        time.sleep(_delai_retry_after(reponse))
+        reponse = client_http.get(url, headers=_entetes(), params=params)
+    return reponse
+
+
+def _patch_fields_crm_avec_backoff(client_http: httpx.Client, url: str, etag: str, champs: dict):
+    """PATCH des `fields` d'un item CRM avec If-Match, honorant Retry-After sur 429/503 (borné).
+
+    L'en-tête `If-Match: <etag>` porte l'ETag lu à la relecture : le PATCH échoue (412/409) si
+    l'item a changé entre-temps — c'est le cœur de l'allocation ATOMIQUE (pas de « lost update »)."""
+    def _entetes_patch() -> dict:
+        return {**_entetes(), "Content-Type": "application/json", "If-Match": etag}
+
+    reponse = client_http.patch(url, headers=_entetes_patch(), json=champs)
+    for _ in range(2):
+        if reponse.status_code not in _STATUTS_TRANSITOIRES_CRM:
+            break
+        time.sleep(_delai_retry_after(reponse))
+        reponse = client_http.patch(url, headers=_entetes_patch(), json=champs)
+    return reponse
+
+
+def _code_mission_vide(valeur: Any) -> bool:
+    """Vrai si le champ CodeMission est VIDE (None ou chaîne blanche) — précondition d'allocation.
+
+    Toute autre valeur (entier, texte non vide) compte comme « déjà attribué » : fail-closed,
+    jamais de réattribution (modele-donnees §2 bis — le code est jamais réattribué)."""
+    if valeur is None:
+        return True
+    if isinstance(valeur, str):
+        return valeur.strip() == ""
+    return False
+
+
+def _code_mission_en_entier(brut: Any) -> int | None:
+    """Convertit une valeur CodeMission en ENTIER ≥ 1, ou None si non-entière (à ignorer au scan).
+
+    Le CodeMission fait foi comme ENTIER positif (modele-donnees §2 bis). En LECTURE on est
+    permissif (on ignore les vides / textes libres, on tolère un éventuel zéro de tête d'un existant) ;
+    la contrainte de FORME (sans zéro de tête) porte sur l'écriture, faite ici avec un int Python."""
+    if brut is None:
+        return None
+    s = str(brut).strip()
+    if not s or not s.isdigit():
+        return None
+    n = int(s)
+    return n if n >= 1 else None
+
+
+def _codes_mission_existants(client_http: httpx.Client, url_items: str) -> list[int]:
+    """Lit TOUS les CodeMission entiers de la Liste « CRM » (pagination @odata.nextLink complète).
+
+    Retourne la liste des entiers rencontrés (doublons conservés : la post-vérification anti-course
+    compte les occurrences). Les valeurs non entières (vides, texte) sont ignorées. Lecture seule ;
+    ne décide, n'écrit rien ; honore Retry-After sur 429/503."""
+    entiers: list[int] = []
+    params = {"$expand": "fields", "$select": "id", "$top": "999"}
+    page = _get_crm_avec_backoff(client_http, url_items, params=params)
+    while True:
+        page.raise_for_status()
+        corps = page.json()
+        for it in corps.get("value", []):
+            n = _code_mission_en_entier((it.get("fields") or {}).get("CodeMission"))
+            if n is not None:
+                entiers.append(n)
+        suivant = corps.get("@odata.nextLink")
+        if not suivant:
+            break
+        page = _get_crm_avec_backoff(client_http, suivant)
+    return entiers
+
+
+@mcp.tool()
+@_journal_appel("allouer_code_mission")
+def allouer_code_mission(ctx: Context, opportunite_id: str) -> dict[str, Any]:
+    """Alloue ATOMIQUEMENT le CodeMission d'une opportunité GAGNÉE et le réécrit sur elle (Liste « CRM »).
+
+    Ferme la couture opportunité → mission (modele-donnees §2 bis) : l'entier `CodeMission` est
+    l'identifiant stable de la mission ouverte par l'affaire gagnée. Jusqu'ici l'attribution était un
+    GESTE GARDIEN tracé ; cet outil (T-0038) l'automatise en écriture SERVEUR à cible FIGÉE, cran
+    NOTIFIÉ — l'agent l'appelle en bout de `cadrage-mission`, plus aucun geste gardien dans la chaîne.
+
+    Cible FIGÉE côté serveur par GRAPH_SITE_ID + GRAPH_CRM_LIST_ID (`_config_crm()`) : comme
+    `create_list_item` fige sa liste, cette fonction n'accepte AUCUN identifiant de liste de
+    l'appelant. Elle ne touche QUE la colonne `CodeMission` de la Liste « CRM », et rien d'autre.
+
+    Règle d'allocation (modele-donnees §2 bis) : `code = max(CodeMission existants) + 1` (1 si aucun) ;
+    entier ≥ 1, GLOBALEMENT UNIQUE, JAMAIS réattribué.
+
+    Matérialisation du cran NOTIFIÉ : comme pour tout outil du fichier, le cran est porté par
+    l'entrée `CRAN_PAR_OUTIL["allouer_code_mission"] = "notifie"` — le journal d'observabilité
+    (`_journal_appel`) inscrit `"cran": "notifie"` sur CHAQUE appel (le gardien est informé par ce
+    journal). L'outil reste « bête » (une seule chose : allouer) : il n'appelle JAMAIS `notifier_canal`
+    lui-même (aucun outil du fichier ne le fait) ; la notification d'équipe est une étape distincte du
+    skill `cadrage-mission` (§4), conforme à la séparation primitive/orchestration (README §septies).
+
+    Garde-fous inscrits dans le code (table-des-crans.yaml : allouer_code_mission, cran notifie) :
+        - PRÉCONDITIONS FAIL-CLOSED, vérifiées AVANT toute écriture : l'item existe, `Etape == "Gagnée"`
+          ET `CodeMission` vide — sinon erreur explicite, RIEN n'est écrit (aucune réattribution) ;
+        - ALLOCATION ATOMIQUE : à chaque tentative on relit l'item pour un ETag FRAIS, on recalcule
+          `max + 1`, puis on PATCH `fields` avec `If-Match: <etag>` ; un 409/412 (ETag périmé, course)
+          fait relire → recalculer → réessayer (au plus 3 tentatives, puis échec explicite) ;
+        - POST-VÉRIFICATION ANTI-COURSE : après le PATCH, on re-scanne toute la liste ; si le code
+          apparaît sur PLUS d'un item (deux allocations concurrentes ont convergé), on RÉALLOUE cet
+          item (nouveau `max + 1`, If-Match) — boucle bornée par les mêmes tentatives ;
+        - Retry-After honoré sur 429/503 (throttling Graph) sur les GET et le PATCH (borné).
+
+    Args:
+        opportunite_id: id de l'élément de la Liste « CRM » (l'opportunité gagnée à coudre).
+
+    Returns:
+        dict {"opportunite_id", "code_mission", "tentatives"} — le code entier alloué et écrit,
+        et le nombre de tentatives d'allocation consommées.
+
+    Raises:
+        ValueError: opportunite_id vide, précondition non tenue (étape ≠ Gagnée ou CodeMission déjà posé).
+        FileNotFoundError: aucune opportunité pour cet id dans la Liste « CRM » (404).
+        RuntimeError: allocation atomique impossible (ETag absent, ou échec après 3 tentatives).
+        ConfigManquante: GRAPH_SITE_ID / GRAPH_CRM_LIST_ID absentes.
+    """
+    _verifier_appelant(ctx)
+
+    if not isinstance(opportunite_id, str) or not opportunite_id.strip():
+        raise ValueError("`opportunite_id` doit être une chaîne non vide (id de l'opportunité gagnée).")
+    opportunite_id = opportunite_id.strip()
+
+    cfg = _config_crm()
+    # Cible NON paramétrable par l'appelant : la Liste « CRM » figée, et elle seule.
+    base_items = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{cfg['crm_list_id']}/items"
+    url_item = f"{base_items}/{opportunite_id}"
+    url_fields = f"{url_item}/fields"
+
+    MAX_TENTATIVES = 3
+    with httpx.Client(timeout=30) as client_http:
+        # --- Préconditions FAIL-CLOSED, UNE fois, AVANT toute écriture ---
+        rep_item = _get_crm_avec_backoff(client_http, url_item, params={"$expand": "fields"})
+        if rep_item.status_code == 404:
+            raise FileNotFoundError(
+                f"Aucune opportunité « {opportunite_id} » dans la Liste « CRM ». Rien écrit."
+            )
+        rep_item.raise_for_status()
+        champs = rep_item.json().get("fields", {}) or {}
+        etape = champs.get("Etape")
+        if etape != "Gagnée":
+            raise ValueError(
+                f"Précondition non tenue : l'opportunité « {opportunite_id} » est à l'étape "
+                f"« {etape} », pas « Gagnée ». Aucun code alloué, rien écrit (fail-closed)."
+            )
+        if not _code_mission_vide(champs.get("CodeMission")):
+            raise ValueError(
+                f"Précondition non tenue : l'opportunité « {opportunite_id} » porte déjà un "
+                f"CodeMission (« {champs.get('CodeMission')} ») — jamais de réattribution "
+                "(modele-donnees §2 bis). Aucun code réécrit (fail-closed)."
+            )
+
+        # --- Allocation ATOMIQUE : If-Match/ETag + post-vérification anti-course, bornée ---
+        derniere_cause = None
+        for tentative in range(1, MAX_TENTATIVES + 1):
+            # Relire l'item pour un ETag FRAIS (une tentative antérieure ou un tiers a pu écrire).
+            rep_relu = _get_crm_avec_backoff(client_http, url_item, params={"$expand": "fields"})
+            rep_relu.raise_for_status()
+            etag = rep_relu.json().get("@odata.etag")
+            if not etag:
+                raise RuntimeError(
+                    "ETag absent sur l'opportunité relue — allocation atomique impossible, "
+                    "rien écrit (fail-closed)."
+                )
+            # code candidat = max des CodeMission existants + 1 (1 si aucun) — conforme §2 bis.
+            code = max(_codes_mission_existants(client_http, base_items), default=0) + 1
+
+            rep_patch = _patch_fields_crm_avec_backoff(
+                client_http, url_fields, etag, {"CodeMission": code}
+            )
+            if rep_patch.status_code in (409, 412):
+                # Conflit de concurrence (ETag périmé) : relire → recalculer → réessayer.
+                derniere_cause = f"conflit If-Match ({rep_patch.status_code})"
+                continue
+            rep_patch.raise_for_status()
+
+            # --- Post-vérification anti-course : re-scan complet de la liste ---
+            apres = _codes_mission_existants(client_http, base_items)
+            occurrences = apres.count(code)
+            if occurrences > 1:
+                # Une course a attribué le même code à un autre item → réallouer CET item.
+                derniere_cause = f"course détectée (code {code} porté par {occurrences} items)"
+                continue
+
+            return {
+                "opportunite_id": opportunite_id,
+                "code_mission": code,
+                "tentatives": tentative,
+            }
+
+        raise RuntimeError(
+            f"Allocation atomique du CodeMission échouée après {MAX_TENTATIVES} tentatives "
+            f"(dernière cause : {derniere_cause}). À reprendre ; aucune réattribution forcée."
+        )
 
 
 @mcp.tool()

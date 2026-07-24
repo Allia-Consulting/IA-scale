@@ -1,0 +1,32 @@
+---
+id: T-0038
+titre: "Allocateur CodeMission atomique et automatisation de l'espace de mission — lever le geste gardien de la couture opportunité → mission"
+capacite: "Généralisation & cockpit utilisateur (Phase 4) / couture CRM — ouverture de mission"
+phase: 4
+type_action: infrastructure
+cran: notifie   # l'outil produit relève du cran notifié (écriture source à cible figée, préconditions strictes, réversible) ; la PR qui l'introduit reste une porte humaine (touche outils/mcp-graph/**).
+produit:
+  - "(outil MCP allouer_code_mission(opportunite_id)) cible FIGÉE côté serveur (GRAPH_CRM_LIST_ID, jamais choisie par l'appelant) ; allocation « max des CodeMission existants + 1 » ATOMIQUE (If-Match/ETag + post-vérification anti-course bornée) ; réécriture de CodeMission sur l'opportunité gagnée — colonne UNIQUE, préconditions strictes (Etape=Gagnée ET CodeMission vide), fail-closed"
+  - "(entrée candidate table-des-crans) allouer_code_mission : cran notifie — écriture source à cible figée (Liste CRM, colonne CodeMission uniquement)"
+  - "(cadrage-mission v1.4 candidat) l'agent APPELLE allouer_code_mission (cran notifié, remplace le geste gardien tracé) puis creer_espace_mission (cran auto) en bout de skill — plus aucun geste gardien dans la chaîne"
+  - "(tests garde-fous) préconditions, If-Match, retry 412, course simulée, ConfigManquante"
+depend_de: [T-0026, T-0035]   # T-0026 (brique CRM, entité Opportunité) ; T-0035 (unification du « code mission » entier, 4e segment du nom d'espace PR #250)
+contrats_concernes:
+  - contrats/socle/modele-donnees.md      # §2 bis — règle d'allocation (entier ≥ 1, max+1, globalement unique, jamais réattribué, réécrit dans CRM.CodeMission)
+  - contrats/socle/table-des-crans.yaml   # entrée candidate allouer_code_mission (cran notifie)
+  - skills/cadrage-mission/SKILL.md        # v1.4 candidat — §4 appelle allouer_code_mission puis creer_espace_mission
+criteres_acceptation:
+  - "Une bascule « Gagnée » produit mission + espace SANS AUCUN GESTE GARDIEN, prouvé sur le réel (épreuve tracée)"
+  - "L'allocation est atomique : If-Match/ETag au PATCH, post-vérification anti-course bornée, fail-closed au-delà des tentatives"
+  - "L'écriture ne vise JAMAIS que la colonne CodeMission de la Liste CRM figée (GRAPH_CRM_LIST_ID) ; l'appelant ne choisit pas la cible"
+  - "Préconditions strictes : Etape=Gagnée ET CodeMission vide, sinon refus explicite, zéro écriture"
+rayon_impact: firme
+statut: en_cours
+note: >
+  Reprend le reste que le journal d'épreuve du 24/07 et modele-donnees.md §2 bis imputaient à T-0024.
+  T-0024 est soldé sur son périmètre historique (vérifié S41) : les références « allocateur atomique =
+  T-0024 » se lisent désormais T-0038. Doctrine assumée ici : la réécriture CodeMission, jusqu'ici
+  promotion à cran GARDIEN, devient écriture serveur à cible figée sous cran NOTIFIÉ — colonne unique,
+  précondition Etape=Gagnée et CodeMission vide, réversible, tracée. La porte humaine de cette PR
+  sanctionne ce choix. La mise en service (image + variable GRAPH_CRM_LIST_ID sur ACA
+  ca-allia-mcp-graph) et l'épreuve réelle sont des gestes gardiens hors de la PR qui introduit le code.
