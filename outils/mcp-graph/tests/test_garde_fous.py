@@ -958,3 +958,193 @@ def test_decouverte_ouverte_mais_mcp_reste_fail_closed():
     # /mcp : toujours fermé sans token (en-têtes vides).
     with pytest.raises(PermissionError):
         server._verifier_appelant(_ctx_avec_headers({}))
+
+
+# --------------------------------------------------------------------------------------------
+# allouer_code_mission — allocateur CodeMission ATOMIQUE (T-0038)
+# Écriture SOURCE bornée par construction : cible FIGÉE (Liste « CRM », GRAPH_CRM_LIST_ID),
+# colonne CodeMission UNIQUEMENT, préconditions fail-closed (Etape=Gagnée ET CodeMission vide),
+# allocation max+1 avec If-Match/ETag + post-vérification anti-course bornées.
+# --------------------------------------------------------------------------------------------
+
+class _FauxClientCRM:
+    """Client httpx factice pour allouer_code_mission.
+
+    Route par forme d'URL :
+      - GET .../items            → SCAN de la liste : renvoie la prochaine réponse de `scan_responses`
+                                    (liste de valeurs CodeMission), la dernière étant répétée si épuisée ;
+      - GET .../items/{id}       → l'opportunité cible : @odata.etag + fields {Etape, CodeMission} ;
+      - PATCH .../items/{id}/fields → statut consommé dans l'ordre de `patch_statuses` (défaut 200).
+    Enregistre chaque appel dans `self.appels` [(méthode, url, corps|params)] et les en-têtes dans
+    `self.entetes_appels` [(méthode, url, headers)] (pour vérifier l'If-Match du PATCH)."""
+
+    def __init__(
+        self, etape="Gagnée", code_mission="", etag='W/"etag-1"',
+        scan_responses=None, patch_statuses=None, item_status=200,
+    ):
+        self._etape = etape
+        self._code_mission = code_mission
+        self._etag = etag
+        self._scans = list(scan_responses) if scan_responses is not None else [[]]
+        self._patch_statuses = list(patch_statuses) if patch_statuses is not None else [200]
+        self._item_status = item_status
+        self._scan_i = 0
+        self._patch_i = 0
+        self.appels = []
+        self.entetes_appels = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get(self, url, headers=None, params=None):
+        self.appels.append(("GET", url, params))
+        self.entetes_appels.append(("GET", url, headers or {}))
+        if url.endswith("/items"):
+            codes = self._scans[self._scan_i] if self._scan_i < len(self._scans) else self._scans[-1]
+            self._scan_i += 1
+            return _RepWb(200, {"value": [{"fields": {"CodeMission": c}} for c in codes]})
+        if self._item_status != 200:
+            return _RepWb(self._item_status, {})
+        return _RepWb(
+            200,
+            {"@odata.etag": self._etag, "fields": {"Etape": self._etape, "CodeMission": self._code_mission}},
+        )
+
+    def patch(self, url, headers=None, json=None):
+        self.appels.append(("PATCH", url, json))
+        self.entetes_appels.append(("PATCH", url, headers or {}))
+        st = self._patch_statuses[self._patch_i] if self._patch_i < len(self._patch_statuses) else self._patch_statuses[-1]
+        self._patch_i += 1
+        return _RepWb(st, {})
+
+
+@pytest.fixture
+def _config_crm_factice(monkeypatch):
+    """Config CRM valide + acquisition de jeton neutralisée, pour exercer le corps réseau (mocké)
+    de l'allocateur — `_entetes()` acquerrait sinon un jeton Azure (indisponible hors tenant).
+    Aucun secret : en-tête factice."""
+    monkeypatch.setattr(server, "_config_crm", lambda: {"site_id": "SITE-1", "crm_list_id": "CRM-1"})
+    monkeypatch.setattr(server, "_entetes", lambda: {"Authorization": "Bearer faketoken"})
+
+
+def _patchs(client):
+    return [c for (m, _u, c) in client.appels if m == "PATCH"]
+
+
+def test_allouer_code_mission_precondition_non_gagnee_refuse(_sans_porte, _config_crm_factice, monkeypatch):
+    """(34) Opportunité pas à l'étape « Gagnée » → ValueError, et AUCUNE écriture (zéro PATCH)."""
+    client = _FauxClientCRM(etape="Proposition", code_mission="")
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_code_mission)
+    with pytest.raises(ValueError):
+        fn(None, opportunite_id="O-042")
+    assert not _patchs(client), "aucune écriture si l'étape n'est pas « Gagnée » (fail-closed)."
+
+
+def test_allouer_code_mission_code_deja_pose_refuse(_sans_porte, _config_crm_factice, monkeypatch):
+    """(35) CodeMission déjà renseigné → ValueError (jamais de réattribution), et AUCUNE écriture."""
+    client = _FauxClientCRM(etape="Gagnée", code_mission="7")
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_code_mission)
+    with pytest.raises(ValueError):
+        fn(None, opportunite_id="O-042")
+    assert not _patchs(client), "aucune réattribution si CodeMission est déjà posé (fail-closed)."
+
+
+def test_allouer_code_mission_patch_porte_if_match_et_max_plus_un(_sans_porte, _config_crm_factice, monkeypatch):
+    """(36) NOMINAL : le PATCH cible « .../items/{id}/fields », porte l'If-Match = ETag lu, et
+    n'écrit QUE CodeMission = max(existants) + 1 ; retour tentatives=1."""
+    client = _FauxClientCRM(
+        etape="Gagnée", code_mission="", etag='W/"etag-42"',
+        scan_responses=[[7], [7, 8]], patch_statuses=[200],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_code_mission)
+
+    res = fn(None, opportunite_id="O-042")
+
+    assert res == {"opportunite_id": "O-042", "code_mission": 8, "tentatives": 1}
+    patchs_entetes = [(u, h) for (m, u, h) in client.entetes_appels if m == "PATCH"]
+    assert len(patchs_entetes) == 1
+    url_patch, entetes = patchs_entetes[0]
+    assert url_patch.endswith("/items/O-042/fields")
+    assert entetes.get("If-Match") == 'W/"etag-42"', "le PATCH doit porter l'If-Match avec l'ETag lu."
+    assert _patchs(client)[0] == {"CodeMission": 8}, "le PATCH n'écrit QUE la colonne CodeMission."
+
+
+def test_allouer_code_mission_conflit_412_puis_succes(_sans_porte, _config_crm_factice, monkeypatch):
+    """(37) 412 au PATCH (ETag périmé) → relecture + recalcul + succès à la 2e tentative."""
+    client = _FauxClientCRM(
+        etape="Gagnée", code_mission="",
+        scan_responses=[[3], [3], [3, 4]], patch_statuses=[412, 200],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_code_mission)
+
+    res = fn(None, opportunite_id="O-042")
+
+    assert res["code_mission"] == 4 and res["tentatives"] == 2
+    assert len(_patchs(client)) == 2, "un PATCH refusé (412) puis un PATCH accepté."
+
+
+def test_allouer_code_mission_trois_conflits_echec_explicite(_sans_porte, _config_crm_factice, monkeypatch):
+    """(38) Trois 412 consécutifs → échec EXPLICITE (RuntimeError), après 3 tentatives bornées."""
+    client = _FauxClientCRM(
+        etape="Gagnée", code_mission="",
+        scan_responses=[[1]], patch_statuses=[412, 412, 412],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_code_mission)
+    with pytest.raises(RuntimeError):
+        fn(None, opportunite_id="O-042")
+    assert len(_patchs(client)) == 3, "exactement 3 tentatives de PATCH, puis échec (borné)."
+
+
+def test_allouer_code_mission_course_reallocation(_sans_porte, _config_crm_factice, monkeypatch):
+    """(39) Course simulée : le PATCH réussit mais le re-scan voit le code EN DOUBLE → réallocation
+    de CET item (nouveau max+1), succès à la 2e tentative."""
+    client = _FauxClientCRM(
+        etape="Gagnée", code_mission="",
+        # it.1 : before=[5] → code 6 ; PATCH 200 ; after=[5,6,6] (doublon) → réallouer
+        # it.2 : before=[5,6] → code 7 ; PATCH 200 ; after=[5,6,7] (propre) → succès
+        scan_responses=[[5], [5, 6, 6], [5, 6], [5, 6, 7]], patch_statuses=[200, 200],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_code_mission)
+
+    res = fn(None, opportunite_id="O-042")
+
+    assert res["code_mission"] == 7 and res["tentatives"] == 2
+    assert len(_patchs(client)) == 2, "réécriture de l'item courant après détection de la course."
+
+
+def test_allouer_code_mission_config_crm_absente_leve_configmanquante(_sans_porte, monkeypatch):
+    """(40) GRAPH_CRM_LIST_ID (ou GRAPH_SITE_ID) absente → ConfigManquante, AVANT toute ouverture
+    de client httpx (fail-closed : la config précède le réseau)."""
+    monkeypatch.delenv("GRAPH_CRM_LIST_ID", raising=False)
+    monkeypatch.delenv("GRAPH_SITE_ID", raising=False)
+
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une config CRM absente.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.allouer_code_mission)
+    with pytest.raises(server.ConfigManquante):
+        fn(None, opportunite_id="O-042")
+
+
+@pytest.mark.parametrize("mauvais", ["", "   ", None])
+def test_allouer_code_mission_opportunite_id_vide_refuse(_sans_porte, monkeypatch, mauvais):
+    """(41) opportunite_id vide / blanc / None → ValueError, AVANT toute ouverture de client httpx."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré un opportunite_id vide.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.allouer_code_mission)
+    with pytest.raises(ValueError):
+        fn(None, opportunite_id=mauvais)
