@@ -1,0 +1,106 @@
+skill: revue-de-pipe
+version_harnais: 1
+cas:
+  - id: ancre-01
+    type: invariant
+    description: "Livrable canonique : le score de santé du pipe."
+    contient:
+      - "score de santé du pipe"
+  - id: ancre-02
+    type: invariant
+    description: "Garde-fou central : la revue ne modifie rien pendant son exécution."
+    contient:
+      - "ZÉRO écriture pendant la revue"
+  - id: ancre-03
+    type: invariant
+    description: "Verrou d'écriture : dérivés en Zone-de-proposition, jamais la source CRM."
+    contient:
+      - "Zone-de-proposition"
+      - "create_list_item"
+  - id: ancre-04
+    type: invariant
+    description: "Lecture via l'outil MCP de lecture (cran auto), jamais d'écriture source."
+    contient:
+      - "list_items"
+  - id: ancre-05
+    type: invariant
+    description: "Pipe pondéré cohérent avec les pondérations figées du cockpit (tour-de-controle §3)."
+    contient:
+      - "Qualification 15 %"
+      - "Proposition 60 %"
+  - id: ancre-06
+    type: invariant
+    description: "Honnêteté des données : aucune dimension absente du schéma n'est comblée."
+    contient:
+      - "on n'invente pas de donnée"
+  - id: ancre-07
+    type: invariant
+    description: "Drapeau d'hygiène : Title vide (identifiant O-NNN non posé)."
+    contient:
+      - "`Title` vide"
+  - id: ancre-08
+    type: invariant
+    description: "Plan d'action borné à trois actions maximum, tranchées par le gardien."
+    contient:
+      - "3 actions maximum"
+  - id: ancre-09
+    type: invariant
+    description: "Provenance du pillage attribuée (Apache-2.0), gabarit adapté et non adopté."
+    contient:
+      - "sales/pipeline-review"
+  - id: scenario-pipe-fictif
+    type: scenario
+    description: >
+      Pipe FICTIF de 5 opportunités (aucune donnée réelle) — attendus qualitatifs pour le scoring
+      LLM (type 'scenario' réservé au schéma, ignoré par le harnais v0 déterministe).
+    entree:
+      liste: "CRM (fictive)"
+      opportunites:
+        - Title: "O-901"
+          NomOpportunite: "Refonte SI — Acme (fictif)"
+          Compte: "Acme (fictif)"
+          Etape: "Proposition"
+          Montant: 90000
+          Echeance: "2026-08-15"
+          Responsable: "resp. fictif"
+          CodeMission: ""
+        - Title: "O-902"
+          NomOpportunite: "Cadrage data — Beta (fictif)"
+          Compte: "Beta (fictif)"
+          Etape: "Qualification"
+          Montant: 40000
+          Echeance: "2026-09-30"
+          Responsable: "resp. fictif"
+          CodeMission: ""
+        - Title: ""            # hygiène : Title vide (O-NNN non posé)
+          NomOpportunite: "Audit coûts — Gamma (fictif)"
+          Compte: "Gamma (fictif)"
+          Etape: "Proposition"
+          Montant: null        # hygiène : montant absent
+          Echeance: "2026-07-10"  # échéance dépassée
+          Responsable: ""
+          CodeMission: ""
+        - Title: "O-904"
+          NomOpportunite: "Delivery PowerBI — Delta (fictif)"
+          Compte: "Delta (fictif)"
+          Etape: "Gagnée"
+          Montant: 60000
+          Echeance: "2026-06-01"
+          Responsable: "resp. fictif"
+          CodeMission: ""        # couture non fermée : Gagnée sans CodeMission
+        - Title: "O-905"
+          NomOpportunite: "Perdue — Epsilon (fictif)"
+          Compte: "Epsilon (fictif)"
+          Etape: "Perdue"
+          Montant: 30000
+          Echeance: "2026-05-01"
+          Responsable: "resp. fictif"
+          CodeMission: ""
+    attendus:
+      - "Le score de santé est justifié ligne à ligne (aucune note décorative)."
+      - "O-903 (Title vide + Montant absent + échéance dépassée) est le drapeau d'hygiène principal."
+      - "O-904 (Gagnée sans CodeMission) est signalé comme couture non fermée."
+      - "O-905 (Perdue) est exclue du pipe actif ; O-904 (Gagnée) comptée comme réalisé."
+      - "Pipe pondéré = Qualification×0,15 + Proposition×0,60 (+ Gagnée réalisé), cohérent cockpit."
+      - "Priorisation : O-901 (montant élevé, échéance proche) avant O-902 (qualification, échéance lointaine)."
+      - "Plan d'action ≤ 3 actions, chacune rattachée à une opportunité ou un drapeau."
