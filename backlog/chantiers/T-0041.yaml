@@ -1,0 +1,28 @@
+---
+id: T-0041
+titre: "Octroi Sites.Selected (lecture) sur ManagementetGestion à l'identité managée du serveur MCP Graph"
+capacite: "Socle d'exploitation & gouvernance / moindre privilège — accès Graph de l'identité managée"
+phase: 1
+type_action: infrastructure
+cran: valide   # paramétrage de droits Graph sur une identité managée : PROSCRIT à l'agent (garde-fous CLAUDE.md) → runbook gardien, porte humaine
+produit: []    # NOMMAGE SEUL — décision gardien + runbook à documenter, aucune exécution
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/organisation.md"   # §5 réconciliateurs / moindre privilège — surface d'accès Graph
+criteres_acceptation:
+  - "Runbook Graph documenté : POST /sites/{siteId}/permissions, roles=['read'], accordé par un principal Sites.FullControl.All, pour le seul site ManagementetGestion"
+  - "L'identité managée peut LIRE le classeur de saisie de ManagementetGestion (fin du 403 constaté S42), sans aucun autre élargissement"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S43 (26/07/2026) par l'épreuve T-0039. Le 403 observé en S42
+  sur ManagementetGestion est le comportement ATTENDU de Sites.Selected strict
+  (moindre privilège) — pas un défaut. Pour que l'identité managée puisse lire
+  le classeur de saisie de ce site, il faut lui accorder explicitement
+  Sites.Selected en LECTURE sur ce seul site : décision gardien + runbook Graph
+  (POST /sites/{siteId}/permissions, roles read, par un principal
+  Sites.FullControl.All). PIÈGE À TRACER : ne JAMAIS ajouter de scope Files.* à
+  cette identité — un scope Files.* OUTREPASSERAIT Sites.Selected (accès
+  tenant-wide aux fichiers), ruinant le moindre privilège. Le paramétrage de
+  droits/tenant est proscrit à l'agent (garde-fous CLAUDE.md) : runbook gardien.
+  Nommage seul, non ouvert.

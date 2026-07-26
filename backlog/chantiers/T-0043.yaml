@@ -1,0 +1,29 @@
+---
+id: T-0043
+titre: "Déclarer outils/tour-de-controle-spfx/ comme chemin sensible dans impact.py (fix incident auto-merge PR #263)"
+capacite: "Socle d'exploitation — autonomie graduée & garde-fous / porte de conformité de l'agent-gardien"
+phase: 1
+type_action: outil
+cran: valide   # touche outils/agent-gardien/impact.py, cœur de la porte de conformité — rayon firme (cf. T-0037)
+produit: []    # NOMMAGE SEUL — aucun code ici ; correctif à instruire à l'ouverture
+depend_de:
+  - T-0037   # brique CHEMINS_SENSIBLES_LARGE
+  - T-0037b  # PREFIXES_SENSIBLES_LARGE (préfixe → large)
+contrats_concernes:
+  - "doctrine/doctrine.md"   # §6 crans — rayon large → validé, appliqué à une surface déployable qui y échappait
+criteres_acceptation:
+  - "Un diff sous outils/tour-de-controle-spfx/ (artefact SPFx déployable en production) sort systématiquement RISQUE: large → porte humaine, jamais auto-merge"
+  - "Un test de non-régression rejoue l'incident PR #263 (diff SPFx isolé → large) et échoue si la règle régresse"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S43 (26/07/2026) par l'épreuve T-0039. INCIDENT : la PR #263
+  (cockpit 1.5.1.0, artefact .sppkg DÉPLOYABLE EN PRODUCTION) a été AUTO-MERGÉE
+  par agent-gardien[bot] (RISQUE: faible, VERDICT: pass, DELEGUE: non) — le verrou
+  #197 a été appliqué à la lettre, mais NE COUVRE PAS ce cas. Cause : le préfixe
+  outils/tour-de-controle-spfx/ n'est pas déclaré sensible dans impact.py, donc
+  un artefact de production peut passer sans gardien. Contenu contre-vérifié
+  conforme avant merge ; gardien a ratifié a posteriori. Remède (même invariant
+  que T-0037/T-0037b : le risque se déclare par CHEMIN) : ajouter ce préfixe aux
+  chemins/préfixes sensibles (PREFIXES_SENSIBLES_LARGE ou équivalent). Lire
+  T-0037 et T-0037b avant d'ouvrir. Nommage seul, non ouvert.

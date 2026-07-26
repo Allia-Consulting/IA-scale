@@ -1,0 +1,26 @@
+---
+id: T-0042
+titre: "Initialisation outillée du classeur de saisie à l'ouverture de mission (template → valeurs mission)"
+capacite: "Cœur de métier — couche de saisie / pilotage économique (modele-donnees.md §5.6)"
+phase: 4
+type_action: outil
+cran: valide   # crée/écrit un classeur de saisie au tenant (source humaine de l'économique) — rayon firme, porte gardien
+produit: []    # NOMMAGE SEUL — aucun outil, aucun canon, aucune écriture tenant
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"   # §5.6 couche de saisie matricielle — schéma du classeur
+criteres_acceptation:
+  - "À définir à l'ouverture : à partir d'un template de saisie et des valeurs de mission (CodeMission, Client, nom), produire un saisie-<code>-….xlsx matriciel (onglets Instructions/Prevu/Realise/Facturation), vierge d'exemples"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S43 (26/07/2026) par l'épreuve T-0039. Aujourd'hui le classeur
+  de saisie (saisie-<code>-….xlsx) est un GESTE HUMAIN NON OUTILLÉ : il a fallu
+  l'initialiser à la main (saisie-4-CockpitM365.xlsx) pour éprouver T-0039 volet B.
+  Le classeur est matriciel (onglets Instructions/Prevu/Realise/Facturation, mois
+  en colonnes — modele-donnees.md §5.6), distinct du gabarit dérivé (format long,
+  §5.2). Chantier à instruire : outiller cette initialisation (template →
+  valeurs). Brique dont dépend la chaîne d'ouverture complète (T-0040). Note de
+  méthode S43 : la construction assistée du classeur EN NAVIGATEUR a été bloquée
+  par le classifieur de sécurité ; repli sur le geste Excel Online (conforme
+  §5.6). Nommage seul, non ouvert.

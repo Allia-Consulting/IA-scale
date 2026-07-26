@@ -1,0 +1,25 @@
+---
+id: T-0040
+titre: "Chaîne d'ouverture de mission complète : la cascade « Gagnée » crée aussi le classeur de saisie (pas seulement le gabarit)"
+capacite: "Cœur de métier — ouverture de mission / couture CRM → pilotage"
+phase: 4
+type_action: infrastructure
+cran: valide   # écrit une nouvelle surface de mission au tenant (classeur de saisie) — rayon firme, porte gardien
+produit: []    # NOMMAGE SEUL — aucun outil, aucun canon, aucune écriture tenant
+depend_de:
+  - T-0042   # l'initialisation du classeur de saisie (template → valeurs mission) est la brique manquante
+contrats_concernes: []
+criteres_acceptation:
+  - "À définir à l'ouverture : une bascule « Gagnée » ouvre la mission de bout en bout — CodeMission + espace (T-0038, déjà fait) ET gabarit ET classeur de saisie initialisé"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S43 (26/07/2026) par l'épreuve T-0039. Constat : la chaîne
+  d'ouverture de mission est INCOMPLÈTE. La cascade « Gagnée » (T-0038) crée le
+  CodeMission et l'espace ; le gabarit de pilotage a un outil d'instanciation
+  (T-0031, workbook_instancier_gabarit) ; mais le CLASSEUR DE SAISIE
+  (saisie-<code>-….xlsx), source humaine matricielle de l'économique
+  (modele-donnees.md §5.6), n'est PAS créé automatiquement — il a fallu
+  l'initialiser à la main pour éprouver T-0039 volet B. Chantier à instruire :
+  refermer la chaîne. Dépend de T-0042 (initialisation du classeur). Nommage
+  seul, non ouvert.
