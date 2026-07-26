@@ -19,4 +19,17 @@ arbitrages:
 scories_nommees_non_ouvertes:
   - "Title des candidats 1..7 non conformes C-NNN — backfill = clics gardien (préalable à l'épreuve)"
   - "Item 9 « TEST-PURGE-T0013D-opposition » — purge = clic gardien"
-statut: en_cours
+statut: soldé   # ratifié par le gardien le 26/07/2026 (S43) sur épreuves volet A (S42) + volet B C-005 (26/07) ; voir note_epreuve
+note_epreuve: >
+  Ratifié explicitement par le gardien le 26/07/2026 (session S43) : solde de T-0039 (et du point 4
+  de T-0035) prononcé sur preuves. Épreuve VERTE en deux volets. Volet A (24/07, S42, cockpit 1.5.0.0) :
+  ajout de candidat (C-008, Title C-NNN auto), changement d'étape en ligne, garde anti-« Acceptée »
+  directe, annonce exhaustive + minimisation RGPD, annulation = zéro écriture (5 preuves REST). Volet B
+  (26/07, S43, cockpit 1.5.1.0) sur C-005 : cascade « Acceptée » = DEUX écritures (Candidats.Etape →
+  Acceptée + fiche Ressources-Profil Id 1) + RAPPEL d'affectation nommant le classeur de saisie (contrat
+  tour-de-controle.md v2.2, PR #262, main db46cb46), annulation = zéro écriture (3 preuves REST),
+  minimisation RGPD prouvée (ni email ni téléphone du candidat), ETag du classeur saisie-4 INCHANGÉ =
+  zéro écriture Workbook. Cockpit 1.5.1.0 DÉPLOYÉ et vérifié au tenant (AppCatalogVersion 1.5.1.0,
+  deployed=true, page vivante). Rejeu volontairement borné à C-005 (arrêt d'usage gardien, cf. arbitrages).
+  Journal d'épreuve : docs/epreuves/2026-07-26-t0039-gestes-recrutement.md (PR #264, mergée). Manques
+  nommés en marge de l'épreuve : T-0040..T-0043.

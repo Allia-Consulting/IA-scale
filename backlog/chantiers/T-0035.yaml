@@ -9,7 +9,7 @@ produit:
   - "(bandeau Staffing) conforme tour-de-controle.md §3 : sélecteur d'année, pourcentages DANS les barres, effectif actif au sommet"
   - "(bandeau Rentabilité) tableau 12 mois Budget | Réalisé, lignes CA et EBITDA, « · » en cas d'absence de donnée (style sobre, aucun vert, aucune pastille)"
   - "(bandeau Factures à émettre) liste des échéances au statut « à émettre », bouton « Émise » (écriture guidée), lien vers le PDF dans le dépôt Teams de la mission"
-  - "(gestes d'écriture guidée et cascades confirmées) conformes au §3 du contrat"
+  - "(gestes d'écriture guidée et cascades confirmées) conformes au §3 du contrat — POINT 4 ÉPROUVÉ/SOLDÉ le 26/07/2026 (ratification gardien S43) : cascades CRM (bascule « Gagnée ») éprouvées S42 (T-0038, épreuve du 24/07) ; gestes recrutement + cascade « Acceptée » éprouvés S42/S43 (T-0039 — volet A S42 + volet B C-005 26/07, cockpit 1.5.1.0 ; journal 2026-07-26-t0039-gestes-recrutement.md). Point 5 (facturation) reste ouvert"
   - "(bascule hub) la page Tour-de-contrôle devient le point d'entrée unique / la page d'accueil du site"
 depend_de: [T-0033, T-0031]   # T-0033 (souche/gabarits propres) puis solde de T-0031 (chaîne économique vivante) = préalables à la lecture économique du cockpit
 contrats_concernes:
@@ -264,6 +264,19 @@ avancement:
         RESTES NOMMÉS (non construits) : T-0024 (allocateur atomique du code + automatisation de la création
         d'espace par l'agent) ; T-0035 point 4 (recrutement) et point 5 (facturation) ; T-0032 (rentabilité).
         Détail : docs/epreuves/2026-07-24-t0035-cascade-crm-pipe-mission.md.
+    - date: 2026-07-26
+      fait: >
+        POINT 4 SOLDÉ — gestes recrutement + cascade « Acceptée », RATIFIÉS par le gardien (S43,
+        26/07/2026). Le gardien a prononcé le solde de T-0039 ET du point 4 de T-0035 (« gestes
+        d'écriture guidée et cascades confirmées conformes au §3 ») sur preuves : épreuve volet A
+        (S42, cockpit 1.5.0.0, 5 preuves REST) + volet B sur C-005 (26/07, cockpit 1.5.1.0 déployé
+        et vérifié au tenant — AppCatalogVersion 1.5.1.0, deployed=true). Cascade « Acceptée » réduite
+        à 2 écritures (Candidats.Etape → Acceptée + fiche Ressources-Profil) + rappel d'affectation
+        (contrat tour-de-controle.md v2.2, PR #262) ; annulation = zéro écriture ; minimisation RGPD
+        prouvée ; ETag du classeur de saisie inchangé = zéro écriture Workbook. Les cascades CRM
+        (bascule « Gagnée ») avaient été éprouvées en S42 (T-0038, épreuve du 24/07). Point 4 soldé ;
+        le chantier T-0035 reste en_cours pour le seul point 5 (facturation / statut « émise »).
+        Journal d'épreuve : docs/epreuves/2026-07-26-t0039-gestes-recrutement.md (PR #264, mergée).
 
   reste_pour_solder:
     - "Point 2 — SOLDÉ le 19/07/2026 (S39) : régénération M1+M2 verte, lecture froide différée verte, rejeu cockpit vert le 19/07 à 16:28 (8 appels Workbook 200, bandeaux justes) ; correctifs porteurs PR #238 (scope Files.ReadWrite.All) + PR #239 (adressage par item id, 1.4.4.0 déployée) ; voir avancement.journal 2026-07-19 et docs/epreuves/2026-07-19-s39-epreuve-t0035-cockpit.md. HISTORIQUE DE LA REPRISE conservé ci-dessous : câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"
