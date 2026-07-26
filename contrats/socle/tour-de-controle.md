@@ -1,8 +1,9 @@
 # Tour de contrôle — point d'entrée unique du SI — Allia Consulting
 
-> **Version** : 2.1 — *promu*. **Statut** : contrat socle — fait foi.
+> **Version** : 2.2 — *promu*. **Statut** : contrat socle — fait foi.
 > **Domicile** : `contrats/socle/tour-de-controle.md`. **Autorité de promotion** : gardien du temple.
 > **Changelog** :
+> v2.2 — promu via boucle de promotion, 26 juillet 2026 (arbitrage gardien S43, épreuve T-0039 volet B) : la cascade « Acceptée » (§3 bandeau 3) n'écrit plus l'affectation initiale — écritures réduites à (1) Candidats.Etape et (2) fiche Ressources-Profil, plus un rappel d'affectation nommant le classeur de saisie. Alignement avec la doctrine v2.1 : l'économique s'édite dans la SAISIE, hors cockpit ; « agir » ne porte que sur les listes. Motif : classeur de saisie matriciel (§5.6), T_Affectations n'existe que dans les gabarits ; fail-closed du pré-vol vérifié le 24/07 (2 refus, zéro écriture).
 > v2.1 — promu via boucle de promotion, 14 juillet 2026 (lecture du réel, session S34 ; aligné sur `modele-donnees.md` v1.18) : **rectification du modèle économique**. Il n'y a **pas de classeur consolidé** — le cockpit lit les **gabarits de pilotage actifs** (dérivés ERP par mission, régénérés par agent depuis la couche saisie) et le **référentiel de coûts** à audience restreinte, en direct. §4 refondu. Les bandeaux économiques (staffing, rentabilité, factures à émettre) passent en **lecture seule** : l'édition économique humaine (affectations, validation d'imputations, statut « émise ») se fait dans le **classeur de saisie** de la mission (`modele-donnees.md` §5.6), **hors cockpit**. Le régime « voir → creuser → agir » demeure, mais « agir » ne porte plus que sur les **listes** (CRM, recrutement) ; l'économique est en lecture. §1, §3 (bandeaux 1/4/5), §5 alignés.
 > v2.0 — promu via boucle de promotion, 14 juillet 2026 : refonte par arbitrage gardien (conception fonctionnelle des 13–14 juillet, session S33). Le cockpit passe de « consommateur en lecture seule » à **point d'entrée unique du SI** : voir, creuser, agir — éditions humaines guidées et cascades déterministes confirmées. Nouvelle hiérarchie figée en six bandeaux (staffing, pipe commercial, recrutement, rentabilité, factures à émettre). Introduction du modèle économique distribué (fichiers de pilotage par mission consolidés par agent). Le principe v1.0 « jamais un double éditable » est abrogé pour les gestes humains ; il demeure pour les agents (Zone-de-proposition, crans). La maquette v1 reste historique et non normative.
 > v1.0 — promu via boucle de promotion, 19 juin 2026 : création. Fige le parti-pris d'expérience utilisateur du cockpit (« Tour de contrôle »), l'orientation technique SPFx, et le régime « socle animé » (consommé par toute la firme, animé par un animateur désigné, promu par le gardien — sur le modèle du design system, doctrine §5). Répond au chantier nommé en doctrine §10 (« le cockpit du collaborateur reste à concevoir »). Chantier de construction : backlog/chantiers/T-0014.yaml. Maquette de référence : contrats/socle/maquettes/tour-de-controle-cockpit-v1.html (non normative).
@@ -65,7 +66,10 @@ le rayon d'impact est la firme entière.
   3. **Recrutement** — compteurs E1, E2, E3 (Candidats.Etape) ; décisions en cours
      (candidats en étape Proposition). Gestes : ajouter un candidat (créé en E1) ;
      changement d'étape en ligne ; passage en Acceptée → cascade « fiche
-     Ressources-Profil + affectation initiale », sur confirmation.
+     Ressources-Profil + rappel d'affectation », sur confirmation. L'affectation initiale elle-même reste un **geste humain** dans le
+     classeur de saisie de la mission (`modele-donnees.md` §5.6) : la cascade
+     **rappelle** en nommant le classeur `saisie-<code>-…`, elle n'écrit jamais
+     l'économique.
   4. **Rentabilité et résultats** — tableau douze mois × (Budget | Réalisé) + colonne
      Total ; lignes CA total et EBITDA ; source : **gabarits actifs + référentiel de coûts**, lus à la volée (§4).
      L'absence de donnée s'affiche « · », jamais zéro inventé.
