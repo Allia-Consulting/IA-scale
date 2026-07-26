@@ -1,24 +1,26 @@
 // Cascade « Acceptée » du bandeau recrutement — logique PURE, sans dépendance SPFx.
 //
-// Cible normative : tour-de-controle.md §1 (régime 2 — cascade déterministe) et §3 bandeau 3
-// (« passage en Acceptée → cascade « fiche Ressources-Profil + affectation initiale », sur
-// confirmation »). Une cascade S'ANNONCE AVANT D'EXÉCUTER (liste exhaustive des écritures) et
-// N'EXÉCUTE QUE SUR CONFIRMATION EXPLICITE ; une cascade qui écrirait sans confirmation est un
-// défaut (§6).
+// Cible normative : tour-de-controle.md v2.2 §1 (régime 2 — cascade déterministe), §3 bandeau 3
+// (« passage en Acceptée → cascade « fiche Ressources-Profil + rappel d'affectation », sur
+// confirmation ») et §6 (fail-closed, jamais de retour arrière silencieux). Une cascade S'ANNONCE
+// AVANT D'EXÉCUTER (liste exhaustive des écritures) et N'EXÉCUTE QUE SUR CONFIRMATION EXPLICITE ;
+// une cascade qui écrirait sans confirmation est un défaut.
 //
-// Trois écritures, dans cet ordre :
+// DEUX écritures, dans cet ordre (arbitrage gardien du 26/07/2026, contrat v2.2) :
 //   (1) Candidats.Etape → « Acceptée »              (liste — SharePoint REST, identité utilisateur)
 //   (2) création d'une fiche « Ressources-Profil »   (liste — SharePoint REST, identité utilisateur)
-//   (3) ajout d'une ligne d'affectation initiale     (classeur de SAISIE — Graph Workbook)
-//       dans la table T_Affectations du classeur `saisie-<CodeMission>-….xlsx` (modele-donnees.md
-//       §5.6 : l'affectation est un geste économique qui vit dans la SAISIE, source humaine — pas
-//       dans le gabarit, qui est un dérivé régénéré par l'agent).
 //
-// Fail-closed, jamais de retour arrière silencieux (tour-de-controle.md §6) :
-//   - la cible d'affectation est VÉRIFIÉE en pré-vol (localisation du classeur + présence de la
-//     table) AVANT toute écriture : si elle manque, ZÉRO écriture (message précis) ;
-//   - un échec en cours de cascade ARRÊTE la séquence et affiche l'état EXACT (écritures 1..n
-//     déjà faites), sans jamais tenter de défaire ce qui a été écrit ;
+// PLUS un RAPPEL d'affectation, qui N'EST PAS une écriture (`rappelAffectation`) : l'affectation
+// initiale reste un GESTE HUMAIN dans le classeur de SAISIE `saisie-<code>-….xlsx` (modele-donnees.md
+// §5.6 — saisie matricielle, hors cockpit). La cascade ne fait que le rappeler, en nommant le
+// classeur (nom réel si résolu en lecture seule, motif générique sinon — fail-OPEN, un rappel n'est
+// pas une écriture). Motif de la réduction : la table T_Affectations n'existe que dans les gabarits
+// dérivés (§5.2), pas dans la saisie ; le pré-vol fail-closed du 24/07 l'a prouvé (2 refus, zéro
+// écriture) — d'où le retrait de l'ancienne écriture Graph Workbook d'affectation.
+//
+// Fail-closed sur les écritures, jamais de retour arrière silencieux (tour-de-controle.md §6) :
+//   - un échec en cours de cascade ARRÊTE la séquence et affiche l'état EXACT (écritures 1..n déjà
+//     faites), sans jamais tenter de défaire ce qui a été écrit ;
 //   - l'annulation avant confirmation = zéro écriture (garantie par l'UI : `executerCascade`
 //     n'est appelée qu'à la confirmation).
 //
@@ -59,17 +61,12 @@ export interface CandidatCascade {
 
 /** Les champs saisis par l'opérateur dans le dialogue de cascade (confirmés avant exécution). */
 export interface SaisieCascade {
-  /** UPN / identité Entra de la nouvelle ressource — Title + IdentifiantEntra de la fiche, et
-   *  Ressource de la ligne d'affectation (couture Ressources-Profil ↔ T_Affectations). */
+  /** UPN / identité Entra de la nouvelle ressource — Title + IdentifiantEntra de la fiche. */
   readonly identifiantEntra: string;
   /** Disponibilité (choix) écrite dans la fiche. */
   readonly disponibilite: string;
-  /** CodeMission de l'affectation initiale (mission réelle). */
+  /** CodeMission de la mission d'accueil — NON écrit ; sert au RAPPEL (nom du classeur de saisie). */
   readonly codeMission: string;
-  /** Mois de l'affectation, 1er du mois (AAAA-MM-01). */
-  readonly mois: string;
-  /** Jours prévus de l'affectation initiale. */
-  readonly joursPrevus: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,25 +117,9 @@ export function champsFicheRessource(
   };
 }
 
-/**
- * Valeurs (3) — une ligne d'affectation pour `workbook/tables/T_Affectations/rows/add`.
- * ORDRE FIGÉ = en-têtes de T_Affectations (modele-donnees.md §5.2 / `ENTETES_AFFECTATIONS` de
- * workbook-graph.ts) : [CodeMission, Ressource, Mois, JoursPrevus]. Ressource = IdentifiantEntra
- * (couture Ressources-Profil). Une seule ligne, forme `values: [[...]]` de l'API Graph.
- */
-export function valeursAffectation(
-  params: {
-    readonly codeMission: string;
-    readonly identifiantEntra: string;
-    readonly mois: string;
-    readonly joursPrevus: number;
-  }
-): ReadonlyArray<ReadonlyArray<unknown>> {
-  return [[params.codeMission, params.identifiantEntra, params.mois, params.joursPrevus]];
-}
-
 // ---------------------------------------------------------------------------
-// Localisation du classeur de saisie (helpers PURS ; le réseau vit dans listes-reelles.ts).
+// Localisation du classeur de saisie (helpers PURS) — READ-ONLY, pour NOMMER le classeur dans le
+// RAPPEL (jamais pour écrire). Le réseau (listing REST) vit dans listes-reelles.ts.
 // ---------------------------------------------------------------------------
 
 /** Un nom de fichier est-il le classeur de saisie de `codeMission` ? Motif §5.6 `^saisie-(\d+)-`. */
@@ -149,8 +130,9 @@ export function estSaisieDeMission(nomFichier: string, codeMission: string): boo
 
 /**
  * Choisit le classeur de saisie d'une mission parmi une liste de noms. Renvoie le nom retenu (ou
- * `undefined` si aucun) et un drapeau `ambigu` si plusieurs candidats matchent (l'appelant refuse
- * alors, plutôt que d'écrire dans le mauvais classeur — fail-closed).
+ * `undefined` si aucun) et un drapeau `ambigu` si plusieurs candidats matchent. Comme la résolution
+ * ne sert qu'à NOMMER le classeur dans le rappel (aucune écriture), l'appelant traite l'ambiguïté et
+ * l'absence en fail-OPEN (motif générique), pas en fail-closed.
  */
 export function choisirSaisie(
   noms: ReadonlyArray<string>,
@@ -162,20 +144,38 @@ export function choisirSaisie(
   return { nom: trouves[0], ambigu: false };
 }
 
+/**
+ * RAPPEL d'affectation (PUR) — texte affiché dans l'annonce ET le message de succès. Ce n'est PAS
+ * une écriture : l'affectation initiale reste un geste humain dans le classeur de SAISIE
+ * `saisie-<code>-….xlsx` (modele-donnees.md §5.6). `nomClasseur` = nom RÉEL résolu en lecture seule
+ * quand il l'est ; sinon on retombe (fail-OPEN) sur le motif générique avec le code de mission.
+ */
+export function rappelAffectation(codeMission: string, nomClasseur?: string): string {
+  const code = (typeof codeMission === 'string' ? codeMission : '').trim();
+  const classeur = (typeof nomClasseur === 'string' && nomClasseur.trim() !== '')
+    ? nomClasseur.trim()
+    : `saisie-${code !== '' ? code : '<code>'}-….xlsx`;
+  return (
+    `L'affectation initiale reste à saisir (geste humain) dans le classeur de saisie ` +
+    `${classeur} — le cockpit ne l'écrit pas (saisie matricielle, modele-donnees.md §5.6).`
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Annonce EXHAUSTIVE (§1 régime 2) — construite AVANT toute écriture, affichée à l'opérateur.
 // ---------------------------------------------------------------------------
 
 export interface LigneAnnonce {
-  /** Cible lisible de l'écriture (liste / classeur + table). */
+  /** Cible lisible de l'écriture (liste). */
   readonly cible: string;
   /** Détail lisible de ce qui sera écrit. */
   readonly detail: string;
 }
 
 /**
- * Construit l'annonce exhaustive des TROIS écritures — l'ordre est celui de l'exécution. Affiche
+ * Construit l'annonce exhaustive des DEUX écritures — l'ordre est celui de l'exécution. Affiche
  * le découpage Prénom/Nom retenu et rappelle explicitement que Email/Téléphone NE sont PAS repris.
+ * Le RAPPEL d'affectation (non-écriture) est produit à part par `rappelAffectation`.
  */
 export function construireAnnonce(candidat: CandidatCascade, saisie: SaisieCascade): ReadonlyArray<LigneAnnonce> {
   const { prenom, nom } = separerNomCandidat(candidat.nom);
@@ -190,16 +190,12 @@ export function construireAnnonce(candidat: CandidatCascade, saisie: SaisieCasca
       detail:
         `${nomFiche} · ${saisie.identifiantEntra} · grade « ${candidat.grade || '—'} » · ` +
         `disponibilité « ${saisie.disponibilite || '—'} ». Email et téléphone NON repris (minimisation RGPD).`
-    },
-    {
-      cible: `Classeur de saisie de la mission ${saisie.codeMission} — table T_Affectations (ajout de ligne)`,
-      detail: `Ressource ${saisie.identifiantEntra} · mois ${saisie.mois} · ${saisie.joursPrevus} jours prévus.`
     }
   ];
 }
 
 // ---------------------------------------------------------------------------
-// Primitives INJECTÉES (implémentées par listes-reelles.ts, liées à SPHttpClient / MSGraphClientV3).
+// Primitives INJECTÉES (implémentées par listes-reelles.ts, liées à SPHttpClient).
 // ---------------------------------------------------------------------------
 
 /** Écriture de liste (SharePoint REST, identité utilisateur) — même signature que `Ecrivain`. */
@@ -209,52 +205,27 @@ export type EcrivainCascade = (
   id?: number
 ) => Promise<Ecriture>;
 
-/** Le classeur de saisie résolu (opaque à ce module — passé tel quel à `ajouterLigneAffectation`). */
-export interface ItemAffectation {
-  readonly driveId: string;
-  readonly itemId: string;
-  /** Nom du classeur retenu (affiché en cas d'échec, jamais un chemin inventé). */
-  readonly fichier: string;
-}
-
-/** Résultat du pré-vol de localisation (aucune écriture) : cible prête, ou motif précis d'échec. */
-export type CibleAffectation =
-  | { readonly etat: 'ok'; readonly item: ItemAffectation }
-  | { readonly etat: 'introuvable'; readonly cause: string }
-  | { readonly etat: 'indisponible'; readonly cause: string };
-
-/** Résultat d'une étape d'écriture (aligné sur `Ecriture`, avec une cause optionnelle). */
-export type ResultatEtape =
-  | { readonly etat: 'ok' }
-  | { readonly etat: 'refuse' }
-  | { readonly etat: 'indisponible'; readonly cause?: string };
-
 export interface DepsCascade {
   readonly ecrire: EcrivainCascade;
-  /** Pré-vol : localise le classeur de saisie de la mission et vérifie la table T_Affectations. */
-  readonly localiserAffectation: (codeMission: string) => Promise<CibleAffectation>;
-  /** Ajout de la ligne d'affectation dans la table (Graph Workbook `rows/add`). */
-  readonly ajouterLigneAffectation: (
-    item: ItemAffectation,
-    valeurs: ReadonlyArray<ReadonlyArray<unknown>>
-  ) => Promise<ResultatEtape>;
 }
 
 // ---------------------------------------------------------------------------
-// Exécution séquentielle, fail-closed, sans retour arrière silencieux.
+// Exécution séquentielle, fail-closed sur les écritures, sans retour arrière silencieux.
 // ---------------------------------------------------------------------------
 
 export interface EtatCascade {
-  /** true seulement si les TROIS écritures ont abouti. */
+  /** true seulement si les DEUX écritures ont abouti. */
   readonly ok: boolean;
-  /** Nombre d'écritures RÉELLEMENT effectuées (0..3) — l'état exact, jamais masqué. */
-  readonly ecrituresFaites: 0 | 1 | 2 | 3;
-  /** Étape en échec (ou 'preflight'), si échec. */
-  readonly etapeEchec?: 'preflight' | 1 | 2 | 3;
+  /** Nombre d'écritures RÉELLEMENT effectuées (0..2) — l'état exact, jamais masqué. */
+  readonly ecrituresFaites: 0 | 1 | 2;
+  /** Étape en échec (1 = candidat, 2 = fiche), si échec. */
+  readonly etapeEchec?: 1 | 2;
   /** Cause technique courte, si échec. */
   readonly cause?: string;
-  /** Résumé lisible de l'état exact (affiché à l'opérateur). */
+  /** Résumé lisible de l'état exact (affiché à l'opérateur), rappel d'affectation inclus. */
   readonly resume: string;
+  /** RAPPEL d'affectation (non-écriture) — également exposé pour l'affichage indépendant. */
+  readonly rappel: string;
 }
 
 function libelleEcriture(etat: 'refuse' | 'indisponible'): string {
@@ -263,30 +234,19 @@ function libelleEcriture(etat: 'refuse' | 'indisponible'): string {
 
 /**
  * Exécute la cascade « Acceptée ». À N'APPELER QU'APRÈS confirmation explicite de l'annonce
- * (`construireAnnonce`). Séquentielle et fail-closed :
- *   0. pré-vol de la cible d'affectation — si absente/illisible : ZÉRO écriture ;
- *   1. étape candidat → Acceptée ; 2. fiche Ressources-Profil ; 3. ligne d'affectation.
- * Tout échec ARRÊTE et retourne l'état exact (écritures faites), sans retour arrière.
+ * (`construireAnnonce`). Séquentielle et fail-closed sur les écritures :
+ *   1. étape candidat → Acceptée ; 2. fiche Ressources-Profil.
+ * Tout échec ARRÊTE et retourne l'état exact (écritures faites), sans retour arrière. Le RAPPEL
+ * d'affectation (non-écriture) est joint dans TOUS les cas : `nomClasseur` est le nom RÉEL résolu
+ * en lecture seule par l'appelant (fail-OPEN vers le motif générique si non résolu).
  */
 export async function executerCascade(
   candidat: CandidatCascade,
   saisie: SaisieCascade,
-  deps: DepsCascade
+  deps: DepsCascade,
+  nomClasseur?: string
 ): Promise<EtatCascade> {
-  // 0. Pré-vol (AVANT toute écriture) : la cible d'affectation doit exister.
-  const cible = await deps.localiserAffectation(saisie.codeMission);
-  if (cible.etat !== 'ok') {
-    const mot = cible.etat === 'introuvable' ? 'introuvable' : 'illisible';
-    return {
-      ok: false,
-      ecrituresFaites: 0,
-      etapeEchec: 'preflight',
-      cause: cible.cause,
-      resume:
-        `Cascade non lancée : classeur de saisie de la mission ${saisie.codeMission} ${mot} ` +
-        `(${cible.cause}). Aucune écriture effectuée.`
-    };
-  }
+  const rappel = rappelAffectation(saisie.codeMission, nomClasseur);
 
   // 1. Candidats.Etape → Acceptée.
   const r1 = await deps.ecrire(LISTE_CANDIDATS, champsAcceptationCandidat(), candidat.id);
@@ -297,8 +257,9 @@ export async function executerCascade(
       etapeEchec: 1,
       cause: r1.etat,
       resume:
-        `Arrêt à l'écriture 1/3 (étape candidat → Acceptée) : ${libelleEcriture(r1.etat)}. ` +
-        `Aucune écriture effectuée.`
+        `Arrêt à l'écriture 1/2 (étape candidat → Acceptée) : ${libelleEcriture(r1.etat)}. ` +
+        `Aucune écriture effectuée.`,
+      rappel
     };
   }
 
@@ -321,39 +282,17 @@ export async function executerCascade(
       etapeEchec: 2,
       cause: r2.etat,
       resume:
-        `Arrêt à l'écriture 2/3 (fiche Ressources-Profil) : ${libelleEcriture(r2.etat)}. ` +
-        `L'écriture 1/3 (étape → Acceptée) est DÉJÀ effectuée — aucun retour arrière automatique.`
-    };
-  }
-
-  // 3. Ligne d'affectation initiale dans le classeur de saisie (Graph Workbook).
-  const r3 = await deps.ajouterLigneAffectation(
-    cible.item,
-    valeursAffectation({
-      codeMission: saisie.codeMission,
-      identifiantEntra: saisie.identifiantEntra,
-      mois: saisie.mois,
-      joursPrevus: saisie.joursPrevus
-    })
-  );
-  if (r3.etat !== 'ok') {
-    return {
-      ok: false,
-      ecrituresFaites: 2,
-      etapeEchec: 3,
-      cause: r3.etat === 'indisponible' ? (r3.cause ?? 'indisponible') : r3.etat,
-      resume:
-        `Arrêt à l'écriture 3/3 (ligne d'affectation, ${cible.item.fichier}) : ` +
-        `${r3.etat === 'refuse' ? 'refusée (droits)' : (r3.cause ?? 'indisponible')}. ` +
-        `Les écritures 1/3 et 2/3 sont DÉJÀ effectuées — aucun retour arrière automatique.`
+        `Arrêt à l'écriture 2/2 (fiche Ressources-Profil) : ${libelleEcriture(r2.etat)}. ` +
+        `L'écriture 1/2 (étape → Acceptée) est DÉJÀ effectuée — aucun retour arrière automatique.`,
+      rappel
     };
   }
 
   return {
     ok: true,
-    ecrituresFaites: 3,
+    ecrituresFaites: 2,
     resume:
-      `Cascade complète : étape → Acceptée, fiche Ressources-Profil créée, ` +
-      `ligne d'affectation initiale ajoutée (${cible.item.fichier}).`
+      `Cascade complète : étape → Acceptée, fiche Ressources-Profil créée. ${rappel}`,
+    rappel
   };
 }

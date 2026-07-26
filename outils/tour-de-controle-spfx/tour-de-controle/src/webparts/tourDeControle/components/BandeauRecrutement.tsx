@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styles from './TourDeControle.module.scss';
 import pipe from './BandeauPipe.module.scss';
-import type { SPHttpClient, MSGraphClientFactory } from '@microsoft/sp-http';
+import type { SPHttpClient } from '@microsoft/sp-http';
 import type { Compteur, DetailItem, Ecriture } from './types';
 import {
   ETAPES_CANDIDAT,
@@ -11,17 +11,16 @@ import {
   prochainTitleCandidat,
   type CandidatLigne
 } from './pipe-recrutement';
-import { creerCandidat, changerEtapeCandidat, depsCascadePour } from './listes-reelles';
-import { construireAnnonce, executerCascade, type EtatCascade, type SaisieCascade } from './cascade-acceptee';
+import { creerCandidat, changerEtapeCandidat, depsCascadePour, resoudreNomSaisiePour } from './listes-reelles';
+import { construireAnnonce, executerCascade, rappelAffectation, type EtatCascade, type SaisieCascade } from './cascade-acceptee';
 
-const { useState, useCallback, useMemo } = React;
+const { useState, useCallback, useMemo, useEffect } = React;
 
 export interface IBandeauRecrutementProps {
   readonly spHttpClient: SPHttpClient;
   readonly dataSiteUrl: string;
-  /** Fabrique Graph (délégué) — écriture de l'affectation de la cascade (Files.ReadWrite.All). */
-  readonly msGraphClientFactory?: MSGraphClientFactory;
-  /** Coordonnées de la couche de saisie (§5.6) — cible de la ligne d'affectation. */
+  /** Coordonnées de la couche de saisie (§5.6) — NOMMENT le classeur `saisie-<code>-…` du RAPPEL
+   *  d'affectation (résolution READ-ONLY, aucune écriture ; contrat v2.2). */
   readonly saisieSiteUrl: string;
   readonly saisieFolderPath: string;
   /** Compteurs agrégés par étape (voir → creuser) — conservés au-dessus des gestes. */
@@ -66,7 +65,7 @@ function statutNode(item: DetailItem): React.ReactElement {
  */
 export default function BandeauRecrutement(props: IBandeauRecrutementProps): React.ReactElement {
   const {
-    spHttpClient, dataSiteUrl, msGraphClientFactory, saisieSiteUrl, saisieFolderPath,
+    spHttpClient, dataSiteUrl, saisieSiteUrl, saisieFolderPath,
     compteurs, candidats, titresPris, gestesAccessibles, missionsConnues, onMutation
   } = props;
 
@@ -100,55 +99,65 @@ export default function BandeauRecrutement(props: IBandeauRecrutementProps): Rea
     return r;
   }, [marquerOccupe, onMutation]);
 
-  // --- Cascade « Acceptée » -------------------------------------------------
+  // --- Cascade « Acceptée » (contrat v2.2 : 2 écritures de listes + RAPPEL d'affectation) --------
   const deps = useMemo(
-    () => depsCascadePour(spHttpClient, dataSiteUrl, { siteUrl: saisieSiteUrl, folderPath: saisieFolderPath }, msGraphClientFactory),
-    [spHttpClient, dataSiteUrl, saisieSiteUrl, saisieFolderPath, msGraphClientFactory]
+    () => depsCascadePour(spHttpClient, dataSiteUrl),
+    [spHttpClient, dataSiteUrl]
+  );
+  // Résolution READ-ONLY du nom du classeur de saisie (pour NOMMER le rappel) — jamais d'écriture.
+  const resoudreNom = useMemo(
+    () => resoudreNomSaisiePour(spHttpClient, { siteUrl: saisieSiteUrl, folderPath: saisieFolderPath }),
+    [spHttpClient, saisieSiteUrl, saisieFolderPath]
   );
 
   const [pendingCascade, setPendingCascade] = useState<CandidatLigne | null>(null);
   const [identifiantEntra, setIdentifiantEntra] = useState('');
   const [disponibilite, setDisponibilite] = useState('');
   const [codeMission, setCodeMission] = useState('');
-  const [mois, setMois] = useState('');            // format « AAAA-MM » (input month)
-  const [joursPrevus, setJoursPrevus] = useState('');
+  const [nomSaisie, setNomSaisie] = useState<string | undefined>(undefined);
   const [cascadeEtat, setCascadeEtat] = useState<EtatCascade | null>(null);
   const [cascadeEnCours, setCascadeEnCours] = useState(false);
 
   const fermerCascade = useCallback((): void => {
     setPendingCascade(null);
     setCascadeEtat(null);
-    setIdentifiantEntra(''); setDisponibilite(''); setCodeMission(''); setMois(''); setJoursPrevus('');
+    setIdentifiantEntra(''); setDisponibilite(''); setCodeMission(''); setNomSaisie(undefined);
   }, []);
 
-  // Le mois est saisi en « AAAA-MM » (input month) ; l'affectation le veut au 1er du mois (§5.2).
-  const moisPremierDuMois = mois ? `${mois}-01` : '';
-  const joursNombre = Number(joursPrevus);
   const saisieCascade: SaisieCascade = {
     identifiantEntra: identifiantEntra.trim(),
     disponibilite: disponibilite.trim(),
-    codeMission: codeMission.trim(),
-    mois: moisPremierDuMois,
-    joursPrevus: joursNombre
+    codeMission: codeMission.trim()
   };
   const cascadeValide =
     saisieCascade.identifiantEntra !== '' &&
     saisieCascade.disponibilite !== '' &&
-    saisieCascade.codeMission !== '' &&
-    saisieCascade.mois !== '' &&
-    Number.isFinite(joursNombre) && joursNombre > 0;
+    saisieCascade.codeMission !== '';
+
+  // Nomme le classeur de saisie du RAPPEL en lecture seule quand la mission change (fail-OPEN :
+  // undefined → motif générique). Aucune écriture ; simple listing pour un rappel plus précis.
+  useEffect(() => {
+    let annule = false;
+    const code = saisieCascade.codeMission;
+    if (!pendingCascade || code === '') { setNomSaisie(undefined); return; }
+    resoudreNom(code)
+      .then(n => { if (!annule) { setNomSaisie(n); } })
+      .catch(() => { if (!annule) { setNomSaisie(undefined); } });
+    return () => { annule = true; };
+  }, [pendingCascade, saisieCascade.codeMission, resoudreNom]);
 
   const confirmerCascade = useCallback(async (candidat: CandidatLigne): Promise<void> => {
     setCascadeEnCours(true);
     const etat = await executerCascade(
       { id: candidat.id, title: candidat.title, nom: candidat.nom, grade: candidat.grade, etape: candidat.etape },
       saisieCascade,
-      deps
+      deps,
+      nomSaisie
     );
     setCascadeEtat(etat);
     if (etat.ok) { await onMutation(); }
     setCascadeEnCours(false);
-  }, [deps, onMutation, saisieCascade]);
+  }, [deps, onMutation, saisieCascade, nomSaisie]);
 
   // --- Geste « ajouter un candidat » ---------------------------------------
   const [nomC, setNomC] = useState('');
@@ -280,7 +289,7 @@ export default function BandeauRecrutement(props: IBandeauRecrutementProps): Rea
                             <>
                               <p className={pipe.confirmText}>
                                 Accepter <span className={pipe.confirmNom}>{c.title || c.nom}</span> déclenchera
-                                trois écritures. Renseignez la fiche, puis confirmez.
+                                deux écritures. Renseignez la fiche, puis confirmez.
                               </p>
                               <div className={pipe.formGrid}>
                                 <label className={pipe.formField}>
@@ -306,18 +315,8 @@ export default function BandeauRecrutement(props: IBandeauRecrutementProps): Rea
                                       disabled={cascadeEnCours} onChange={e => setCodeMission(e.target.value)} />
                                   )}
                                 </label>
-                                <label className={pipe.formField}>
-                                  <span className={pipe.formLabel}>Mois</span>
-                                  <input className={pipe.champ} type="month" value={mois} disabled={cascadeEnCours}
-                                    onChange={e => setMois(e.target.value)} />
-                                </label>
-                                <label className={pipe.formField}>
-                                  <span className={pipe.formLabel}>Jours prévus</span>
-                                  <input className={pipe.champ} type="number" inputMode="numeric" value={joursPrevus}
-                                    disabled={cascadeEnCours} onChange={e => setJoursPrevus(e.target.value)} />
-                                </label>
                               </div>
-                              {/* Annonce EXHAUSTIVE des trois écritures */}
+                              {/* Annonce EXHAUSTIVE des deux écritures (contrat v2.2) */}
                               <p className={pipe.confirmMention}>Écritures qui seront effectuées, sur confirmation :</p>
                               {annonce?.map((l, i) => (
                                 <div key={i} className={styles.detailRow}>
@@ -325,6 +324,8 @@ export default function BandeauRecrutement(props: IBandeauRecrutementProps): Rea
                                   <span className={styles.metaText}>{l.detail}</span>
                                 </div>
                               ))}
+                              {/* RAPPEL d'affectation — PAS une écriture : geste humain dans la saisie (§5.6) */}
+                              <p className={pipe.note}>{rappelAffectation(saisieCascade.codeMission, nomSaisie)}</p>
                               <div className={pipe.confirmActions}>
                                 <button type="button" className={pipe.btn} disabled={!cascadeValide || cascadeEnCours}
                                   onClick={() => { confirmerCascade(c).catch(() => undefined); }}>

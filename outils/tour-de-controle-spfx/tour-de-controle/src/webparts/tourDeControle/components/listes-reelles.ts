@@ -26,20 +26,13 @@ import {
 } from './gabarits';
 import {
   lireContenus,
-  resoudreDrives,
-  resoudreItem,
-  TABLE_AFFECTATIONS,
   versTexte,
   type GrapheGet,
-  type ReponseGraphe,
   type CibleGabarit,
   type CiblesReferentiel
 } from './workbook-graph';
 import {
   choisirSaisie,
-  type CibleAffectation,
-  type ItemAffectation,
-  type ResultatEtape,
   type DepsCascade
 } from './cascade-acceptee';
 import {
@@ -93,12 +86,13 @@ export interface CockpitData {
 
 /**
  * Coordonnées du classeur de SAISIE (modele-donnees.md §5.6) — site « Management et Gestion »,
- * racine de la bibliothèque « Documents ». Cible n°3 de la cascade « Acceptée » (ligne
- * d'affectation dans T_Affectations). Posées par le gardien (property pane) ; vides = cascade
- * non câblée sur l'affectation → pré-vol « introuvable », zéro écriture.
+ * racine de la bibliothèque « Documents ». Sert au RAPPEL d'affectation de la cascade « Acceptée »
+ * (contrat v2.2) : un listing READ-ONLY du dossier NOMME le classeur `saisie-<code>-….xlsx` dans le
+ * rappel. Aucune écriture n'y a lieu (l'affectation est un geste humain, saisie matricielle). Posées
+ * par le gardien (property pane) ; vides = rappel générique (motif `saisie-<code>-….xlsx`), fail-OPEN.
  */
 export interface ConfigSaisie {
-  /** URL absolue du site de la saisie (base `_api` + `/sites/{host}:{path}` Graph). */
+  /** URL absolue du site de la saisie (base `_api`). */
   readonly siteUrl: string;
   /** Chemin server-relative du dossier des classeurs `saisie-<code>-….xlsx`. */
   readonly folderPath: string;
@@ -476,125 +470,55 @@ function grapheGetPour(client: MSGraphClientV3): GrapheGet {
 }
 
 // ---------------------------------------------------------------------------
-// Cascade « Acceptée » (T-0039) — primitives liées au contexte SPFx. Les listes s'écrivent en
-// SharePoint REST (identité utilisateur) ; l'affectation initiale s'écrit dans le classeur de
-// SAISIE via Graph Workbook délégué (Files.ReadWrite.All). Toutes ne lèvent JAMAIS.
+// Cascade « Acceptée » (T-0039, contrat v2.2) — primitives liées au contexte SPFx. La cascade
+// n'écrit QUE des LISTES (SharePoint REST, identité utilisateur) : Candidats.Etape puis fiche
+// Ressources-Profil. L'affectation initiale N'EST PLUS écrite (arbitrage gardien 26/07 : saisie
+// matricielle, T_Affectations n'existe que dans les gabarits) — elle fait l'objet d'un RAPPEL, pour
+// lequel on NOMME le classeur de saisie via un listing READ-ONLY (aucun Graph, aucune écriture).
+// Toutes ne lèvent JAMAIS.
 // ---------------------------------------------------------------------------
 
-/** Résout le client Graph délégué, ou `undefined` (fabrique absente / getClient échoué). Ne lève jamais. */
-async function clientGraphOuNul(graphFactory?: MSGraphClientFactory): Promise<MSGraphClientV3 | undefined> {
-  if (!graphFactory) { return undefined; }
-  try {
-    return await graphFactory.getClient('3');
-  } catch (e) {
-    console.error('[tour-de-controle] client Graph non résolu (cascade)', e instanceof Error ? e.message : String(e));
-    return undefined;
-  }
-}
-
-/** Adaptateur POST Graph (écriture Workbook, permission Files.ReadWrite.All). Ne lève jamais. */
-function graphePostPour(client: MSGraphClientV3): (chemin: string, corps: unknown) => Promise<ReponseGraphe> {
-  return async (chemin, corps) => {
-    try {
-      const rep: unknown = await client.api(chemin).post(corps);
-      return { ok: true, status: 200, corps: rep };
-    } catch (e) {
-      const brut = (e && typeof e === 'object' && 'statusCode' in e) ? Number((e as { statusCode?: unknown }).statusCode) : 0;
-      const status = isFinite(brut) ? brut : 0;
-      console.error('[tour-de-controle] échec POST Graph', { chemin, status, erreur: e instanceof Error ? e.message : String(e) });
-      return { ok: false, status };
-    }
-  };
-}
-
 /**
- * Pré-vol de localisation du classeur de saisie de la mission (AUCUNE écriture) : listing REST du
- * dossier, choix du classeur `saisie-<code>-…` (refus si ambigu), résolution Graph de son id, puis
- * vérification de la présence de la table T_Affectations. Motifs d'échec PRÉCIS (introuvable /
- * indisponible), jamais de zéro muet.
+ * Résout, en LECTURE seule, le NOM du classeur de saisie de la mission (`saisie-<code>-….xlsx`) pour
+ * le RAPPEL d'affectation. Simple listing REST du dossier de saisie sous l'identité de l'utilisateur ;
+ * jamais d'écriture, jamais de Graph. Fail-OPEN : renvoie `undefined` dès que le nom n'est pas
+ * résoluble sûrement (config vide, dossier illisible, aucun match, ou plusieurs candidats ambigus) —
+ * l'appelant retombe alors sur le motif générique. Ne lève jamais.
  */
-function localiserAffectationPour(
+export function resoudreNomSaisiePour(
   sp: SPHttpClient,
-  cfgSaisie: ConfigSaisie,
-  graphFactory?: MSGraphClientFactory
-): (codeMission: string) => Promise<CibleAffectation> {
+  cfgSaisie: ConfigSaisie
+): (codeMission: string) => Promise<string | undefined> {
   return async (codeMission) => {
-    if (!cfgSaisie.siteUrl || !cfgSaisie.folderPath) {
-      return { etat: 'introuvable', cause: 'classeur de saisie non câblé (site/dossier vides)' };
-    }
-    // 1. Listing REST du dossier de saisie (identité utilisateur) → noms + URLs server-relative.
+    if (!cfgSaisie.siteUrl || !cfgSaisie.folderPath) { return undefined; }
     const url = `${cfgSaisie.siteUrl}/_api/web/GetFolderByServerRelativePath(decodedUrl='${litteralOData(cfgSaisie.folderPath)}')`
-      + `/Files?$select=Name,ServerRelativeUrl&$top=2000`;
-    let fichiers: ReadonlyArray<Record<string, unknown>>;
+      + `/Files?$select=Name&$top=2000`;
     try {
       const res: SPHttpClientResponse = await sp.get(url, SPHttpClient.configurations.v1);
-      if (res.status === 404) { return { etat: 'introuvable', cause: 'dossier de saisie introuvable' }; }
-      if (!res.ok) { return { etat: 'indisponible', cause: `listing du dossier de saisie (HTTP ${res.status})` }; }
+      if (!res.ok) { return undefined; }
       const body: { value?: ReadonlyArray<Record<string, unknown>> } = await res.json();
-      fichiers = body.value ?? [];
+      const noms = (body.value ?? []).map(f => versTexte(f.Name));
+      const choix = choisirSaisie(noms, codeMission);
+      // Ambigu → on ne nomme pas au hasard : fail-OPEN vers le motif générique (rappel, pas écriture).
+      return choix.ambigu ? undefined : choix.nom;
     } catch {
-      return { etat: 'indisponible', cause: 'listing du dossier de saisie (échec réseau)' };
+      return undefined;
     }
-
-    const noms = fichiers.map(f => versTexte(f.Name));
-    const choix = choisirSaisie(noms, codeMission);
-    if (!choix.nom) { return { etat: 'introuvable', cause: `aucun classeur « saisie-${codeMission}-… » dans le dossier` }; }
-    if (choix.ambigu) { return { etat: 'introuvable', cause: `plusieurs classeurs « saisie-${codeMission}-… » (ambigu) — refus fail-closed` }; }
-    const fichier = fichiers.find(f => versTexte(f.Name) === choix.nom);
-    const serverRel = versTexte(fichier ? fichier.ServerRelativeUrl : undefined);
-    if (!serverRel) { return { etat: 'indisponible', cause: 'URL du classeur de saisie introuvable' }; }
-
-    // 2. Résolution Graph : site → drives → id du driveItem (réutilise workbook-graph).
-    const client = await clientGraphOuNul(graphFactory);
-    if (!client) { return { etat: 'indisponible', cause: 'client Graph non résolu (fabrique absente ou getClient a échoué)' }; }
-    const grapheGet = grapheGetPour(client);
-    const drives = await resoudreDrives(grapheGet, cfgSaisie.siteUrl);
-    if (!drives) { return { etat: 'indisponible', cause: 'résolution site→drive du site de saisie échouée' }; }
-    const resu = await resoudreItem(grapheGet, drives, serverRel);
-    if (!resu.item) {
-      return resu.acces === 'restreint'
-        ? { etat: 'introuvable', cause: `classeur ${choix.nom} non visible (droits)` }
-        : { etat: 'indisponible', cause: resu.cause ?? 'classeur non résolu' };
-    }
-    // 3. Présence de la table T_Affectations (sinon « table absente » AVANT toute écriture).
-    const t = await grapheGet(`/drives/${resu.item.driveId}/items/${resu.item.itemId}/workbook/tables/${encodeURIComponent(TABLE_AFFECTATIONS)}`);
-    if (t.status === 404) { return { etat: 'introuvable', cause: `table ${TABLE_AFFECTATIONS} absente de ${choix.nom}` }; }
-    if (!t.ok) { return { etat: 'indisponible', cause: `accès à ${TABLE_AFFECTATIONS} (HTTP ${t.status})` }; }
-    return { etat: 'ok', item: { driveId: resu.item.driveId, itemId: resu.item.itemId, fichier: choix.nom } };
-  };
-}
-
-/** Ajout de la ligne d'affectation dans T_Affectations (Graph Workbook `rows/add`). Ne lève jamais. */
-function ajouterLigneAffectationPour(
-  graphFactory?: MSGraphClientFactory
-): (item: ItemAffectation, valeurs: ReadonlyArray<ReadonlyArray<unknown>>) => Promise<ResultatEtape> {
-  return async (item, valeurs) => {
-    const client = await clientGraphOuNul(graphFactory);
-    if (!client) { return { etat: 'indisponible', cause: 'client Graph non résolu' }; }
-    const post = graphePostPour(client);
-    const chemin = `/drives/${item.driveId}/items/${item.itemId}/workbook/tables/${encodeURIComponent(TABLE_AFFECTATIONS)}/rows/add`;
-    const rep = await post(chemin, { values: valeurs });
-    if (rep.ok) { return { etat: 'ok' }; }
-    if (rep.status === 403) { return { etat: 'refuse' }; }
-    return { etat: 'indisponible', cause: `ajout de ligne dans ${TABLE_AFFECTATIONS} (HTTP ${rep.status})` };
   };
 }
 
 /**
- * Construit les primitives de la cascade « Acceptée » liées au contexte SPFx : écriture de listes
- * en SharePoint REST (SSO utilisateur) et écriture de l'affectation en Graph Workbook délégué
- * (Files.ReadWrite.All). Consommé par BandeauRecrutement + `executerCascade` (cascade-acceptee.ts).
+ * Construit les primitives d'écriture de la cascade « Acceptée » liées au contexte SPFx : écriture de
+ * listes en SharePoint REST (SSO utilisateur, aucune élévation). Consommé par BandeauRecrutement +
+ * `executerCascade` (cascade-acceptee.ts). Le RAPPEL d'affectation ne passe pas par ici : il est
+ * NOMMÉ en lecture seule (`resoudreNomSaisiePour`) et formaté par `rappelAffectation`.
  */
 export function depsCascadePour(
   sp: SPHttpClient,
-  dataSiteUrl: string,
-  cfgSaisie: ConfigSaisie,
-  graphFactory?: MSGraphClientFactory
+  dataSiteUrl: string
 ): DepsCascade {
   return {
-    ecrire: ecrivainPour(sp, dataSiteUrl),
-    localiserAffectation: localiserAffectationPour(sp, cfgSaisie, graphFactory),
-    ajouterLigneAffectation: ajouterLigneAffectationPour(graphFactory)
+    ecrire: ecrivainPour(sp, dataSiteUrl)
   };
 }
 

@@ -195,7 +195,6 @@ export default function TourDeControle(props: ITourDeControleProps): React.React
           <BandeauRecrutement
             spHttpClient={spHttpClient}
             dataSiteUrl={dataSiteUrl}
-            msGraphClientFactory={msGraphClientFactory}
             saisieSiteUrl={saisieSiteUrl}
             saisieFolderPath={saisieFolderPath}
             compteurs={data.recrutement.compteurs}
