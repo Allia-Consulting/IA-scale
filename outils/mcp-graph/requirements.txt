@@ -1,5 +1,9 @@
 # Dépendances du serveur MCP Graph (outils/mcp-graph/server.py).
 # Installation : python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-mcp>=1.2.0
+# mcp BORNÉ < 2.0.0 : le serveur importe `mcp.server.fastmcp` (Context, FastMCP), API RETIRÉE
+# par la majeure mcp 2.0.0 (sortie fin 07/2026). Sans cette borne, pip résout 2.0.0 et TOUT
+# `import server` casse (ModuleNotFoundError: mcp.server.fastmcp) — build « import réel » et
+# tests garde-fous rouges. Relever la borne = migration explicite vers l'API fastmcp de la 2.x.
+mcp>=1.2.0,<2.0.0
 httpx>=0.27.0
 azure-identity>=1.16.0
