@@ -8,7 +8,7 @@ cran: notifie   # bascule de la page en point d'entrée unique du site : interne
 produit:
   - "(bandeau Staffing) conforme tour-de-controle.md §3 : sélecteur d'année, pourcentages DANS les barres, effectif actif au sommet"
   - "(bandeau Rentabilité) tableau 12 mois Budget | Réalisé, lignes CA et EBITDA, « · » en cas d'absence de donnée (style sobre, aucun vert, aucune pastille)"
-  - "(bandeau Factures à émettre) liste des échéances au statut « à émettre », bouton « Émise » (écriture guidée), lien vers le PDF dans le dépôt Teams de la mission"
+  - "(bandeau Factures à émettre) liste des échéances au statut « à émettre », statut « émise » = geste humain dans la saisie (modele-donnees.md §5.6), re-dérivé par l agent — cockpit lecture seule (tour-de-controle.md v2.2 §3, arbitrage gardien 28/07/2026, épreuve verte docs/epreuves/2026-07-28-t0035-geste-emise.md), lien vers le PDF dans le dépôt Teams de la mission"
   - "(gestes d'écriture guidée et cascades confirmées) conformes au §3 du contrat — POINT 4 ÉPROUVÉ/SOLDÉ le 26/07/2026 (ratification gardien S43) : cascades CRM (bascule « Gagnée ») éprouvées S42 (T-0038, épreuve du 24/07) ; gestes recrutement + cascade « Acceptée » éprouvés S42/S43 (T-0039 — volet A S42 + volet B C-005 26/07, cockpit 1.5.1.0 ; journal 2026-07-26-t0039-gestes-recrutement.md). Point 5 (facturation) reste ouvert"
   - "(bascule hub) la page Tour-de-contrôle devient le point d'entrée unique / la page d'accueil du site"
 depend_de: [T-0033, T-0031]   # T-0033 (souche/gabarits propres) puis solde de T-0031 (chaîne économique vivante) = préalables à la lecture économique du cockpit
