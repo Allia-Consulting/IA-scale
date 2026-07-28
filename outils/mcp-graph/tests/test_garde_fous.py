@@ -1148,3 +1148,280 @@ def test_allouer_code_mission_opportunite_id_vide_refuse(_sans_porte, monkeypatc
     fn = _sous_jacente(server.allouer_code_mission)
     with pytest.raises(ValueError):
         fn(None, opportunite_id=mauvais)
+
+
+# --------------------------------------------------------------------------------------------
+# allouer_num_facture — allocateur NumFacture ATOMIQUE (T-0030), registre « Factures »
+# Écriture SOURCE bornée par construction : cible FIGÉE (Liste « Factures », GRAPH_FACTURES_LIST_ID,
+# même site que « CRM »), IDEMPOTENCE par clé (CodeMission, EtiquetteLocale), allocation
+# F-AAAA-NNNN = max de l'année + 1 (0001 si aucun) à l'ÉMISSION, post-vérification anti-course
+# bornée (tie-break déterministe par item_id), jamais de recyclage ni de suppression. Cran validé.
+# --------------------------------------------------------------------------------------------
+
+class _FauxClientFactures:
+    """Client httpx factice pour allouer_num_facture (registre « Factures »).
+
+    Piloté par `scans` : une liste d'ÉTATS successifs du registre ; chaque état est une liste
+    d'items {"id": ..., "fields": {...}}. Le dernier état est répété si la séquence est épuisée.
+      - GET .../items          → SCAN : renvoie l'état courant puis avance le compteur ;
+      - GET .../items/{id}      → relecture d'un item (etag + fields) SANS avancer le compteur ;
+      - POST .../items          → CRÉATION : enregistre les fields dans `self.posts`, renvoie
+                                   {"id": post_id} avec le statut `post_status` (201 nominal) ;
+      - PATCH .../items/{id}/fields → statut consommé dans l'ordre de `patch_statuses` (défaut 200).
+    Enregistre chaque appel dans `self.appels` [(méthode, url, corps|params)]."""
+
+    def __init__(self, scans, post_id="NEW-1", post_status=201, patch_statuses=None,
+                 item_etag='W/"f-1"'):
+        self._scans = [list(s) for s in scans]
+        self._post_id = post_id
+        self._post_status = post_status
+        self._patch_statuses = list(patch_statuses) if patch_statuses is not None else [200]
+        self._item_etag = item_etag
+        self._scan_i = 0
+        self._patch_i = 0
+        self.appels = []
+        self.entetes_appels = []
+        self.posts = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def _etat(self):
+        return self._scans[self._scan_i] if self._scan_i < len(self._scans) else self._scans[-1]
+
+    def get(self, url, headers=None, params=None):
+        self.appels.append(("GET", url, params))
+        self.entetes_appels.append(("GET", url, headers or {}))
+        if url.endswith("/items"):
+            etat = self._etat()
+            self._scan_i += 1
+            return _RepWb(200, {"value": [{"id": it["id"], "fields": it["fields"]} for it in etat]})
+        # GET item par id (relecture d'ETag au renumérotage) — n'avance PAS le compteur de scan.
+        item_id = url.rsplit("/items/", 1)[-1]
+        for it in self._etat():
+            if str(it["id"]) == str(item_id):
+                return _RepWb(200, {"@odata.etag": self._item_etag, "fields": it["fields"]})
+        return _RepWb(404, {})
+
+    def post(self, url, headers=None, json=None):
+        self.appels.append(("POST", url, json))
+        self.entetes_appels.append(("POST", url, headers or {}))
+        champs = (json or {}).get("fields")
+        self.posts.append(champs)
+        return _RepWb(self._post_status, {"id": self._post_id, "fields": champs})
+
+    def patch(self, url, headers=None, json=None):
+        self.appels.append(("PATCH", url, json))
+        self.entetes_appels.append(("PATCH", url, headers or {}))
+        st = self._patch_statuses[self._patch_i] if self._patch_i < len(self._patch_statuses) else self._patch_statuses[-1]
+        self._patch_i += 1
+        return _RepWb(st, {})
+
+
+def _item_fact(item_id, title, code_mission, etiquette, statut="émise"):
+    """Fabrique un item de registre {"id", "fields"} pour piloter _FauxClientFactures."""
+    return {
+        "id": item_id,
+        "fields": {"Title": title, "CodeMission": code_mission, "EtiquetteLocale": etiquette, "Statut": statut},
+    }
+
+
+class _FauxDatetime:
+    """Fige l'horloge du serveur à 2026-07-28 (année → NNNN, DateEmission déterministe)."""
+
+    @staticmethod
+    def now(tz=None):
+        import datetime as _dt
+        return _dt.datetime(2026, 7, 28, 9, 30, 0, tzinfo=_dt.timezone.utc)
+
+
+@pytest.fixture
+def _factures_2026(monkeypatch):
+    """Config « Factures » valide + jeton neutralisé + horloge figée à 2026, pour exercer le corps
+    réseau (mocké) de l'allocateur. Aucun secret ; aucune variable d'environnement réelle requise."""
+    monkeypatch.setattr(server, "_config_factures", lambda: {"site_id": "SITE-1", "factures_list_id": "FACT-1"})
+    monkeypatch.setattr(server, "_entetes", lambda: {"Authorization": "Bearer faketoken"})
+    monkeypatch.setattr(server, "datetime", _FauxDatetime)
+
+
+def _posts(client):
+    return [c for (m, _u, c) in client.appels if m == "POST"]
+
+
+def _entrees_ok():
+    return dict(code_mission=5, etiquette_locale="2026-07-siteflow", mois_ca="2026-07-01",
+                montant_ht=12000, echeance="2026-08-31")
+
+
+def test_allouer_num_facture_idempotence_cle_existante_rend_meme_numero(_sans_porte, _factures_2026, monkeypatch):
+    """(42) IDEMPOTENCE : une clé (CodeMission, EtiquetteLocale) déjà présente → on REND son
+    NumFacture existant, SANS aucun POST (re-ingestion ne réalloue jamais, T-0030)."""
+    registre = [_item_fact("42", "F-2026-003", "5", "2026-07-siteflow")]
+    client = _FauxClientFactures(scans=[registre])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res == {"num_facture": "F-2026-003", "item_id": "42", "idempotent": True, "tentatives": 0}
+    assert not _posts(client), "aucune création si la clé est déjà au registre (idempotence)."
+
+
+def test_allouer_num_facture_premiere_de_l_annee_est_0001(_sans_porte, _factures_2026, monkeypatch):
+    """(43) Registre vide pour l'année → premier numéro = F-2026-0001, créé avec Statut « émise »."""
+    client = _FauxClientFactures(
+        scans=[[], [_item_fact("NEW-1", "F-2026-0001", "5", "2026-07-siteflow")]],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res["num_facture"] == "F-2026-0001"
+    assert res["idempotent"] is False and res["item_id"] == "NEW-1"
+    champs = _posts(client)[0]["fields"]
+    assert champs["Title"] == "F-2026-0001"
+    assert champs["Statut"] == "émise", "l'allocation pose Statut « émise » côté serveur."
+    assert champs["DateEmission"] == "2026-07-28", "DateEmission = date du jour, posée côté serveur."
+    assert champs["CodeMission"] == "5" and champs["EtiquetteLocale"] == "2026-07-siteflow"
+
+
+def test_allouer_num_facture_max_plus_un_de_l_annee(_sans_porte, _factures_2026, monkeypatch):
+    """(44) NNNN = max des NNNN de l'ANNÉE + 1 : un an antérieur est ignoré ; 001/003 → 004."""
+    avant = [
+        _item_fact("1", "F-2025-0009", "9", "2025-vieux"),   # autre année → ignorée du max
+        _item_fact("2", "F-2026-0001", "1", "a"),
+        _item_fact("3", "F-2026-0003", "2", "b"),
+    ]
+    apres = avant + [_item_fact("NEW-1", "F-2026-0004", "5", "2026-07-siteflow")]
+    client = _FauxClientFactures(scans=[avant, apres])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res["num_facture"] == "F-2026-0004", "max de 2026 = 3 → 4 (l'item 2025 est ignoré)."
+    assert _posts(client)[0]["fields"]["Title"] == "F-2026-0004"
+
+
+def test_allouer_num_facture_cible_figee_liste_factures(_sans_porte, _factures_2026, monkeypatch):
+    """(45) L'écriture (POST) ne vise QUE le registre « Factures » figé (FACT-1), jamais ailleurs."""
+    client = _FauxClientFactures(scans=[[], [_item_fact("NEW-1", "F-2026-0001", "5", "2026-07-siteflow")]])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    fn(None, **_entrees_ok())
+
+    urls_post = [u for (m, u, _c) in client.appels if m == "POST"]
+    assert urls_post and all("/lists/FACT-1/items" in u for u in urls_post), \
+        "le POST vise la Liste « Factures » figée (GRAPH_FACTURES_LIST_ID), et elle seule."
+
+
+@pytest.mark.parametrize("champ,valeur", [
+    ("code_mission", 0), ("code_mission", -3), ("code_mission", "abc"),
+    ("etiquette_locale", ""), ("etiquette_locale", "   "),
+    ("mois_ca", ""), ("echeance", ""),
+    ("montant_ht", 0), ("montant_ht", -5), ("montant_ht", "pasunnombre"),
+])
+def test_allouer_num_facture_preconditions_refusees_avant_reseau(_sans_porte, champ, valeur, monkeypatch):
+    """(46) Précondition non tenue → ValueError, AVANT toute ouverture de client httpx (fail-closed)."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une précondition non tenue.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.allouer_num_facture)
+    entrees = _entrees_ok()
+    entrees[champ] = valeur
+    with pytest.raises(ValueError):
+        fn(None, **entrees)
+
+
+def test_allouer_num_facture_config_absente_leve_configmanquante(_sans_porte, monkeypatch):
+    """(47) GRAPH_FACTURES_LIST_ID (ou GRAPH_SITE_ID) absente → ConfigManquante, AVANT tout réseau."""
+    monkeypatch.delenv("GRAPH_FACTURES_LIST_ID", raising=False)
+    monkeypatch.delenv("GRAPH_SITE_ID", raising=False)
+
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une config « Factures » absente.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.allouer_num_facture)
+    with pytest.raises(server.ConfigManquante):
+        fn(None, **_entrees_ok())
+
+
+def test_allouer_num_facture_course_sur_numero_renumerote_le_perdant(_sans_porte, _factures_2026, monkeypatch):
+    """(48) COURSE sur NNNN : mon item (id « NEW-9 », le plus grand) partage F-2026-0004 avec un
+    item concurrent (id « 3 ») → tie-break déterministe : le petit id garde 0004, MON item est
+    RENUMÉROTÉ en F-2026-0005 par PATCH If-Match, puis re-scan propre → succès."""
+    avant = [_item_fact("2", "F-2026-0003", "2", "b")]
+    # après création : mon NEW-9 a pris 0004, mais l'item 3 concurrent l'a aussi → doublon.
+    apres_course = avant + [
+        _item_fact("3", "F-2026-0004", "7", "concurrent"),
+        _item_fact("NEW-9", "F-2026-0004", "5", "2026-07-siteflow"),
+    ]
+    # après renumérotage de NEW-9 → 0005 : plus de doublon.
+    apres_propre = [
+        _item_fact("2", "F-2026-0003", "2", "b"),
+        _item_fact("3", "F-2026-0004", "7", "concurrent"),
+        _item_fact("NEW-9", "F-2026-0005", "5", "2026-07-siteflow"),
+    ]
+    client = _FauxClientFactures(
+        scans=[avant, apres_course, apres_propre],
+        post_id="NEW-9", patch_statuses=[200],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res["num_facture"] == "F-2026-0005", "mon item (grand id) est renuméroté au suivant."
+    assert res["tentatives"] == 2
+    patchs = [(u, c) for (m, u, c) in client.appels if m == "PATCH"]
+    assert len(patchs) == 1 and patchs[0][0].endswith("/items/NEW-9/fields")
+    assert patchs[0][1] == {"Title": "F-2026-0005"}, "le PATCH ne réécrit QUE le Title (renumérotage)."
+    entetes_patch = [h for (m, _u, h) in client.entetes_appels if m == "PATCH"]
+    assert entetes_patch[0].get("If-Match") == 'W/"f-1"', "le renumérotage porte l'If-Match (ETag lu)."
+
+
+def test_allouer_num_facture_course_sur_numero_canonique_garde(_sans_porte, _factures_2026, monkeypatch):
+    """(49) COURSE sur NNNN mais MON item (id « 1 », le plus petit) est CANONIQUE → il GARDE
+    F-2026-0004 ; aucun renumérotage (aucun PATCH), succès direct."""
+    avant = [_item_fact("2", "F-2026-0003", "2", "b")]
+    apres_course = [
+        _item_fact("1", "F-2026-0004", "5", "2026-07-siteflow"),  # mon item, plus petit id
+        _item_fact("2", "F-2026-0003", "2", "b"),
+        _item_fact("9", "F-2026-0004", "7", "concurrent"),        # concurrent, plus grand id
+    ]
+    client = _FauxClientFactures(scans=[avant, apres_course], post_id="1")
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res["num_facture"] == "F-2026-0004" and res["tentatives"] == 1
+    assert not [m for (m, _u, _c) in client.appels if m == "PATCH"], \
+        "l'item canonique GARDE son numéro : aucun renumérotage."
+
+
+def test_allouer_num_facture_doublon_cle_perdant_fail_closed(_sans_porte, _factures_2026, monkeypatch):
+    """(50) DOUBLON DE CLÉ créé concurremment et mon item NON canonique → RuntimeError explicite,
+    AUCUNE suppression (l'outil n'en a pas la primitive) : réconciliation gardien signalée."""
+    apres = [
+        _item_fact("1", "F-2026-0004", "5", "2026-07-siteflow"),   # concurrent canonique (petit id)
+        _item_fact("NEW-9", "F-2026-0005", "5", "2026-07-siteflow"),  # le mien, même clé, plus grand id
+    ]
+    client = _FauxClientFactures(scans=[[], apres], post_id="NEW-9")
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    with pytest.raises(RuntimeError):
+        fn(None, **_entrees_ok())
+    # Fail-closed : jamais de DELETE (l'outil ne supprime pas).
+    assert not [m for (m, _u, _c) in client.appels if m == "DELETE"], \
+        "aucune suppression : l'orphelin est signalé pour réconciliation gardien, jamais purgé."

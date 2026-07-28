@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose QUINZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose SEIZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -14,6 +14,7 @@ Ce serveur expose QUINZE opérations à un agent, via le Model Context Protocol 
     - creer_espace_mission        : CRÉE l'espace de mission (arbre de dossiers FIGÉ) UNIQUEMENT sous la racine « Missions ».
     - deposer_document_mission    : DÉPOSE un brouillon interne UNIQUEMENT dans un sous-dossier FIGÉ d'un espace de mission.
     - allouer_code_mission        : ALLOUE atomiquement le CodeMission (max+1) d'une opportunité GAGNÉE et le réécrit sur elle — cible FIGÉE « CRM », colonne CodeMission uniquement, If-Match, préconditions fail-closed.
+    - allouer_num_facture         : ALLOUE le NumFacture légal F-AAAA-NNNN (max de l'année + 1) d'une échéance ÉMISE et l'inscrit au registre — cible FIGÉE « Factures », idempotent par clé (CodeMission, EtiquetteLocale), post-vérification anti-course bornée, jamais recyclé, cran validé.
     - notifier_canal              : DÉPOSE une notification UNIQUEMENT dans la liste « Notifications » (relais vers Teams par flux M365).
     - workbook_lire_table         : LIT (lecture seule, NON bornée) les lignes d'une table nommée d'un classeur Excel (saisie / gabarit / réf. coûts).
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
@@ -21,7 +22,7 @@ Ce serveur expose QUINZE opérations à un agent, via le Model Context Protocol 
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
     - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve FROIDE « vierge » (en-têtes §5.2 + lignes de corps VIDES tolérées, la ligne d'insertion Excel — T-0035 reprise n°5), rollback borné ET VÉRIFIÉ. Plus aucune souche binaire.
 
-(Compte des opérations = 15 outils réellement décorés ; un `grep` du décorateur d'outil retourne 16,
+(Compte des opérations = 16 outils réellement décorés ; un `grep` du décorateur d'outil retourne 17,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
 
 Transport & santé :
@@ -144,6 +145,12 @@ CRAN_PAR_OUTIL = {
     # ferme la couture opportunité → mission (largement visible) : cran NOTIFIE (l'agent agit,
     # le gardien est informé). Remplace le geste gardien tracé de l'ancienne réécriture manuelle.
     "allouer_code_mission": "notifie",
+    # Allocateur NumFacture (T-0030) : écriture SOURCE à cible figée (Liste « Factures », registre
+    # du NumFacture), idempotente et bornée — MAIS elle grave une SÉQUENCE LÉGALE IRRÉVERSIBLE
+    # (numérotation continue des factures, exigence FR) et la facture sort de la firme : cran VALIDÉ
+    # (porte humaine avant l'action ; dé-escalade vers « notifie » envisageable après historique,
+    # décision gardien tracée). Miroir gouverné de allouer_code_mission (table-des-crans v1.14).
+    "allouer_num_facture": "valide",
     # Primitives Workbook/Tables (T-0031) : lecture non bornée = auto par nature ; écritures
     # bornées au domicile gabarit = auto (type d'action reconcilier_gabarit_pilotage, table v1.10).
     "workbook_lire_table": "auto",
@@ -219,6 +226,7 @@ TABLES_GABARIT = (
 )
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 ENV_CRM_LIST_ID = "GRAPH_CRM_LIST_ID"  # liste « CRM » (SEULE cible de allouer_code_mission — écriture de la colonne CodeMission uniquement, T-0038)
+ENV_FACTURES_LIST_ID = "GRAPH_FACTURES_LIST_ID"  # liste « Factures » (SEULE cible de allouer_num_facture — registre du NumFacture, MÊME site que « CRM », T-0030)
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
 # Le support de kick-off se dépose dans « 01 - Pilotage » (décision gardien, amendement n°2 après test 0.8.0).
@@ -693,6 +701,37 @@ def _config_crm() -> dict[str, str]:
         raise ConfigManquante(
             "Configuration « CRM » incomplète. Variables d'environnement manquantes : "
             f"{absentes}. Liste « CRM » créée au runbook T-0026 ; id posé au runbook T-0038. "
+            "Voir outils/mcp-graph/README.md."
+        )
+    return valeurs
+
+
+def _config_factures() -> dict[str, str]:
+    """Lit la configuration de la Liste « Factures » (cible FIGÉE de allouer_num_facture, T-0030).
+
+    Config DÉDIÉE, sur le modèle de `_config_crm()` : les outils existants ne dépendent PAS de ces
+    variables (aucune régression de leur contrat). L'allocateur lit sa propre configuration et échoue
+    clairement (ConfigManquante) si l'une manque. Aucun secret (identité managée).
+
+    Deux cibles FIGÉES côté serveur (jamais choisies par l'appelant) :
+        - site_id          : site AlliaConsuling (partagé, GRAPH_SITE_ID) — MÊME site que « CRM » ;
+        - factures_list_id : Liste « Factures » (GRAPH_FACTURES_LIST_ID) — le registre du NumFacture,
+          la SEULE liste que allouer_num_facture lit et écrit.
+    """
+    valeurs = {
+        "site_id": os.environ.get(ENV_SITE_ID, ""),
+        "factures_list_id": os.environ.get(ENV_FACTURES_LIST_ID, ""),
+    }
+    manquantes = [k for k, v in valeurs.items() if not v]
+    if manquantes:
+        noms_env = {
+            "site_id": ENV_SITE_ID,
+            "factures_list_id": ENV_FACTURES_LIST_ID,
+        }
+        absentes = ", ".join(noms_env[k] for k in manquantes)
+        raise ConfigManquante(
+            "Configuration « Factures » incomplète. Variables d'environnement manquantes : "
+            f"{absentes}. Liste « Factures » créée et id posé au runbook T-0030. "
             "Voir outils/mcp-graph/README.md."
         )
     return valeurs
@@ -1413,6 +1452,307 @@ def allouer_code_mission(ctx: Context, opportunite_id: str) -> dict[str, Any]:
         raise RuntimeError(
             f"Allocation atomique du CodeMission échouée après {MAX_TENTATIVES} tentatives "
             f"(dernière cause : {derniere_cause}). À reprendre ; aucune réattribution forcée."
+        )
+
+
+# --- Allocateur NumFacture atomique (T-0030) — registre « Factures » ------------------------
+# Miroir gouverné de allouer_code_mission (T-0038) : cible FIGÉE (Liste « Factures »,
+# GRAPH_FACTURES_LIST_ID, MÊME site que « CRM »), écriture bornée à CETTE liste, l'appelant ne
+# choisit jamais la cible. Différences tenant à la nature du geste (modele-donnees §2 bis,
+# table-des-crans v1.14, cran VALIDÉ) :
+#   - on CRÉE un élément de registre (POST) au lieu de PATCHer un item pré-existant ;
+#   - le numéro F-AAAA-NNNN est séquentiel PAR ANNÉE (NNNN = max de l'année + 1, 0001 si aucun) ;
+#   - IDEMPOTENCE par clé (CodeMission, EtiquetteLocale) : une clé déjà présente REND son numéro
+#     sans réallouer (T-0030 : une re-ingestion ne réalloue jamais) ;
+#   - allocation UNIQUEMENT à l'émission (Statut « émise » + DateEmission posés ICI, jamais par
+#     l'appelant) : une échéance annulée AVANT émission ne consomme jamais cet outil, donc ne brûle
+#     aucun numéro (chronologie légale FR sans trou) ; un numéro n'est JAMAIS recyclé ni supprimé
+#     (aucune primitive de suppression — supprimer_definitivement reste proscrit).
+_RE_NUM_FACTURE = re.compile(r"^F-(\d{4})-(\d{4})$")
+
+
+def _num_facture_en_couple(title: Any) -> tuple[str, int] | None:
+    """Parse un NumFacture « F-AAAA-NNNN » en (annee:str, seq:int), ou None si non conforme.
+
+    En LECTURE on est permissif : tout Title ne respectant pas exactement le motif (vide, texte
+    libre, ancienne convention) est ignoré du calcul de séquence. La FORME (F-AAAA-NNNN, NNNN sur
+    4 chiffres) est garantie à l'ÉCRITURE, faite ici avec un entier Python formaté `:04d`."""
+    if title is None:
+        return None
+    m = _RE_NUM_FACTURE.match(str(title).strip())
+    if not m:
+        return None
+    return m.group(1), int(m.group(2))
+
+
+def _scanner_registre_factures(client_http: httpx.Client, url_items: str) -> list[dict[str, Any]]:
+    """Lit TOUT le registre « Factures » (pagination @odata.nextLink complète) → descripteurs.
+
+    Chaque descripteur : {item_id, annee, seq, code_mission, etiquette, title}. Un Title non conforme
+    laisse annee/seq à None (l'item compte pour la clé d'idempotence, pas pour la séquence). Lecture
+    seule ; ne décide, n'écrit rien ; honore Retry-After sur 429/503 (via `_get_crm_avec_backoff`,
+    GET générique malgré son nom historique)."""
+    descripteurs: list[dict[str, Any]] = []
+    params = {"$expand": "fields", "$select": "id", "$top": "999"}
+    page = _get_crm_avec_backoff(client_http, url_items, params=params)
+    while True:
+        page.raise_for_status()
+        corps = page.json()
+        for it in corps.get("value", []):
+            f = it.get("fields") or {}
+            couple = _num_facture_en_couple(f.get("Title"))
+            etq = f.get("EtiquetteLocale")
+            descripteurs.append(
+                {
+                    "item_id": it.get("id"),
+                    "annee": couple[0] if couple else None,
+                    "seq": couple[1] if couple else None,
+                    "code_mission": _code_mission_en_entier(f.get("CodeMission")),
+                    "etiquette": etq.strip() if isinstance(etq, str) else None,
+                    "title": str(f.get("Title")).strip() if f.get("Title") is not None else None,
+                }
+            )
+        suivant = corps.get("@odata.nextLink")
+        if not suivant:
+            break
+        page = _get_crm_avec_backoff(client_http, suivant)
+    return descripteurs
+
+
+def _post_item_avec_backoff(client_http: httpx.Client, url: str, fields: dict):
+    """POST d'un item de liste (body {"fields": ...}), honorant Retry-After sur 429/503 (borné)."""
+    entetes = {**_entetes(), "Content-Type": "application/json"}
+    reponse = client_http.post(url, headers=entetes, json={"fields": fields})
+    for _ in range(2):
+        if reponse.status_code not in _STATUTS_TRANSITOIRES_CRM:
+            break
+        time.sleep(_delai_retry_after(reponse))
+        reponse = client_http.post(url, headers=entetes, json={"fields": fields})
+    return reponse
+
+
+def _valider_entrees_num_facture(
+    code_mission: Any, etiquette_locale: Any, mois_ca: Any, montant_ht: Any, echeance: Any
+) -> tuple[int, str, str, Any, str]:
+    """Valide et normalise les entrées AVANT tout réseau (fail-closed, jamais d'à-peu-près).
+
+    Préconditions strictes (modele-donnees §2 bis) : `code_mission` entier ≥ 1, `etiquette_locale`
+    non vide ; `mois_ca` / `echeance` chaînes non vides ; `montant_ht` nombre > 0. Toute condition
+    douteuse = ValueError explicite, avant toute ouverture de client httpx.
+
+    Retourne (code_int, etiquette, mois_ca, montant, echeance) — `montant` en int si intégral."""
+    code_int = _code_mission_en_entier(code_mission)
+    if code_int is None:
+        raise ValueError(
+            f"`code_mission` doit être un entier ≥ 1 (reçu : {code_mission!r}). Rien écrit (fail-closed)."
+        )
+    if not isinstance(etiquette_locale, str) or not etiquette_locale.strip():
+        raise ValueError(
+            "`etiquette_locale` doit être une chaîne non vide (clé de réconciliation avec la saisie)."
+        )
+    if not isinstance(mois_ca, str) or not mois_ca.strip():
+        raise ValueError("`mois_ca` doit être une chaîne non vide (mois de rattachement du CA).")
+    if not isinstance(echeance, str) or not echeance.strip():
+        raise ValueError("`echeance` doit être une chaîne non vide (date d'échéance).")
+    try:
+        montant = float(montant_ht)
+    except (TypeError, ValueError):
+        raise ValueError(f"`montant_ht` doit être un nombre (reçu : {montant_ht!r}).")
+    if not montant > 0:
+        raise ValueError(f"`montant_ht` doit être strictement positif (reçu : {montant}).")
+    if montant.is_integer():
+        montant = int(montant)  # évite « 12000.0 » dans le registre
+    return code_int, etiquette_locale.strip(), mois_ca.strip(), montant, echeance.strip()
+
+
+@mcp.tool()
+@_journal_appel("allouer_num_facture")
+def allouer_num_facture(
+    ctx: Context,
+    code_mission: int,
+    etiquette_locale: str,
+    mois_ca: str,
+    montant_ht: float,
+    echeance: str,
+) -> dict[str, Any]:
+    """Alloue le NumFacture légal « F-AAAA-NNNN » d'une échéance ÉMISE et l'inscrit au registre « Factures ».
+
+    Source de vérité du NumFacture (modele-donnees §2 bis). Jusqu'ici l'attribution du numéro légal
+    était pensée comme un geste humain ; cet outil (T-0030) l'automatise en écriture SERVEUR à cible
+    FIGÉE, cran VALIDÉ — l'allocation grave une séquence légale irréversible (numérotation continue
+    des factures, exigence FR) et la facture sort de la firme, d'où la porte humaine.
+
+    Cible FIGÉE côté serveur par GRAPH_SITE_ID + GRAPH_FACTURES_LIST_ID (`_config_factures()`) : comme
+    `create_list_item` fige sa liste, cette fonction n'accepte AUCUN identifiant de liste de
+    l'appelant. Elle n'écrit QUE dans le registre « Factures », et nulle part ailleurs.
+
+    Garde-fous inscrits dans le code (table-des-crans.yaml : allouer_num_facture, cran validé) :
+        - PRÉCONDITIONS FAIL-CLOSED, vérifiées AVANT tout réseau : `code_mission` entier ≥ 1,
+          `etiquette_locale` non vide, `mois_ca` / `echeance` non vides, `montant_ht` nombre > 0 —
+          sinon ValueError, RIEN n'est écrit ;
+        - IDEMPOTENCE par clé (CodeMission, EtiquetteLocale) : si le registre porte déjà cette clé,
+          on REND son NumFacture existant SANS créer ni réallouer (T-0030 : une re-ingestion ne
+          réalloue jamais un numéro déjà attribué) ;
+        - ALLOCATION : `NNNN = max des NNNN de l'ANNÉE en cours + 1` (0001 si aucun) ; l'élément est
+          créé avec `Statut = « émise »` et `DateEmission` = date du jour (posés côté serveur, jamais
+          par l'appelant — allocation UNIQUEMENT à l'émission) ;
+        - POST-VÉRIFICATION ANTI-COURSE, bornée (3 tentatives) : après la création on re-scanne
+          l'année. Le tie-break est DÉTERMINISTE (ordre total sur `item_id`) : sur un doublon de
+          NNNN, l'item retenu GARDE le numéro, l'AUTRE (le nôtre, si perdant) est RENUMÉROTÉ vers un
+          nouveau `max + 1` par PATCH If-Match — jamais de trou (le numéro contesté reste pris),
+          jamais de recyclage ; ce tie-break garantit la CONVERGENCE (pas de ping-pong, à la
+          différence du simple `continue` de T-0038 sur item pré-existant). Un doublon de CLÉ créé
+          concurremment (double émission simultanée de la même échéance), s'il rend le nôtre non
+          canonique, est FAIL-CLOSED explicite : l'outil ne supprime jamais (aucune primitive), il
+          signale l'élément en trop pour réconciliation gardien ;
+        - Retry-After honoré sur 429/503 (throttling Graph) sur les GET, le POST et le PATCH (borné) ;
+        - AUCUNE suppression, AUCUN recyclage : un numéro alloué est définitif.
+
+    Args:
+        code_mission: identifiant stable de la mission (entier ≥ 1) — couture avec le gabarit.
+        etiquette_locale: étiquette locale libre, unique par mission (ex. « 2026-07-siteflow ») —
+            clé de réconciliation (CodeMission, EtiquetteLocale) avec la ligne de saisie.
+        mois_ca: mois de rattachement du CA (chaîne, ex. date ISO « 2026-07-01 »).
+        montant_ht: montant HT en euros (nombre > 0).
+        echeance: date d'échéance (chaîne, ex. date ISO).
+
+    Returns:
+        dict {"num_facture", "item_id", "idempotent", "tentatives"} — le numéro F-AAAA-NNNN alloué
+        (ou existant si idempotent), l'id d'élément du registre, si le résultat vient d'une clé déjà
+        présente, et le nombre de tentatives de stabilisation consommées.
+
+    Raises:
+        ValueError: précondition non tenue (entrée invalide).
+        RuntimeError: création sans id, doublon de clé non résoluble sans suppression, ou
+            stabilisation impossible après 3 tentatives — réconciliation gardien requise.
+        ConfigManquante: GRAPH_SITE_ID / GRAPH_FACTURES_LIST_ID absentes.
+    """
+    _verifier_appelant(ctx)
+
+    code_int, etiquette, mois_ca, montant, echeance = _valider_entrees_num_facture(
+        code_mission, etiquette_locale, mois_ca, montant_ht, echeance
+    )
+
+    cfg = _config_factures()
+    # Cible NON paramétrable par l'appelant : le registre « Factures » figé, et lui seul.
+    base_items = f"{GRAPH_BASE}/sites/{cfg['site_id']}/lists/{cfg['factures_list_id']}/items"
+    maintenant = datetime.now(timezone.utc)
+    annee = maintenant.strftime("%Y")
+    date_emission = maintenant.strftime("%Y-%m-%d")
+    cle = (code_int, etiquette)
+
+    MAX_TENTATIVES = 3
+    with httpx.Client(timeout=30) as client_http:
+        # --- 1. IDEMPOTENCE : une clé (CodeMission, EtiquetteLocale) déjà présente REND son numéro ---
+        registre = _scanner_registre_factures(client_http, base_items)
+        deja = [d for d in registre if (d["code_mission"], d["etiquette"]) == cle]
+        if deja:
+            # Ordre total déterministe sur item_id (si un doublon historique existait déjà).
+            canonique = min(deja, key=lambda d: str(d["item_id"]))
+            return {
+                "num_facture": canonique["title"],
+                "item_id": canonique["item_id"],
+                "idempotent": True,
+                "tentatives": 0,
+            }
+
+        # --- 2. CRÉATION (une seule fois) : NNNN = max des NNNN de l'année + 1 (0001 si aucun) ---
+        seq = max((d["seq"] for d in registre if d["annee"] == annee and d["seq"]), default=0) + 1
+        num_facture = f"F-{annee}-{seq:04d}"
+        champs = {
+            "Title": num_facture,
+            "CodeMission": str(code_int),
+            "EtiquetteLocale": etiquette,
+            "MoisCA": mois_ca,
+            "MontantHT": montant,
+            "Echeance": echeance,
+            "DateEmission": date_emission,  # posé ICI : allocation = émission
+            "Statut": "émise",              # posé ICI : jamais choisi par l'appelant
+        }
+        rep_post = _post_item_avec_backoff(client_http, base_items, champs)
+        rep_post.raise_for_status()
+        item_id = rep_post.json().get("id")
+        if not item_id:
+            raise RuntimeError(
+                "Création de l'élément « Factures » sans id retourné — état incertain, "
+                "réconciliation gardien requise (aucune suppression automatique)."
+            )
+
+        # --- 3. POST-VÉRIFICATION ANTI-COURSE, bornée (tie-break déterministe par item_id) ---
+        num_courant = num_facture
+        derniere_cause = None
+        for tentative in range(1, MAX_TENTATIVES + 1):
+            apres = _scanner_registre_factures(client_http, base_items)
+            mon = next((d for d in apres if str(d["item_id"]) == str(item_id)), None)
+            if mon is None:
+                raise RuntimeError(
+                    f"Élément « {item_id} » introuvable à la post-vérification — état incertain, "
+                    "réconciliation gardien requise."
+                )
+
+            # 3a. DOUBLON DE CLÉ (double émission concurrente de la MÊME échéance).
+            memes_cle = [d for d in apres if (d["code_mission"], d["etiquette"]) == cle]
+            if len(memes_cle) > 1:
+                canonique = min(memes_cle, key=lambda d: str(d["item_id"]))
+                if str(canonique["item_id"]) == str(item_id):
+                    return {
+                        "num_facture": mon["title"],
+                        "item_id": item_id,
+                        "idempotent": False,
+                        "tentatives": tentative,
+                    }
+                # Perdant : aucune primitive de suppression (proscrit) → FAIL-CLOSED explicite.
+                raise RuntimeError(
+                    f"Doublon de clé (CodeMission={code_int}, EtiquetteLocale={etiquette!r}) créé "
+                    f"concurremment : élément « {item_id} » en trop, canonique « {canonique['item_id']} » "
+                    f"(numéro {canonique['title']}). Réconciliation GARDIEN requise (l'outil ne "
+                    "supprime jamais, aucun numéro recyclé)."
+                )
+
+            # 3b. DOUBLON DE NUMÉRO (course sur NNNN entre missions distinctes).
+            memes_num = [d for d in apres if d["annee"] == annee and d["title"] == num_courant]
+            if len(memes_num) <= 1:
+                return {
+                    "num_facture": num_courant,
+                    "item_id": item_id,
+                    "idempotent": False,
+                    "tentatives": tentative,
+                }
+            canonique = min(memes_num, key=lambda d: str(d["item_id"]))
+            if str(canonique["item_id"]) == str(item_id):
+                return {
+                    "num_facture": num_courant,
+                    "item_id": item_id,
+                    "idempotent": False,
+                    "tentatives": tentative,
+                }
+            # Perdant sur le numéro : RENUMÉROTER MON item vers un nouveau max+1 (PATCH If-Match).
+            # Le numéro contesté reste porté par l'item canonique (pas de trou) ; mon item prend le
+            # suivant. `apres` inclut mon item : max des NNNN de l'année = le contesté, donc +1.
+            nouvelle_seq = max((d["seq"] for d in apres if d["annee"] == annee and d["seq"]), default=0) + 1
+            nouveau_num = f"F-{annee}-{nouvelle_seq:04d}"
+            url_item = f"{base_items}/{item_id}"
+            rep_relu = _get_crm_avec_backoff(client_http, url_item, params={"$expand": "fields"})
+            rep_relu.raise_for_status()
+            etag = rep_relu.json().get("@odata.etag")
+            if not etag:
+                raise RuntimeError(
+                    "ETag absent au renumérotage — état incertain, réconciliation gardien requise."
+                )
+            rep_patch = _patch_fields_crm_avec_backoff(
+                client_http, f"{url_item}/fields", etag, {"Title": nouveau_num}
+            )
+            if rep_patch.status_code in (409, 412):
+                derniere_cause = f"conflit If-Match au renumérotage ({rep_patch.status_code})"
+                continue
+            rep_patch.raise_for_status()
+            num_courant = nouveau_num
+            derniere_cause = f"renumérotage {num_facture} → {nouveau_num} (course sur le numéro)"
+
+        raise RuntimeError(
+            f"Stabilisation du NumFacture échouée après {MAX_TENTATIVES} tentatives "
+            f"(dernière cause : {derniere_cause}). Élément « {item_id} » créé ; réconciliation "
+            "gardien requise (aucune suppression automatique, aucun numéro recyclé)."
         )
 
 
