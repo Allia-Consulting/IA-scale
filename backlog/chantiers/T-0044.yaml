@@ -1,0 +1,34 @@
+---
+id: T-0044
+titre: "Appliquer la politique administrateur local sur le tenant (runbook Intune)"
+capacite: "Socle d'exploitation / Parc & gestion de poste"
+phase: 1
+type_action: runbook_humain
+cran: valide   # promotion admin local via script Intune assigné au groupe des Macs, LAPS, ADE : paramétrage du tenant/MDM + posture de sécurité, rayon parc global → PROSCRIT à un agent, geste exclusif du gardien (table-des-crans.yaml ; garde-fous CLAUDE.md). Réversible en une action, mais firme-large → validé.
+produit: []    # NOMMAGE SEUL — aucun script, aucune config ici ; runbook à instruire à l'ouverture
+depend_de: ["RUNBOOK-HUMAIN"]
+# RUNBOOK-HUMAIN : sentinelle de garde-fou (cf. T-0006, T-0036). Promouvoir des comptes en
+#   administrateur local via un script Intune assigné à un groupe d'appareils, gérer un compte
+#   LAPS, verrouiller l'enrôlement ADE sont des actions PROSCRITES à un agent et à Claude
+#   (table-des-crans.yaml : parametrer_tenant_m365_securite_residence_donnees). C'est le runbook
+#   du gardien. Tâche NON sélectionnable en autonomie (sentinelle jamais « promu », plan §4).
+contrats_concernes:
+  - "contrats/socle/parc-collaborateur.md"   # v1.5 §5 — revirement : administrateur local, installation autonome, compensations
+criteres_acceptation:
+  - "Script shell Intune de promotion admin local (dseditgroup -o edit -a <utilisateur console> -t user admin) créé et assigné au groupe des Macs — jamais un ajout manuel poste par poste"
+  - "Sur un poste : le collaborateur installe une application SANS invite de mot de passe administrateur tiers"
+  - "Compensations vérifiées vivantes : FileVault actif + clé séquestrée Intune ; profil MDM ADE non amovible (désenrôlement impossible par l'utilisateur) ; compte LAPS Intune distinct présent et à mot de passe géré ; poste toujours « conforme » et ca-parc-collaborateur-conforme inchangé"
+  - "Rollback prouvé en une action : retrait de l'assignation du script + script inverse (dseditgroup -o edit -d) → le poste redevient Standard, sans perte de donnée"
+echeance: à planifier — dépend de la disponibilité du gardien (paramétrage tenant)
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S43 (28 juillet 2026) sur revirement explicite de la politique de parc par le
+  gardien : les collaborateurs deviennent administrateurs locaux de leur Mac et installent leurs
+  applications en autonomie, sans saisie de mot de passe administrateur tiers ; la politique
+  antérieure (utilisateur standard, installation médiée) est abrogée. Le livrable candidat de la
+  session est parc-collaborateur.md v1.5 (§5) ; AUCUN geste tenant exécuté par le projet. Ce
+  chantier porte l'EXÉCUTION (runbook Intune) : script de promotion admin local assigné au groupe
+  des Macs, vérification des compensations non négociables (FileVault, ADE verrouillé, LAPS Intune
+  distinct, conformité Intune inchangée), preuve de rollback en une action. NOMMAGE SEUL, non
+  ouvert : aucun script écrit, aucune config posée dans cette session.
