@@ -1425,3 +1425,89 @@ def test_allouer_num_facture_doublon_cle_perdant_fail_closed(_sans_porte, _factu
     # Fail-closed : jamais de DELETE (l'outil ne supprime pas).
     assert not [m for (m, _u, _c) in client.appels if m == "DELETE"], \
         "aucune suppression : l'orphelin est signalé pour réconciliation gardien, jamais purgé."
+
+
+# --------------------------------------------------------------------------------------------
+# Correctif 0.19.1 (T-0030) — scan du registre aveugle (incident du 31/07, épreuve post-0.19.0)
+#   (1) _RE_NUM_FACTURE exigeait NNNN sur 4 chiffres EXACTS → les seeds réels du registre
+#       (F-AAAA-NNN, numéros des PDF émis, sur 3 chiffres) étaient exclus du max → séquence
+#       repartie à 0001 (doublon).
+#   (2) CodeMission est une colonne SharePoint Number ; Graph la sérialise en double intégral
+#       (1 → 1.0) ; _code_mission_en_entier faisait str(brut).isdigit() → "1.0" échouait → None
+#       → la clé d'idempotence (CodeMission, EtiquetteLocale) ne matchait jamais, et la
+#       post-vérification anti-course était aveugle pareil (écriture d'un doublon de clé).
+# Arbitrages gardien du 31/07 : lecture permissive \d{3,4} (les seeds comptent dans la séquence),
+# écriture inchangée en 4 chiffres (:04d), contrat modele-donnees §2 bis INCHANGÉ.
+# --------------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("brut,attendu", [
+    (1.0, 1),        # double intégral (sérialisation Graph d'une colonne Number) → 1
+    ("1.0", 1),      # même chose en chaîne (selon le sérialiseur) → 1
+    (1, 1),          # entier natif → 1 (chemin isdigit inchangé)
+    ("1", 1),        # chaîne d'entier → 1 (chemin isdigit inchangé)
+    (1.5, None),     # double NON entier → rejeté (aucune facture partielle de code)
+    ("x", None),     # texte libre → rejeté
+    (None, None),    # vide → rejeté
+    (0.0, None),     # zéro (double intégral) → rejeté (code ≥ 1 exigé)
+])
+def test_code_mission_en_entier_tolere_le_double_graph(brut, attendu):
+    """(51) _code_mission_en_entier tolère le double intégral servi par Graph pour une colonne
+    Number (1.0, « 1.0»), reste RÉTROCOMPATIBLE sur les entiers/chaînes, et rejette toujours un
+    double non entier, un texte libre, le vide et le zéro (correctif 0.19.1, cause racine 2)."""
+    assert server._code_mission_en_entier(brut) == attendu
+
+
+def test_allouer_num_facture_idempotence_code_mission_double_graph_et_seed_3_chiffres(_sans_porte, _factures_2026, monkeypatch):
+    """(52) IDEMPOTENCE quand Graph sérialise CodeMission en DOUBLE (1.0) et que le seed porte un
+    NumFacture sur 3 chiffres (F-2026-001) : l'appel avec la clé existante REND le Title du seed,
+    idempotent True, AUCUN POST. C'est l'incident du 31/07 (avant 0.19.1 : clé non matchée →
+    écriture d'un doublon F-2026-0001)."""
+    registre = [_item_fact("4", "F-2026-001", 1.0, "2026-05-siteflow")]  # CodeMission = double Graph
+    client = _FauxClientFactures(scans=[registre])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, code_mission=1, etiquette_locale="2026-05-siteflow",
+             mois_ca="2026-05-01", montant_ht=15300, echeance="2026-06-01")
+
+    assert res == {"num_facture": "F-2026-001", "item_id": "4", "idempotent": True, "tentatives": 0}
+    assert not _posts(client), "clé (1, 2026-05-siteflow) déjà au registre → aucune création."
+
+
+def test_allouer_num_facture_sequence_compte_les_seeds_3_chiffres(_sans_porte, _factures_2026, monkeypatch):
+    """(53) SÉQUENCE : trois seeds réels sur 3 chiffres (F-2026-001..003) comptent dans le max →
+    la prochaine allocation est F-2026-0004 (avant 0.19.1 : seeds exclus → repartait à 0001)."""
+    avant = [
+        _item_fact("1", "F-2026-001", "1", "2026-05-siteflow"),
+        _item_fact("2", "F-2026-002", "1", "2026-06-siteflow"),
+        _item_fact("3", "F-2026-003", "1", "2026-07-siteflow"),
+    ]
+    apres = avant + [_item_fact("NEW-1", "F-2026-0004", "5", "2026-07-datalab")]
+    client = _FauxClientFactures(scans=[avant, apres])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, code_mission=5, etiquette_locale="2026-07-datalab",
+             mois_ca="2026-07-01", montant_ht=12000, echeance="2026-08-31")
+
+    assert res["num_facture"] == "F-2026-0004", "max des NNN (3 chiffres) = 3 → 4."
+    assert _posts(client)[0]["fields"]["Title"] == "F-2026-0004"
+
+
+def test_allouer_num_facture_sequence_mixte_3_et_4_chiffres(_sans_porte, _factures_2026, monkeypatch):
+    """(54) SÉQUENCE mixte : un seed 3 chiffres (F-2026-003) et un numéro 4 chiffres (F-2026-0005)
+    dans la même année → max = 5 → prochaine allocation F-2026-0006 (lecture \\d{3,4} unifiée)."""
+    avant = [
+        _item_fact("1", "F-2026-003", "1", "2026-07-siteflow"),
+        _item_fact("2", "F-2026-0005", "2", "2026-07-datalab"),
+    ]
+    apres = avant + [_item_fact("NEW-1", "F-2026-0006", "3", "2026-07-arabelle")]
+    client = _FauxClientFactures(scans=[avant, apres])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, code_mission=3, etiquette_locale="2026-07-arabelle",
+             mois_ca="2026-07-01", montant_ht=9000, echeance="2026-08-31")
+
+    assert res["num_facture"] == "F-2026-0006", "max(3, 5) = 5 → 6."
+    assert _posts(client)[0]["fields"]["Title"] == "F-2026-0006"

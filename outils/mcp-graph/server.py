@@ -1295,13 +1295,29 @@ def _code_mission_en_entier(brut: Any) -> int | None:
 
     Le CodeMission fait foi comme ENTIER positif (modele-donnees §2 bis). En LECTURE on est
     permissif (on ignore les vides / textes libres, on tolère un éventuel zéro de tête d'un existant) ;
-    la contrainte de FORME (sans zéro de tête) porte sur l'écriture, faite ici avec un int Python."""
+    la contrainte de FORME (sans zéro de tête) porte sur l'écriture, faite ici avec un int Python.
+
+    Correctif 0.19.1 : on tolère aussi la sérialisation Graph d'une colonne SharePoint Number, qui
+    rend un DOUBLE intégral (ex. 1 → 1.0, `"1.0"`) — sans cette tolérance la clé d'idempotence
+    (CodeMission, EtiquetteLocale) ne matchait jamais et la post-vérification anti-course était
+    aveugle. Un double NON entier (1.5) reste rejeté. Fonction partagée avec allouer_code_mission :
+    l'élargissement est RÉTROCOMPATIBLE — le chemin `isdigit` est inchangé, seul un cas jusque-là
+    None (double intégral) devient un entier valide."""
     if brut is None:
         return None
     s = str(brut).strip()
-    if not s or not s.isdigit():
+    if not s:
         return None
-    n = int(s)
+    if s.isdigit():
+        n = int(s)
+    else:
+        try:
+            valeur = float(s)
+        except ValueError:
+            return None
+        if not valeur.is_integer():
+            return None
+        n = int(valeur)
     return n if n >= 1 else None
 
 
@@ -1468,15 +1484,18 @@ def allouer_code_mission(ctx: Context, opportunite_id: str) -> dict[str, Any]:
 #     l'appelant) : une échéance annulée AVANT émission ne consomme jamais cet outil, donc ne brûle
 #     aucun numéro (chronologie légale FR sans trou) ; un numéro n'est JAMAIS recyclé ni supprimé
 #     (aucune primitive de suppression — supprimer_definitivement reste proscrit).
-_RE_NUM_FACTURE = re.compile(r"^F-(\d{4})-(\d{4})$")
+_RE_NUM_FACTURE = re.compile(r"^F-(\d{4})-(\d{3,4})$")
 
 
 def _num_facture_en_couple(title: Any) -> tuple[str, int] | None:
     """Parse un NumFacture « F-AAAA-NNNN » en (annee:str, seq:int), ou None si non conforme.
 
-    En LECTURE on est permissif : tout Title ne respectant pas exactement le motif (vide, texte
-    libre, ancienne convention) est ignoré du calcul de séquence. La FORME (F-AAAA-NNNN, NNNN sur
-    4 chiffres) est garantie à l'ÉCRITURE, faite ici avec un entier Python formaté `:04d`."""
+    En LECTURE on est permissif : la séquence NNN accepte 3 OU 4 chiffres — les seeds réels du
+    registre (numéros des PDF déjà émis, F-AAAA-NNN sur 3 chiffres) DOIVENT compter dans le calcul
+    de la séquence (correctif 0.19.1 : sur 4 chiffres exacts ils étaient exclus → séquence repartie
+    à 0001, doublon). Tout Title hors motif (vide, texte libre, autre convention) reste ignoré du
+    calcul de séquence. La FORME (F-AAAA-NNNN, NNNN sur 4 chiffres) reste garantie à l'ÉCRITURE,
+    faite ici avec un entier Python formaté `:04d`."""
     if title is None:
         return None
     m = _RE_NUM_FACTURE.match(str(title).strip())
