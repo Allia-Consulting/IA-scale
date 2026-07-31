@@ -1511,3 +1511,37 @@ def test_allouer_num_facture_sequence_mixte_3_et_4_chiffres(_sans_porte, _factur
 
     assert res["num_facture"] == "F-2026-0006", "max(3, 5) = 5 → 6."
     assert _posts(client)[0]["fields"]["Title"] == "F-2026-0006"
+
+
+# --------------------------------------------------------------------------------------------
+# ANTI-DIVERGENCE de projection du schéma (T-0030, correctif 0.19.2, épreuve 3g)
+# TABLES_GABARIT est la PROJECTION machine de contrats/socle/modele-donnees.md §5.2 (v1.25) —
+# le contrat FAIT FOI, l'ordre des en-têtes est figé. L'épreuve 3g a stoppé une dérivation AVANT
+# tout effet de bord : TABLES_GABARIT.T_Echeancier n'avait que 7 colonnes (EtiquetteLocale
+# manquante) alors que §5.2 v1.25 en a 8 — le trou de la chaîne #268 (contrat) → #272 (skill,
+# « aucun code serveur »), la projection serveur n'ayant été portée par aucune des deux PRs.
+# Ces listes littérales RECOPIENT le contrat : elles cassent la CI si la projection diverge à nouveau.
+# --------------------------------------------------------------------------------------------
+
+# Ordre EXACT des en-têtes, tel qu'il fait foi dans modele-donnees.md §5.2 (v1.25).
+_ENTETES_CONTRAT_52 = {
+    "T_Affectations": ("CodeMission", "Ressource", "Mois", "JoursPrevus"),
+    "T_Imputations": ("CodeMission", "Ressource", "Mois", "JoursRealises", "StatutValidation"),
+    "T_Echeancier": ("NumFacture", "CodeMission", "EtiquetteLocale", "MoisCA", "MontantHT", "Echeance", "Statut", "LienFacture"),
+}
+
+
+def test_tables_gabarit_projette_exactement_modele_donnees_52():
+    """(55) TABLES_GABARIT est la projection FIDÈLE de §5.2 : mêmes tables, mêmes en-têtes DANS
+    L'ORDRE. Casse la CI si la projection serveur diverge du contrat (rejeu de l'écart 3g)."""
+    projete = {table: tuple(entetes) for (_feuille, table, entetes) in server.TABLES_GABARIT}
+    assert projete == _ENTETES_CONTRAT_52
+
+
+def test_t_echeancier_porte_etiquettelocale_en_position_contractuelle():
+    """(56) NON-RÉGRESSION 0.19.2 ciblée : T_Echeancier porte bien EtiquetteLocale, en 3e position
+    (après CodeMission, avant MoisCA) — clé de réconciliation avec la saisie (§5.2 / §5.6)."""
+    echeancier = next(entetes for (_f, table, entetes) in server.TABLES_GABARIT if table == "T_Echeancier")
+    assert "EtiquetteLocale" in echeancier, "EtiquetteLocale absente — régression de l'écart 3g."
+    assert echeancier.index("EtiquetteLocale") == 2, "EtiquetteLocale doit suivre CodeMission (§5.2)."
+    assert len(echeancier) == 8, "T_Echeancier v1.25 a 8 en-têtes."

@@ -222,7 +222,7 @@ ENV_GABARIT_OLD_FOLDER_ID= "GRAPH_GABARIT_OLD_FOLDER_ID" # dossier « 00 - Old �
 TABLES_GABARIT = (
     ("Affectations", "T_Affectations", ("CodeMission", "Ressource", "Mois", "JoursPrevus")),
     ("Imputations", "T_Imputations", ("CodeMission", "Ressource", "Mois", "JoursRealises", "StatutValidation")),
-    ("Echeancier", "T_Echeancier", ("NumFacture", "CodeMission", "MoisCA", "MontantHT", "Echeance", "Statut", "LienFacture")),
+    ("Echeancier", "T_Echeancier", ("NumFacture", "CodeMission", "EtiquetteLocale", "MoisCA", "MontantHT", "Echeance", "Statut", "LienFacture")),
 )
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 ENV_CRM_LIST_ID = "GRAPH_CRM_LIST_ID"  # liste « CRM » (SEULE cible de allouer_code_mission — écriture de la colonne CodeMission uniquement, T-0038)
@@ -550,7 +550,7 @@ def _assainir_code_mission(code_mission: str) -> str:
 def _colonne_excel(n: int) -> str:
     """Lettre de colonne Excel pour un index 1-based (1→A … 26→Z).
 
-    Helper trivial : 26 colonnes suffisent (le plus large gabarit, T_Echeancier, a 7 en-têtes).
+    Helper trivial : 26 colonnes suffisent (le plus large gabarit, T_Echeancier, a 8 en-têtes).
     Sert à composer l'adresse de la plage d'en-têtes (A1:<lettre>1) de chaque table.
 
     Raises:
