@@ -10,10 +10,10 @@ cas:
       - "1er du mois"
   - id: fusion-02
     type: invariant
-    description: "Régénération réconciliée — montant d'une facture existante modifié : le gabarit est régénéré (jamais réécrit en place), sans suppression ; clé (CodeMission, NumFacture)."
+    description: "Régénération réconciliée — montant d'une facture existante modifié : le gabarit est régénéré (jamais réécrit en place), sans suppression ; clé d'appariement T_Echeancier (CodeMission, EtiquetteLocale) — stable avant/après émission (v1.5, T-0030)."
     contient:
       - "RÉGÉNÉRATION RÉCONCILIÉE, JAMAIS DE SUPPRESSION"
-      - "(CodeMission, NumFacture)"
+      - "(CodeMission, EtiquetteLocale)"
   - id: garde-03
     type: invariant
     description: "Garde — un mois existant repassé à 0 : aucune écriture qui efface, la ligne est reportée dans le jeu régénéré + anomalie attendue."
@@ -63,3 +63,34 @@ cas:
       - "l'agent l'INSTANCIE, puis poursuit la consolidation"
       - "workbook_instancier_gabarit"
       - "ne subit PAS d'archivage préalable"
+  - id: allocation-emise-avec-etiquette-11
+    type: invariant
+    description: "Allocation (T-0030) — ligne émise AVEC EtiquetteLocale et sans NumFacture : appel gouverné allouer_num_facture, numéro rendu posé dans le jeu régénéré puis écrit dans T_Echeancier.NumFacture au repeuplement."
+    contient:
+      - "allouer_num_facture(code_mission, etiquette_locale, mois_ca, montant_ht, echeance)"
+      - "posé dans le jeu régénéré"
+      - "écrit dans `T_Echeancier.NumFacture`"
+  - id: allocation-emise-sans-etiquette-12
+    type: invariant
+    description: "Allocation (T-0030) — ligne émise SANS EtiquetteLocale : anomalie, aucun appel d'allocation, jamais de numéro forgé localement."
+    contient:
+      - "Ligne émise SANS `EtiquetteLocale` dans la saisie"
+      - "ne jamais forger un numéro localement"
+  - id: allocation-idempotence-13
+    type: invariant
+    description: "Allocation (T-0030) — re-dérivation : l'outil est idempotent par clé (CodeMission, EtiquetteLocale) ; il rend le numéro existant sans écrire (pas de double allocation)."
+    contient:
+      - "IDEMPOTENT par clé `(CodeMission, EtiquetteLocale)`"
+      - "rend le numéro existant sans écrire"
+  - id: allocation-report-existant-14
+    type: invariant
+    description: "Allocation (T-0030) — NumFacture déjà présent au gabarit : reporté tel quel comme champ propre au gabarit, jamais de réallocation ni d'appel."
+    contient:
+      - "REPORTER tel quel"
+      - "jamais de réallocation, aucun appel"
+  - id: allocation-cran-15
+    type: invariant
+    description: "Allocation (T-0030) — cran de allouer_num_facture = validé (séquence légale irréversible + la facture sort de la firme) ; porte tenue par le déclenchement manuel, aucune orchestration."
+    contient:
+      - "Allouer le `NumFacture` d'une ligne émise (`allouer_num_facture`)"
+      - "séquence légale irréversible"
