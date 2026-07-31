@@ -15,7 +15,7 @@ criteres_acceptation:
   - "Un diff sous outils/tour-de-controle-spfx/ (artefact SPFx déployable en production) sort systématiquement RISQUE: large → porte humaine, jamais auto-merge"
   - "Un test de non-régression rejoue l'incident PR #263 (diff SPFx isolé → large) et échoue si la règle régresse"
 rayon_impact: firme
-statut: à_faire
+statut: en_cours
 note: >
   Nommé en session S43 (26/07/2026) par l'épreuve T-0039. INCIDENT : la PR #263
   (cockpit 1.5.1.0, artefact .sppkg DÉPLOYABLE EN PRODUCTION) a été AUTO-MERGÉE
@@ -27,3 +27,25 @@ note: >
   que T-0037/T-0037b : le risque se déclare par CHEMIN) : ajouter ce préfixe aux
   chemins/préfixes sensibles (PREFIXES_SENSIBLES_LARGE ou équivalent). Lire
   T-0037 et T-0037b avant d'ouvrir. Nommage seul, non ouvert.
+
+# --- Amendement S45 (31/07/2026) — arbitrage gardien, ouverture du chantier. Notes
+#     AJOUTÉES ci-dessous ; aucune ligne existante ci-dessus réécrite. ---
+perimetre_etendu:
+  - "outils/tour-de-controle-spfx/"   # incident fondateur #263 (artefact SPFx .sppkg déployé en production)
+  - "skills/"                          # arbitrage gardien 31/07/2026, occurrence #272 (un SKILL.md pilote les dérivations d'un agent sur données réelles)
+occurrences_auto_merge:   # 5 auto-merges vécus au 31/07/2026 (arbitrage gardien)
+  - "#263 — SPFx .sppkg : incident FONDATEUR, trou de chemin ; ratifié a posteriori"
+  - "#267 — docs/backlog : usage PRÉVU de l'auto-merge, PAS un trou ; ratifié"
+  - "#270 — docs journal S44 : usage prévu ; ratifié"
+  - "#272 — skills/consolidation-pilotage v1.5 : artefact FONCTIONNEL, MÊME classe de trou que #263 ; ratifié a posteriori"
+  - "#273 — docs journal S45 : usage prévu ; ratifié"
+note_correctif_s45: >
+  Ouvert et instruit en S45 (31/07/2026). Correctif posé dans outils/agent-gardien/impact.py :
+  outils/tour-de-controle-spfx/ ET skills/ ajoutés à PREFIXES_SENSIBLES_LARGE — tout diff sous
+  ces deux arbres sort désormais « large » -> porte humaine, jamais auto-merge (même invariant
+  que T-0037/T-0037b : le risque se déclare par CHEMIN). docs/ et backlog/ RESTENT
+  auto-mergeables : l'auto-merge des journaux et fiches est un USAGE PRÉVU (#267/#270/#273),
+  pas un trou. Trois tests de non-régression : rejeu #263 (SPFx isolé -> large), rejeu #272
+  (SKILL.md isolé -> large), contre-cas docs/epreuves/ (reste « faible »). Statut en_cours :
+  SOLDE à l'épreuve réelle — la prochaine PR sous skills/ ou outils/tour-de-controle-spfx/
+  doit être TENUE en porte humaine (auto-approbation « skipping »), preuve à journaliser.

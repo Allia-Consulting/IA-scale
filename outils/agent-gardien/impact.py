@@ -68,6 +68,18 @@ CHEMINS_SENSIBLES_LARGE = (
 # propre organe de décision. Testés AVANT toute heuristique de préfixe LOW/MID.
 PREFIXES_SENSIBLES_LARGE = (
     "outils/agent-gardien/",
+    # Arbitrage gardien du 31/07/2026 (T-0043) : deux surfaces FONCTIONNELLES
+    # déployables passent sensibles après deux incidents d'auto-merge — même
+    # classe de trou que la porte elle-même (le risque se déclare par CHEMIN) :
+    #   - outils/tour-de-controle-spfx/ : artefact SPFx (.sppkg) déployé en
+    #     PRODUCTION sur le tenant ; sous outils/ (LOW_PREFIXES) il sortait
+    #     « faible » et fut auto-mergé (incident fondateur #263) ;
+    #   - skills/ : un SKILL.md pilote les dérivations d'un agent sur DONNÉES
+    #     RÉELLES ; en MID_PREFIXES il sortait « faible » sans consommateur socle
+    #     et fut auto-mergé (incident #272, consolidation-pilotage v1.5).
+    # Désormais TOUT diff sous ces deux arbres est « large » → porte humaine.
+    "outils/tour-de-controle-spfx/",
+    "skills/",
 )
 N_RAYON_LARGE = 3           # au-delà de N artefacts touchés : rayon large
 

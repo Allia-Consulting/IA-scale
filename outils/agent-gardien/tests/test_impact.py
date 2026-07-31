@@ -322,3 +322,50 @@ def test_rapports_scratch_exclus_pas_de_fausse_casse(tmp_path):
     # Et donc aucune fausse casse structurelle : la suppression est propre.
     assert res["casse_structurelle"] is False, res
     assert res["verdict"] == "pass", res
+
+
+# ---------------------------------------------------------------------------
+# (k) NON-RÉGRESSION #263 : un artefact SPFx (tour-de-controle-spfx, .sppkg
+#     déployable en PRODUCTION) est TOUJOURS « large », même isolé — avant le
+#     fix T-0043 il sortait « faible » (sous outils/, LOW_PREFIXES) et fut
+#     auto-mergé. Ce test échoue si la règle régresse.
+# ---------------------------------------------------------------------------
+def test_spfx_sensible_toujours_large_meme_isole(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "outils/tour-de-controle-spfx/config/package-solution.json",
+            '{"solution": {"version": "1.5.1.0"}}\n')
+    res = impact.analyze(root, ["outils/tour-de-controle-spfx/config/package-solution.json"])
+    assert res["risque"] == "large", res
+    fiche = res["par_fichier"]["outils/tour-de-controle-spfx/config/package-solution.json"]
+    assert fiche["risque"] == "large", fiche
+
+
+# ---------------------------------------------------------------------------
+# (l) NON-RÉGRESSION #272 : un SKILL.md (pilote les dérivations d'un agent sur
+#     DONNÉES RÉELLES) est TOUJOURS « large », même isolé sans consommateur
+#     socle — avant le fix T-0043 il sortait « faible » (MID_PREFIXES, peu de
+#     consommateurs) et fut auto-mergé (consolidation-pilotage v1.5).
+# ---------------------------------------------------------------------------
+def test_skill_sensible_toujours_large_meme_isole(tmp_path):
+    root = str(tmp_path)
+    # Aucun consommateur déclaré : sans le fix, MID_PREFIXES -> « faible ».
+    _ecrire(root, "skills/consolidation-pilotage/SKILL.md",
+            "# skill\n> **id** : `consolidation-pilotage`\n")
+    res = impact.analyze(root, ["skills/consolidation-pilotage/SKILL.md"])
+    assert res["risque"] == "large", res
+    fiche = res["par_fichier"]["skills/consolidation-pilotage/SKILL.md"]
+    assert fiche["risque"] == "large", fiche
+
+
+# ---------------------------------------------------------------------------
+# (m) CONTRE-CAS : docs/epreuves/ reste NON-large — l'auto-merge des journaux
+#     est un USAGE PRÉVU (#267/#270/#273), pas un trou. Le fix T-0043 ne doit
+#     pas élargir docs/.
+# ---------------------------------------------------------------------------
+def test_docs_epreuves_isole_reste_faible(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "docs/epreuves/2026-07-31-journal.md", "# journal de session\n")
+    res = impact.analyze(root, ["docs/epreuves/2026-07-31-journal.md"])
+    assert res["risque"] == "faible", res
+    fiche = res["par_fichier"]["docs/epreuves/2026-07-31-journal.md"]
+    assert fiche["risque"] == "faible", fiche
