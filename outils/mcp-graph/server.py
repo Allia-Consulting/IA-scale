@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose DIX-SEPT opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose DIX-NEUF opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -17,6 +17,7 @@ Ce serveur expose DIX-SEPT opérations à un agent, via le Model Context Protoco
     - allouer_num_facture         : ALLOUE le NumFacture légal F-AAAA-NNNN (max de l'année + 1) d'une échéance ÉMISE et l'inscrit au registre — cible FIGÉE « Factures », idempotent par clé (CodeMission, EtiquetteLocale), post-vérification anti-course bornée, jamais recyclé, cran validé.
     - notifier_canal              : DÉPOSE une notification UNIQUEMENT dans la liste « Notifications » (relais vers Teams par flux M365).
     - workbook_lire_table         : LIT (lecture seule, NON bornée) les lignes d'une table nommée d'un classeur Excel (saisie / gabarit / réf. coûts).
+    - lire_saisie_table           : LIT (lecture seule, cible BORNÉE au drive de SAISIE) une table nommée du classeur de saisie d'une mission — classeur résolu par la CONVENTION DE NOMMAGE `^saisie-(\\d+)-` (§5.6), nom de table borné aux TROIS tables contractuelles (SAISIE_Prevu_<millésime> / SAISIE_Realise_<millésime> / SAISIE_Facturation), lignes rendues POSITIONNELLES telles que servies (vides préservés) ; AUCUNE écriture possible par construction, AUCUNE dérivation (la règle §5.6 appartient au consommateur) — pendant serveur de l'invariant « la machine n'écrit jamais la saisie », déjà garanti côté DROIT par Sites.Selected role=read (T-0045, 0.22.0).
     - workbook_ajouter_lignes     : AJOUTE des lignes à une table du GABARIT d'une mission — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
@@ -24,8 +25,17 @@ Ce serveur expose DIX-SEPT opérations à un agent, via le Model Context Protoco
     - inscrire_cout_structure     : INSCRIT le coût de structure RÉEL d'un mois dans la table T_Structure du réf. de coûts — cible FIGÉE (classeur referentiel-structure.xlsx, GRAPH_REF_STRUCTURE_*, table T_Structure, PosteCout figé « fonctionnement-reel »), écriture SOURCE bornée sur validation d'une ligne candidate (proposition_id), idempotente par (Mois, fonctionnement-reel) — jamais d'écrasement ni de doublon, cran VALIDÉ (T-0032).
     - corriger_cout_structure     : CORRIGE le montant d'un mois DÉJÀ inscrit dans T_Structure (pièce tardive, avoir, oubli — besoin structurel) — MÊME cible figée, PATCH de la ligne existante (jamais un append), précondition INVERSE de l'idempotence (la ligne DOIT exister, sinon refus « rien à corriger » — jamais de création déguisée), sur validation d'une NOUVELLE ligne candidate, cran VALIDÉ (T-0032, 0.21.0).
 
-(Compte des opérations = 18 outils réellement décorés ; un `grep` du décorateur d'outil retourne 19,
-car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
+(Compte des opérations = 19 outils réellement décorés ; un `grep` du décorateur d'outil retourne 20,
+car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.
+Le chapeau ci-dessus disait « DIX-SEPT » alors que 18 outils étaient décorés depuis la 0.21.0 : le
+compte est remis d'aplomb ici, et un test du harnais le VÉRIFIE désormais au lieu de le déclarer.)
+
+Remontée d'erreur Graph (0.22.0, T-0045) : dans les primitives Workbook, `raise_for_status()` est
+remplacé par `_lever_erreur_graph(reponse, contexte)`, qui remonte le `error.code` et le
+`error.message` du CORPS de la réponse Graph (ou les 200 premiers caractères du corps brut) avec le
+contexte d'appel. Motif mesuré le 01/08/2026 : un `404` avalé ne disait pas s'il s'agissait d'un
+classeur introuvable ou d'un NOM DE TABLE inconnu, ni un `403` s'il s'agissait d'une absence
+d'octroi. L'erreur levée reste un sous-type de `httpx.HTTPStatusError` (compatibilité préservée).
 
 Transport & santé :
 
@@ -156,6 +166,10 @@ CRAN_PAR_OUTIL = {
     # Primitives Workbook/Tables (T-0031) : lecture non bornée = auto par nature ; écritures
     # bornées au domicile gabarit = auto (type d'action reconcilier_gabarit_pilotage, table v1.10).
     "workbook_lire_table": "auto",
+    # Lecture BORNÉE de la couche de saisie (T-0045, 0.22.0) : lecture seule par nature (réversible,
+    # interne) — donc auto, comme les autres lectures. Aucune écriture n'existe sur cette surface, et
+    # le droit lui-même l'interdit (Sites.Selected role=read sur le site Management et Gestion, §5.6).
+    "lire_saisie_table": "auto",
     "workbook_ajouter_lignes": "auto",
     "workbook_maj_ligne": "auto",
     "workbook_archiver_gabarit": "auto",
@@ -241,6 +255,28 @@ ENV_CRM_LIST_ID = "GRAPH_CRM_LIST_ID"  # liste « CRM » (SEULE cible de allouer
 ENV_FACTURES_LIST_ID = "GRAPH_FACTURES_LIST_ID"  # liste « Factures » (SEULE cible de allouer_num_facture — registre du NumFacture, MÊME site que « CRM », T-0030)
 ENV_REF_STRUCTURE_DRIVE_ID = "GRAPH_REF_STRUCTURE_DRIVE_ID"  # drive du réf. de coûts (SEULE cible d'écriture de inscrire_cout_structure — classeur referentiel-structure.xlsx, T-0032)
 ENV_REF_STRUCTURE_ITEM_ID = "GRAPH_REF_STRUCTURE_ITEM_ID"    # driveItem du classeur referentiel-structure.xlsx (item FIGÉ — jamais choisi par l'appelant)
+ENV_SAISIE_DRIVE_ID = "GRAPH_SAISIE_DRIVE_ID"    # drive du site Management et Gestion hébergeant les classeurs de SAISIE (LECTURE SEULE — T-0045)
+ENV_SAISIE_FOLDER_ID = "GRAPH_SAISIE_FOLDER_ID"  # dossier racine des classeurs de saisie (cible BORNÉE de lire_saisie_table)
+
+# Tables nommées de la COUCHE DE SAISIE — PROJECTION machine de contrats/socle/modele-donnees.md
+# §5.6 (v1.28, faits MESURÉS le 01/08/2026 sur `saisie-1-siteflow.xlsx`). Le CONTRAT fait foi ;
+# ces constantes en sont la recopie. Trois tables, et trois seulement :
+#   - SAISIE_Prevu_<millésime>    (onglet « Prevu <millésime> »)   : grille ressource × mois du prévu ;
+#   - SAISIE_Realise_<millésime>  (onglet « Realise <millésime> ») : grille ressource × mois du réalisé ;
+#   - SAISIE_Facturation          (onglet « Facturation »)          : lignes de facturation (EtiquetteLocale).
+# Le MILLÉSIME est porté par le NOM de table des deux grilles : une année nouvelle apporte une table
+# nouvelle, jamais une réécriture. PIÈGE consigné au contrat : `T_Imputations` (comme `T_Affectations`
+# et `T_Echeancier`) est une table du GABARIT (§5.2), JAMAIS de la saisie — la demander sur une saisie
+# rend un 404 légitime (fait mesuré le 01/08 ; c'est ce que `_valider_table_saisie` refuse AVANT réseau).
+PREFIXES_TABLES_SAISIE_MILLESIMEES = ("SAISIE_Prevu", "SAISIE_Realise")
+TABLE_SAISIE_FACTURATION = "SAISIE_Facturation"
+# Millésime = 4 chiffres, bornes [2020..2100] — mêmes bornes que l'année d'un nom d'espace de mission.
+_MOTIF_TABLE_SAISIE_MILLESIMEE = re.compile(r"^(SAISIE_Prevu|SAISIE_Realise)_(\d{4})$")
+# Convention de NOMMAGE des classeurs de saisie (§5.6) : `saisie-<CodeMission>-<Libellé>.xlsx` — le
+# CodeMission est porté par le nom, le libellé qui suit est LIBRE, la casse est LIBRE. C'est par ce
+# motif (et non par un nom composé côté serveur) que la cible se résout : le libellé étant libre,
+# le nom de fichier n'est PAS déductible du seul code_mission.
+_MOTIF_NOM_SAISIE = re.compile(r"^saisie-(\d+)-", re.IGNORECASE)
 
 # Table T_Structure du référentiel de coûts — PROJECTION machine de contrats/socle/modele-donnees.md
 # §5.3 (en-têtes figés ; le CONTRAT fait foi, cette constante en est la recopie). inscrire_cout_structure
@@ -272,6 +308,105 @@ mcp = FastMCP(
 
 class ConfigManquante(RuntimeError):
     """Levée quand une variable d'environnement requise est absente."""
+
+
+class ErreurGraph(httpx.HTTPStatusError):
+    """Erreur Graph EXPLICITE : statut HTTP + `error.code` / `error.message` du CORPS de la réponse.
+
+    SOUS-TYPE de `httpx.HTTPStatusError` (0.22.0, T-0045) : tout consommateur qui interceptait déjà
+    `httpx.HTTPStatusError` continue de fonctionner à l'identique — l'ajout est STRICTEMENT ADDITIF,
+    il n'introduit aucune classe d'erreur nouvelle à attraper. Les champs `statut`, `code`,
+    `message_graph`, `contexte` et `corps_brut` sont posés en attributs pour être lisibles
+    programmatiquement (et pas seulement dans le texte du message).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        statut: int,
+        code: str = "",
+        message_graph: str = "",
+        contexte: str = "",
+        corps_brut: str = "",
+        reponse: Any = None,
+    ):
+        super().__init__(message, request=None, response=reponse)
+        self.statut = statut
+        self.code = code
+        self.message_graph = message_graph
+        self.contexte = contexte
+        self.corps_brut = corps_brut
+
+
+def _lever_erreur_graph(reponse: Any, contexte: str) -> None:
+    """Lève `ErreurGraph` si `reponse` porte un statut d'erreur (>= 400) ; ne fait RIEN sinon.
+
+    REMPLACE `reponse.raise_for_status()` dans les primitives Workbook. Motif (T-0045, 0.22.0) :
+    `raise_for_status()` AVALE le corps de la réponse Graph — le message ne porte que le statut.
+    Un `404` ne dit donc PAS s'il s'agit d'un `itemNotFound` (le classeur est introuvable) ou d'un
+    nom de table inconnu ; un `403` ne dit pas s'il s'agit d'une absence d'octroi ou d'une limite
+    d'API. Cette ambiguïté a coûté du temps de diagnostic le 01/08/2026 : le `404` venait du NOM DE
+    TABLE (`T_Imputations` est la table du GABARIT §5.2, pas de la saisie §5.6) et le `403` d'une
+    ABSENCE D'OCTROI `Sites.Selected`, pas d'une limite de l'API Workbook (`read` suffit en app-only).
+    Le corps de la réponse portait la réponse ; le code la jetait.
+
+    Ordre de lecture du corps, fail-soft (on ne masque JAMAIS l'erreur d'origine derrière une
+    erreur de décodage) :
+        1. corps JSON exploitable portant l'enveloppe `{"error": {"code", "message"}}` → les deux
+           sont remontés (c'est le cas normal de Graph) ;
+        2. sinon (corps non JSON, JSON sans enveloppe `error`, corps vide) → les **200 premiers
+           caractères** du corps BRUT, pour ne pas noyer un journal avec une page HTML d'erreur.
+
+    Le `contexte` d'appel (fourni par l'appelant : quelle opération, sur quelle cible) est joint au
+    message : c'est lui qui rend le statut interprétable sans relire le code.
+
+    N'altère AUCUN comportement de succès : un statut < 400 ne lève rien et ne lit pas le corps.
+
+    Raises:
+        ErreurGraph: statut >= 400 (sous-type de httpx.HTTPStatusError — compatibilité préservée).
+    """
+    statut = getattr(reponse, "status_code", 0)
+    if not isinstance(statut, int) or statut < 400:
+        return
+
+    code = ""
+    message_graph = ""
+    corps_brut = ""
+    try:
+        corps = reponse.json()
+    except Exception:  # noqa: BLE001 — corps non JSON : on retombera sur le brut, jamais d'échec ici.
+        corps = None
+    if isinstance(corps, dict):
+        erreur = corps.get("error")
+        if isinstance(erreur, dict):
+            code = str(erreur.get("code") or "")
+            message_graph = str(erreur.get("message") or "")
+    if not (code or message_graph):
+        texte = getattr(reponse, "text", "")
+        if not isinstance(texte, str):
+            texte = ""
+        corps_brut = texte[:200]  # borne : jamais un dump complet dans un message d'erreur.
+
+    details = []
+    if code:
+        details.append(f"code Graph « {code} »")
+    if message_graph:
+        details.append(f"message « {message_graph} »")
+    if corps_brut:
+        details.append(f"corps brut (200 premiers caractères) « {corps_brut} »")
+    if not details:
+        details.append("aucun corps exploitable (corps vide ou illisible)")
+
+    raise ErreurGraph(
+        f"Graph HTTP {statut} — {contexte} : " + " ; ".join(details),
+        statut=statut,
+        code=code,
+        message_graph=message_graph,
+        contexte=contexte,
+        corps_brut=corps_brut,
+        reponse=reponse,
+    )
 
 
 @mcp.custom_route("/healthz", methods=["GET"])
@@ -614,7 +749,7 @@ def _resoudre_item_gabarit(client_http: httpx.Client, code_mission: str) -> str:
             f"aucun gabarit pour {code} dans « 06 - Gabarit ERP » (fichier attendu : {nom}). "
             "Génération initiale requise avant toute écriture."
         )
-    reponse.raise_for_status()
+    _lever_erreur_graph(reponse, f"résolution du gabarit « {nom} » sous « 06 - Gabarit ERP »")
     return reponse.json()["id"]
 
 
@@ -788,6 +923,46 @@ def _config_ref_structure() -> dict[str, str]:
             "Configuration « référentiel structure » incomplète. Variables d'environnement "
             f"manquantes : {absentes}. Classeur referentiel-structure.xlsx (07 - Coût de Structure) "
             "et ses coordonnées tenant posés au runbook gardien (T-0032). Voir outils/mcp-graph/README.md."
+        )
+    return valeurs
+
+
+def _config_saisie() -> dict[str, str]:
+    """Lit la configuration de la COUCHE DE SAISIE (cible BORNÉE de lire_saisie_table, T-0045).
+
+    Config DÉDIÉE, sur le patron EXACT de `_config_ref_structure()` : les autres outils ne dépendent
+    PAS de ces variables (aucune régression de leur contrat). La lecture de saisie lit sa propre
+    configuration et échoue clairement (`ConfigManquante`) si l'une manque — FAIL-CLOSED, aucun
+    fallback, aucune valeur au canon. Aucun secret (identité managée).
+
+    Deux cibles FIGÉES côté serveur (jamais choisies par l'appelant) :
+        - drive_id  : drive du site **Management et Gestion** hébergeant les classeurs de saisie ;
+        - folder_id : dossier racine des classeurs `saisie-<CodeMission>-<Libellé>.xlsx` (§5.6) — le
+          SEUL dossier dans lequel `lire_saisie_table` cherche un classeur.
+
+    FAIT MESURÉ le 01/08/2026 : `GRAPH_SAISIE_DRIVE_ID` est ABSENTE du conteneur déployé — la pose
+    des deux variables sur le service est un geste de runbook GARDIEN, comme pour tout autre domicile.
+
+    NB — le DROIT borne cette lecture avant le code : l'octroi est `Sites.Selected` **role=read** sur
+    le seul site Management et Gestion (§5.6). Aucun scope `Files.*` ne doit être ajouté à l'identité
+    managée : il outrepasserait `Sites.Selected` et ferait tomber la garantie « la machine n'écrit
+    JAMAIS la saisie » au niveau du droit.
+    """
+    valeurs = {
+        "drive_id": os.environ.get(ENV_SAISIE_DRIVE_ID, ""),
+        "folder_id": os.environ.get(ENV_SAISIE_FOLDER_ID, ""),
+    }
+    manquantes = [k for k, v in valeurs.items() if not v]
+    if manquantes:
+        noms_env = {
+            "drive_id": ENV_SAISIE_DRIVE_ID,
+            "folder_id": ENV_SAISIE_FOLDER_ID,
+        }
+        absentes = ", ".join(noms_env[k] for k in manquantes)
+        raise ConfigManquante(
+            "Configuration « couche de saisie » incomplète. Variables d'environnement manquantes : "
+            f"{absentes}. Domicile des classeurs de saisie (site Management et Gestion, §5.6) et ses "
+            "coordonnées tenant posés au runbook gardien (T-0045). Voir outils/mcp-graph/README.md."
         )
     return valeurs
 
@@ -1951,7 +2126,7 @@ def _entetes_physiques_t_structure(client_http: httpx.Client, base_table_url: st
     de poser des cellules à l'aveugle dans le mauvais ordre. Retourne l'ordre PHYSIQUE (pour aligner la
     ligne écrite). Lecture seule ; honore Retry-After sur 429/503."""
     rep = _get_crm_avec_backoff(client_http, f"{base_table_url}/columns")
-    rep.raise_for_status()
+    _lever_erreur_graph(rep, f"lecture des en-têtes physiques de la table « {TABLE_STRUCTURE} »")
     noms = [c.get("name") for c in rep.json().get("value", [])]
     if set(noms) != set(ENTETES_T_STRUCTURE):
         raise RuntimeError(
@@ -1972,7 +2147,7 @@ def _lire_lignes_t_structure_indexees(
     chaque ligne ; s'il manque (ou n'est pas un entier), la POSITION dans la réponse fait foi —
     c'est l'ordre documenté de la table, déjà retenu par `workbook_maj_ligne`. Lecture seule."""
     rep = _get_crm_avec_backoff(client_http, f"{base_table_url}/rows")
-    rep.raise_for_status()
+    _lever_erreur_graph(rep, f"lecture des lignes de la table « {TABLE_STRUCTURE} » (avec index)")
     lignes: list[tuple[int, dict[str, Any]]] = []
     for position, row in enumerate(rep.json().get("value", [])):
         valeurs = row.get("values") or [[]]
@@ -2122,7 +2297,9 @@ def inscrire_cout_structure(
         valeur_par_nom = {"Mois": mois_norm, "PosteCout": POSTE_STRUCTURE_REEL, "Montant": montant_norm}
         ligne_valeurs = [valeur_par_nom[nom] for nom in noms]
         rep_post = _post_workbook_rows_avec_backoff(client_http, f"{base_table}/rows", ligne_valeurs)
-        rep_post.raise_for_status()
+        _lever_erreur_graph(
+            rep_post, f"append de la ligne {mois_norm} dans la table « {TABLE_STRUCTURE} »"
+        )
 
         # Post-vérification : relire et rendre la ligne inscrite. Même prédicat que la garde
         # d'idempotence (correctif 0.20.1) — sinon FAUX-ROUGE quand la relecture rend un sérial.
@@ -2244,7 +2421,11 @@ def corriger_cout_structure(
         rep_patch = _patch_workbook_row_avec_backoff(
             client_http, f"{base_table}/rows/itemAt(index={index_cible})", ligne_valeurs
         )
-        rep_patch.raise_for_status()
+        _lever_erreur_graph(
+            rep_patch,
+            f"correction (PATCH itemAt(index={index_cible})) de la ligne {mois_norm} "
+            f"dans la table « {TABLE_STRUCTURE} »",
+        )
 
         # Post-vérification : le mois porte TOUJOURS exactement une ligne, et elle porte le NOUVEAU montant.
         apres = _lire_lignes_t_structure(client_http, base_table, noms)
@@ -2678,6 +2859,186 @@ def notifier_canal(ctx: Context, titre: str, corps: str, reference: str = "") ->
     return {"created_id": corps_reponse.get("id"), "titre": titre}
 
 
+def _metadonnees_item(client_http: httpx.Client, drive_id: str, item_id: str) -> dict[str, Any]:
+    """Lit les MÉTADONNÉES d'un driveItem (eTag / cTag / nom / dernière modification). Lecture seule.
+
+    Motif (T-0045, 0.22.0) : les outils gouvernés ne rendaient AUCUNE métadonnée — pour savoir si un
+    classeur avait bougé entre deux lectures, chaque épreuve devait sonder Graph par une requête REST
+    navigateur à côté du connecteur. L'`eTag` (version du fichier, change à chaque enregistrement) et
+    le `cTag` (version du CONTENU) sont désormais rendus par les primitives de LECTURE Workbook.
+
+    AJOUT STRICTEMENT ADDITIF, et BEST EFFORT par conception : cette lecture est ACCESSOIRE au
+    contenu. Un échec (403/404/réseau) ne fait donc PAS échouer la lecture des lignes — il rend des
+    valeurs vides et journalise. Rendre une lecture de lignes RÉUSSIE en échec pour une métadonnée
+    manquante casserait les consommateurs existants, alors que le contrat dit l'inverse : « le contenu
+    fait foi » (§5.6).
+
+    PIÈGE CONTRACTUEL à ne pas oublier en consommant `lastModifiedDateTime` : en co-édition Excel
+    Online, les métadonnées de modification sont DIFFÉRÉES (§5.6) — le contenu fait foi, PAS
+    l'horodatage. L'horodatage est rendu pour l'observabilité et la détection de la boucle agent,
+    jamais comme preuve qu'un contenu n'a pas changé.
+
+    Returns:
+        dict {"eTag", "cTag", "name", "lastModifiedDateTime"} — chaînes vides si non lisibles.
+    """
+    vide = {"eTag": "", "cTag": "", "name": "", "lastModifiedDateTime": ""}
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}"
+    params = {"$select": "id,name,eTag,cTag,lastModifiedDateTime"}
+    try:
+        reponse = client_http.get(url, headers=_entetes(), params=params)
+    except Exception as exc:  # noqa: BLE001 — accessoire : jamais bloquant pour la lecture du contenu.
+        logger.warning("métadonnées de l'item %s illisibles (%s) — rendues vides.", item_id, exc)
+        return vide
+    if getattr(reponse, "status_code", 0) != 200:
+        logger.warning(
+            "métadonnées de l'item %s illisibles (HTTP %s) — rendues vides.",
+            item_id, getattr(reponse, "status_code", "?"),
+        )
+        return vide
+    try:
+        corps = reponse.json()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("métadonnées de l'item %s non JSON (%s) — rendues vides.", item_id, exc)
+        return vide
+    if not isinstance(corps, dict):
+        return vide
+    return {
+        "eTag": str(corps.get("eTag") or ""),
+        "cTag": str(corps.get("cTag") or ""),
+        "name": str(corps.get("name") or ""),
+        "lastModifiedDateTime": str(corps.get("lastModifiedDateTime") or ""),
+    }
+
+
+def _valider_table_saisie(table: str) -> str:
+    """Valide un nom de table de SAISIE contre la LISTE CONTRACTUELLE §5.6 — AVANT tout appel réseau.
+
+    La couche de saisie porte TROIS tables nommées, et trois seulement (fait mesuré le 01/08/2026,
+    consigné en `modele-donnees.md` §5.6 v1.28) : `SAISIE_Prevu_<millésime>`,
+    `SAISIE_Realise_<millésime>` et `SAISIE_Facturation`. Tout autre nom est REFUSÉ ici, donc AVANT le
+    réseau : la cible de lecture reste bornée par construction, et le diagnostic est immédiat au lieu
+    d'arriver en `404` opaque depuis Graph.
+
+    REJEU DU FAIT DU 01/08 : demander `T_Imputations` sur une saisie rendait un `404` que l'ancien
+    `raise_for_status()` ne savait pas expliquer. `T_Imputations` (comme `T_Affectations` et
+    `T_Echeancier`) est une table du GABARIT (§5.2) — la demander sur la saisie est une erreur de
+    modèle, pas une absence de donnée. Le refus la NOMME.
+
+    Raises:
+        ValueError: nom vide/non-chaîne, table du gabarit demandée sur la saisie, ou nom hors des
+            trois tables contractuelles (millésime hors bornes [2020..2100] inclus).
+    """
+    if not isinstance(table, str) or not table.strip():
+        raise ValueError("`table` doit être une chaîne non vide (nom de table nommée de la saisie).")
+    nom = table.strip()
+
+    if nom.startswith("T_"):
+        raise ValueError(
+            f"« {nom} » n'est pas une table de la couche de SAISIE : T_Imputations est la table du "
+            "GABARIT (modele-donnees.md §5.2), PAS de la saisie — comme T_Affectations et "
+            "T_Echeancier. C'est la cause EXACTE du 404 mesuré le 01/08/2026. La saisie porte "
+            f"{PREFIXES_TABLES_SAISIE_MILLESIMEES[0]}_<millésime>, "
+            f"{PREFIXES_TABLES_SAISIE_MILLESIMEES[1]}_<millésime> et {TABLE_SAISIE_FACTURATION} "
+            "(§5.6). Le Réalisé se DÉRIVE de la saisie vers le gabarit ; il ne s'y lit pas sous le "
+            "nom du gabarit."
+        )
+
+    if nom == TABLE_SAISIE_FACTURATION:
+        return nom
+
+    correspondance = _MOTIF_TABLE_SAISIE_MILLESIMEE.fullmatch(nom)
+    if correspondance:
+        millesime = int(correspondance.group(2))
+        if not (2020 <= millesime <= 2100):
+            raise ValueError(
+                f"millésime hors bornes dans « {nom} » : attendu entre 2020 et 2100 (le millésime est "
+                "porté par le NOM de table des deux grilles, §5.6)."
+            )
+        return nom
+
+    raise ValueError(
+        f"« {nom} » n'est pas une table contractuelle de la couche de saisie. Attendu (§5.6, v1.28) : "
+        f"{PREFIXES_TABLES_SAISIE_MILLESIMEES[0]}_<millésime>, "
+        f"{PREFIXES_TABLES_SAISIE_MILLESIMEES[1]}_<millésime> ou {TABLE_SAISIE_FACTURATION}. "
+        "La lecture de saisie n'accepte aucun nom de table libre."
+    )
+
+
+def _resoudre_item_saisie(client_http: httpx.Client, code_mission: str) -> dict[str, str]:
+    """Résout le classeur de SAISIE d'une mission SOUS le dossier de saisie FIGÉ, par NOMMAGE §5.6.
+
+    Garde-fou structurel, miroir de `_resoudre_item_gabarit` : l'appelant ne fournit JAMAIS de
+    drive_id / item_id / chemin. Seul ce helper résout la cible, et il ne cherche QUE dans le dossier
+    de saisie figé côté serveur (`GRAPH_SAISIE_DRIVE_ID` + `GRAPH_SAISIE_FOLDER_ID`).
+
+    POURQUOI un LISTAGE et non un adressage par chemin (contrairement au gabarit) : la convention
+    §5.6 est `saisie-<CodeMission>-<Libellé>.xlsx` où le **libellé est LIBRE** (et la casse libre). Le
+    nom de fichier n'est donc PAS déductible du seul `code_mission` — on liste le dossier figé et on
+    apparie sur le motif `^saisie-(\\d+)-` en comparant le code capturé. (Le gabarit, lui, a un nom
+    entièrement déterminé : `gabarit-<code>.xlsx`.)
+
+    Les sous-dossiers (`00 - Template Mission`, `01 - Missions cloturées`) sont écartés par le motif
+    lui-même : ils ne commencent pas par `saisie-<chiffres>-`.
+
+    AMBIGUÏTÉ = REFUS : si DEUX classeurs du dossier portent le même code, on ne devine pas lequel
+    est la source — anomalie signalée (RuntimeError), jamais un choix arbitraire. C'est la même
+    discipline que l'unicité exigée par `corriger_cout_structure`.
+
+    Returns:
+        dict {"item_id", "nom"} — le classeur de saisie de la mission.
+
+    Raises:
+        ValueError: code_mission vide, motif interdit, ou non numérique (§5.6 exige des chiffres).
+        FileNotFoundError: aucun classeur `saisie-<code>-*.xlsx` dans le dossier de saisie figé.
+        RuntimeError: plusieurs classeurs pour ce code (anomalie de source — jamais de devinette).
+        ConfigManquante: GRAPH_SAISIE_DRIVE_ID / GRAPH_SAISIE_FOLDER_ID absentes.
+        ErreurGraph: échec Graph du listage (corps d'erreur remonté).
+    """
+    code = _assainir_code_mission(code_mission)
+    if not re.fullmatch(r"\d+", code):
+        raise ValueError(
+            f"`code_mission` doit être une suite de chiffres (« {code} » ne l'est pas) : la convention "
+            "de nommage de la saisie est `^saisie-(\\d+)-` (§5.6), le CodeMission étant un entier."
+        )
+    cfg = _config_saisie()
+    drive_id = cfg["drive_id"]
+    folder_id = cfg["folder_id"]
+
+    candidats: list[dict[str, str]] = []
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_id}/children"
+    params: dict[str, str] | None = {"$select": "id,name", "$top": "999"}
+    while url:
+        reponse = client_http.get(url, headers=_entetes(), params=params)
+        _lever_erreur_graph(
+            reponse,
+            f"listage du dossier de saisie (drive figé, code_mission={code})",
+        )
+        corps = reponse.json()
+        for enfant in corps.get("value", []):
+            nom = enfant.get("name") or ""
+            correspondance = _MOTIF_NOM_SAISIE.match(nom)
+            if not correspondance or correspondance.group(1) != code:
+                continue
+            if not nom.lower().endswith(".xlsx"):
+                continue
+            candidats.append({"item_id": enfant.get("id", ""), "nom": nom})
+        url = corps.get("@odata.nextLink") or ""
+        params = None  # le nextLink porte déjà ses paramètres.
+
+    if not candidats:
+        raise FileNotFoundError(
+            f"aucun classeur de saisie pour le code {code} dans le dossier de saisie figé "
+            f"(attendu : `saisie-{code}-<Libellé>.xlsx`, §5.6). Rien n'est lu."
+        )
+    if len(candidats) > 1:
+        raise RuntimeError(
+            f"Anomalie de source : {len(candidats)} classeurs portent le code {code} dans le dossier "
+            f"de saisie — {[c['nom'] for c in candidats]!r}. REFUS (on ne devine pas lequel est la "
+            "source) — réconciliation gardien requise."
+        )
+    return candidats[0]
+
+
 @mcp.tool()
 @_journal_appel("workbook_lire_table")
 def workbook_lire_table(ctx: Context, drive_id: str, item_id: str, table: str) -> dict[str, Any]:
@@ -2700,16 +3061,123 @@ def workbook_lire_table(ctx: Context, drive_id: str, item_id: str, table: str) -
         table: nom (ou id) de la table nommée dans le classeur.
 
     Returns:
-        dict {"table", "lignes": [[...valeurs...], ...], "count"} — valeurs brutes ligne à ligne.
+        dict {"table", "lignes": [[...valeurs...], ...], "count", "metadonnees_item"} — valeurs brutes
+        ligne à ligne, plus (0.22.0, AJOUT ADDITIF) les métadonnées de l'item : `eTag` / `cTag` /
+        `name` / `lastModifiedDateTime` (best effort, chaînes vides si non lisibles). Attention en
+        consommant l'horodatage : en co-édition, les métadonnées de modification sont DIFFÉRÉES —
+        le CONTENU fait foi (§5.6).
     """
     _verifier_appelant(ctx)
     url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/workbook/tables/{table}/rows"
     with httpx.Client(timeout=30) as client_http:
         reponse = client_http.get(url, headers=_entetes())
-        reponse.raise_for_status()
+        # Corps d'erreur Graph REMONTÉ (0.22.0) : un 404 dit désormais s'il s'agit d'un itemNotFound
+        # (classeur introuvable) ou d'un nom de table inconnu — l'ambiguïté du 01/08 est levée.
+        _lever_erreur_graph(reponse, f"lecture des lignes de la table « {table} »")
         corps = reponse.json()
+        # Métadonnées (eTag/cTag) : accessoires, best effort — jamais bloquantes pour le contenu.
+        metadonnees = _metadonnees_item(client_http, drive_id, item_id)
     lignes = [row["values"][0] for row in corps.get("value", [])]
-    return {"table": table, "lignes": lignes, "count": len(lignes)}
+    return {
+        "table": table,
+        "lignes": lignes,
+        "count": len(lignes),
+        "metadonnees_item": metadonnees,
+    }
+
+
+@mcp.tool()
+@_journal_appel("lire_saisie_table")
+def lire_saisie_table(ctx: Context, code_mission: str, table: str) -> dict[str, Any]:
+    """LIT (lecture seule, cible BORNÉE) une table nommée du classeur de SAISIE d'une mission.
+
+    GET /drives/{SAISIE_DRIVE_ID}/items/{item résolu}/workbook/tables/{table}/rows
+
+    PENDANT SERVEUR de l'invariant §5.6 « l'agent n'écrit JAMAIS la saisie » (T-0045, 0.22.0). À la
+    différence de `workbook_lire_table` (lecture NON bornée, cible libre), cette primitive :
+
+        - **ne prend AUCUNE cible libre** — pas de `drive_id`, pas d'`item_id`, pas de chemin.
+          L'appelant fournit `code_mission` et `table`, rien d'autre. Le drive et le dossier sont
+          FIGÉS côté serveur (`_config_saisie()`, site Management et Gestion) ;
+        - **résout le classeur par la CONVENTION DE NOMMAGE** `^saisie-(\\d+)-` (§5.6) dans ce seul
+          dossier — le libellé qui suit le code étant LIBRE, le nom n'est pas déductible : on liste et
+          on apparie (`_resoudre_item_saisie`). Deux classeurs pour un même code = REFUS (anomalie) ;
+        - **refuse tout nom de table hors des trois tables contractuelles** §5.6
+          (`SAISIE_Prevu_<millésime>`, `SAISIE_Realise_<millésime>`, `SAISIE_Facturation`), AVANT tout
+          réseau. Demander `T_Imputations` — la table du GABARIT (§5.2) — est refusé en NOMMANT la
+          cause : c'est le fait mesuré du 01/08/2026, rejoué en garde ;
+        - **n'expose AUCUNE écriture, par construction** : il n'existe dans ce module aucun chemin
+          d'écriture vers le drive de saisie. Et le DROIT le borne avant le code — l'octroi est
+          `Sites.Selected` **role=read** sur le seul site Management et Gestion (§5.6, fait mesuré :
+          `read` SUFFIT à l'API Workbook en app-only). Ne JAMAIS ajouter de scope `Files.*` à
+          l'identité managée : il outrepasserait `Sites.Selected` et ferait tomber cette garantie.
+
+    FIDÉLITÉ — LIRE N'EST PAS INTERPRÉTER. Les lignes sont rendues **telles que Graph les sert**, dans
+    l'ordre de la table, **positions préservées** : le schéma des deux grilles est
+    `[Ressource, Janvier … Décembre (12 positions), TOTAL]` (14 colonnes) et **l'index de colonne
+    porte le mois**. Un mois sans imputation est une **cellule VIDE, jamais une colonne absente** —
+    c'est précisément ce qui interdit tout glissement. Cette primitive ne « nettoie » donc RIEN : elle
+    ne retire pas les vides, ne compacte pas, ne réordonne pas. Une surface qui aplatit la grille perd
+    les positions et ne peut pas servir de source de dérivation (c'était le défaut du connecteur M365).
+
+    ELLE NE DÉRIVE RIEN, non plus : pas de filtrage de la ligne d'entête technique « Nb. jours ouvres
+    max », pas de filtrage des lignes fantômes (`TOTAL` = 0), pas de somme, pas de mapping mois, pas
+    de contrôle `Σ douze positions == TOTAL`. La **règle de dérivation §5.6 appartient au
+    consommateur** (le dérivateur `T_Imputations`, PR ultérieure) — c'est lui qui signale l'anomalie
+    si l'égalité ne tombe pas, et qui ne forge jamais un mois. La primitive reste BÊTE (décision S34).
+
+    Args:
+        code_mission: code de la mission (suite de chiffres) — sélectionne `saisie-<code>-*.xlsx` dans
+            le dossier de saisie FIGÉ. Assaini côté serveur ; ce n'est PAS un chemin.
+        table: nom de la table nommée, borné aux trois tables contractuelles §5.6.
+
+    Returns:
+        dict {"code_mission", "nom_classeur", "item_id", "table", "lignes", "count",
+        "metadonnees_item"} — `lignes` = valeurs POSITIONNELLES brutes (vides préservés) ;
+        `metadonnees_item` porte `eTag` / `cTag` / `name` / `lastModifiedDateTime` (best effort).
+        Rappel §5.6 : en co-édition, l'horodatage est DIFFÉRÉ — le contenu fait foi.
+
+    Raises:
+        ValueError: `table` hors des trois tables contractuelles (dont le cas `T_*` du gabarit, nommé),
+            ou `code_mission` vide / non numérique / portant un motif interdit — AVANT tout réseau.
+        FileNotFoundError: aucun classeur `saisie-<code>-*.xlsx` dans le dossier figé.
+        RuntimeError: plusieurs classeurs pour ce code (anomalie de source, jamais de devinette).
+        ConfigManquante: GRAPH_SAISIE_DRIVE_ID / GRAPH_SAISIE_FOLDER_ID absentes (fail-closed).
+        ErreurGraph: échec Graph — le `code` et le `message` du corps Graph sont remontés (0.22.0).
+    """
+    _verifier_appelant(ctx)
+    # (1) Nom de table borné à la liste contractuelle §5.6 — AVANT tout réseau (rejeu du 404 du 01/08).
+    table_ok = _valider_table_saisie(table)
+    # (2) Config figée présente, sinon ConfigManquante — aucun fallback, aucune cible par défaut.
+    cfg = _config_saisie()
+    drive_id = cfg["drive_id"]
+    with httpx.Client(timeout=30) as client_http:
+        # (3) Cible résolue côté serveur, dans le seul dossier de saisie figé.
+        classeur = _resoudre_item_saisie(client_http, code_mission)
+        item_id = classeur["item_id"]
+        url = (
+            f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}"
+            f"/workbook/tables/{table_ok}/rows"
+        )
+        reponse = client_http.get(url, headers=_entetes())
+        _lever_erreur_graph(
+            reponse,
+            f"lecture de la table de saisie « {table_ok} » du classeur « {classeur['nom']} »",
+        )
+        corps = reponse.json()
+        metadonnees = _metadonnees_item(client_http, drive_id, item_id)
+    # FIDÉLITÉ : aucune transformation. `row["values"][0]` est la ligne telle que servie — les cellules
+    # vides restent VIDES et à leur POSITION (c'est l'index qui porte le mois, §5.6).
+    lignes = [row["values"][0] for row in corps.get("value", [])]
+    return {
+        "code_mission": _assainir_code_mission(code_mission),
+        "nom_classeur": classeur["nom"],
+        "item_id": item_id,
+        "table": table_ok,
+        "lignes": lignes,
+        "count": len(lignes),
+        "metadonnees_item": metadonnees,
+    }
 
 
 @mcp.tool()
@@ -2757,7 +3225,9 @@ def workbook_ajouter_lignes(
             headers={**_entetes(), "Content-Type": "application/json"},
             json={"index": None, "values": lignes},
         )
-        reponse.raise_for_status()
+        _lever_erreur_graph(
+            reponse, f"append de {len(lignes)} ligne(s) dans la table « {table} » du gabarit"
+        )
     return {"code_mission": code_mission.strip(), "table": table, "ajoutees": len(lignes)}
 
 
@@ -2807,7 +3277,10 @@ def workbook_maj_ligne(
             headers={**_entetes(), "Content-Type": "application/json"},
             json={"values": [valeurs]},
         )
-        reponse.raise_for_status()
+        _lever_erreur_graph(
+            reponse,
+            f"mise à jour (PATCH itemAt(index={index})) de la table « {table} » du gabarit",
+        )
     return {"code_mission": code_mission.strip(), "table": table, "index": index, "maj": True}
 
 
@@ -2875,7 +3348,9 @@ def workbook_archiver_gabarit(ctx: Context, code_mission: str) -> dict[str, Any]
                 "name": nom_archive,
             },
         )
-        reponse.raise_for_status()
+        _lever_erreur_graph(
+            reponse, f"déplacement du gabarit vers « 00 - Old » sous le nom « {nom_archive} »"
+        )
     return {
         "code_mission": code,
         "nom_archive": nom_archive,
@@ -2981,7 +3456,9 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 f"un gabarit existe déjà pour {code} dans « 06 - Gabarit ERP » ({nom_gabarit}) : "
                 "instanciation refusée (collision=fail). Aucun écrasement, aucune fusion."
             )
-        reponse_creation.raise_for_status()
+        _lever_erreur_graph(
+            reponse_creation, f"création service-authored du gabarit « {nom_gabarit} » (PUT contenu vide)"
+        )
         item_id = reponse_creation.json()["id"]
 
         # À partir d'ici l'item EXISTE : tout échec déclenche le rollback borné ET VÉRIFIÉ (§9).
@@ -2994,7 +3471,7 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 headers={**_entetes(), "Content-Type": "application/json"},
                 json={"persistChanges": True},
             )
-            reponse_session.raise_for_status()
+            _lever_erreur_graph(reponse_session, "ouverture de la session Workbook de fabrication")
             session_id = reponse_session.json()["id"]
 
             def _wb_entetes(avec_json: bool = True) -> dict[str, str]:
@@ -3006,7 +3483,7 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
 
             # --- 3) FEUILLES : renommer la 1re feuille, ajouter les deux autres ---
             reponse_feuilles = client_http.get(f"{base_wb}/worksheets", headers=_wb_entetes(avec_json=False))
-            reponse_feuilles.raise_for_status()
+            _lever_erreur_graph(reponse_feuilles, "lecture des feuilles du classeur fabriqué")
             feuilles = reponse_feuilles.json().get("value", [])
             if not feuilles:
                 raise RuntimeError("classeur créé sans aucune feuille — état Workbook inattendu.")
@@ -3017,14 +3494,16 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 headers=_wb_entetes(),
                 json={"name": TABLES_GABARIT[0][0]},
             )
-            reponse_renommage.raise_for_status()
+            _lever_erreur_graph(
+                reponse_renommage, f"renommage de la 1re feuille en « {TABLES_GABARIT[0][0]} »"
+            )
             for feuille_nom, _table_nom, _entetes_table in TABLES_GABARIT[1:]:
                 reponse_ajout = client_http.post(
                     f"{base_wb}/worksheets/add",
                     headers=_wb_entetes(),
                     json={"name": feuille_nom},
                 )
-                reponse_ajout.raise_for_status()
+                _lever_erreur_graph(reponse_ajout, f"ajout de la feuille « {feuille_nom} »")
 
             # --- 4) PAR TABLE : en-têtes (PATCH range) → tables/add (RETRY 504) → renommage T_* ---
             for feuille_nom, table_nom, entetes_table in TABLES_GABARIT:
@@ -3034,7 +3513,10 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                     headers=_wb_entetes(),
                     json={"values": [list(entetes_table)]},
                 )
-                reponse_range.raise_for_status()
+                _lever_erreur_graph(
+                    reponse_range,
+                    f"écriture des en-têtes §5.2 de « {table_nom} » (range {adresse} de « {feuille_nom} »)",
+                )
                 # tables/add : 504 occasionnel documenté (Graph) → RETRY borné (backoff 1 s puis 2 s,
                 # soit 1 appel + 2 réessais max) avant d'échouer.
                 reponse_table = client_http.post(
@@ -3051,14 +3533,17 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                         headers=_wb_entetes(),
                         json={"address": adresse, "hasHeaders": True},
                     )
-                reponse_table.raise_for_status()
+                _lever_erreur_graph(
+                    reponse_table,
+                    f"création de la table sur « {feuille_nom} » (tables/add, adresse {adresse})",
+                )
                 table_id = reponse_table.json()["id"]
                 reponse_nom_table = client_http.patch(
                     f"{base_wb}/tables/{table_id}",
                     headers=_wb_entetes(),
                     json={"name": table_nom},
                 )
-                reponse_nom_table.raise_for_status()
+                _lever_erreur_graph(reponse_nom_table, f"renommage de la table en « {table_nom} »")
 
             # --- 5) PREUVE INTERNE EN SESSION (sanity chaude) : les 3 tables doivent être VIERGES ---
             # Lecture DANS la session de fabrication (jeton + workbook-session-id). NÉCESSAIRE mais PAS
@@ -3070,7 +3555,9 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                     f"{base_wb}/tables/{table_nom}/rows",
                     headers=_wb_entetes(avec_json=False),
                 )
-                reponse_rows.raise_for_status()
+                _lever_erreur_graph(
+                    reponse_rows, f"preuve interne EN SESSION : lecture des lignes de « {table_nom} »"
+                )
                 lignes = reponse_rows.json().get("value", [])
                 pleines = sum(1 for ligne in lignes if _ligne_pleine((ligne.get("values") or [[]])[0]))
                 if pleines != 0:
@@ -3100,7 +3587,9 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 headers={**_entetes(), "Content-Type": "application/json"},
                 json={"persistChanges": True},
             )
-            reponse_session2.raise_for_status()
+            _lever_erreur_graph(
+                reponse_session2, "ouverture de la 2e session Workbook (ré-émission par le service)"
+            )
             session2_id = reponse_session2.json()["id"]
             entetes_session2 = {
                 **_entetes(),
@@ -3114,7 +3603,10 @@ def workbook_instancier_gabarit(ctx: Context, code_mission: str) -> dict[str, An
                 headers=entetes_session2,
                 json={"values": [list(entetes0)]},
             )
-            reponse_reemission.raise_for_status()
+            _lever_erreur_graph(
+                reponse_reemission,
+                f"ré-émission par le service : réécriture inerte du range {adresse0} de « {feuille0} »",
+            )
             try:
                 client_http.post(f"{base_wb}/closeSession", headers=entetes_session2)
             except Exception:  # noqa: BLE001

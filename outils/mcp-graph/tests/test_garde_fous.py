@@ -2126,3 +2126,623 @@ def test_inscrire_et_corriger_ont_des_preconditions_exclusives(
     corriger(None, **_entrees_correction_ok())
     assert vide.rows == [["2026-07-01", "fonctionnement-reel", 2860.67]], \
         "une seule ligne du mois, au montant corrigé — jamais deux."
+
+# --------------------------------------------------------------------------------------------
+# _lever_erreur_graph — REMONTÉE DU CORPS D'ERREUR GRAPH (T-0045, serveur 0.22.0)
+# Le manque le plus coûteux du 01/08/2026 : `raise_for_status()` AVALE le corps de la réponse. Un
+# 404 ne disait pas s'il s'agissait d'un itemNotFound (classeur) ou d'un NOM DE TABLE inconnu ; un
+# 403 ne disait pas s'il s'agissait d'une absence d'octroi Sites.Selected ou d'une limite d'API. Le
+# corps portait la réponse, le code la jetait. Ces tests prouvent qu'il ne la jette plus.
+# --------------------------------------------------------------------------------------------
+
+class _RepCorps:
+    """Réponse httpx factice à corps PILOTABLE : JSON exploitable, JSON sans enveloppe, ou brut.
+
+    `json_data=_ILLISIBLE` fait lever `.json()` (corps non JSON, comme une page HTML d'erreur) ;
+    `.text` porte alors le corps brut. `lu` note si `.json()` a été touché — sert à prouver qu'un
+    statut de SUCCÈS ne lit JAMAIS le corps (aucun changement de comportement de succès).
+    """
+
+    _ILLISIBLE = object()
+
+    def __init__(self, status_code, json_data=None, text=""):
+        self.status_code = status_code
+        self._json = json_data
+        self.text = text
+        self.headers = {}
+        self.lu = False
+
+    def json(self):
+        self.lu = True
+        if self._json is _RepCorps._ILLISIBLE:
+            raise ValueError("corps non JSON (simulation)")
+        return self._json if self._json is not None else {}
+
+
+def _corps_graph(code, message):
+    """Enveloppe d'erreur Graph canonique : {"error": {"code": ..., "message": ...}}."""
+    return {"error": {"code": code, "message": message}}
+
+
+def test_lever_erreur_graph_corps_json_remonte_code_et_message():
+    """(83) Corps JSON Graph exploitable → `error.code` ET `error.message` remontés dans le message,
+    avec le CONTEXTE d'appel, et posés en ATTRIBUTS lisibles programmatiquement. C'est exactement ce
+    que `raise_for_status()` avalait le 01/08 : le 404 disait « nom de table inconnu », pas le code."""
+    rep = _RepCorps(404, _corps_graph("ItemNotFound", "The resource could not be found."))
+    with pytest.raises(server.ErreurGraph) as capture:
+        server._lever_erreur_graph(rep, "lecture de la table « SAISIE_Realise_2026 »")
+
+    exc = capture.value
+    assert exc.statut == 404
+    assert exc.code == "ItemNotFound"
+    assert exc.message_graph == "The resource could not be found."
+    assert exc.contexte == "lecture de la table « SAISIE_Realise_2026 »"
+    texte = str(exc)
+    assert "404" in texte
+    assert "ItemNotFound" in texte, "le code Graph doit figurer dans le message (il était avalé)."
+    assert "The resource could not be found." in texte
+    assert "SAISIE_Realise_2026" in texte, "le contexte d'appel rend le statut interprétable."
+
+
+def test_lever_erreur_graph_403_absence_d_octroi_est_lisible():
+    """(83 bis) REJEU du second fait du 01/08 : le 403 venait d'une ABSENCE D'OCTROI (Sites.Selected),
+    pas d'une limite de l'API Workbook. Avec le corps remonté, `accessDenied` est lisible d'emblée."""
+    rep = _RepCorps(403, _corps_graph("accessDenied", "Access denied. Check credentials and try again."))
+    with pytest.raises(server.ErreurGraph) as capture:
+        server._lever_erreur_graph(rep, "lecture des lignes de la table de saisie")
+    assert capture.value.code == "accessDenied"
+    assert capture.value.statut == 403
+
+
+def test_lever_erreur_graph_corps_non_json_rend_extrait_brut_borne():
+    """(84) Corps NON JSON (page HTML d'erreur de passerelle, p. ex.) → les **200 premiers caractères**
+    du corps BRUT, et pas davantage : un message d'erreur ne doit jamais devenir un dump."""
+    brut = "<html><body>" + ("X" * 500) + "</body></html>"
+    rep = _RepCorps(502, _RepCorps._ILLISIBLE, text=brut)
+    with pytest.raises(server.ErreurGraph) as capture:
+        server._lever_erreur_graph(rep, "création de la table")
+
+    exc = capture.value
+    assert exc.statut == 502
+    assert exc.code == "" and exc.message_graph == ""
+    assert exc.corps_brut == brut[:200]
+    assert len(exc.corps_brut) == 200, "l'extrait brut est BORNÉ à 200 caractères."
+    assert brut[:50] in str(exc)
+    assert "X" * 300 not in str(exc), "le corps complet ne doit jamais partir dans le message."
+
+
+def test_lever_erreur_graph_corps_json_sans_enveloppe_error_retombe_sur_le_brut():
+    """(85) JSON valide mais SANS enveloppe `{"error": …}` (cas non canonique) → repli sur l'extrait
+    brut : on ne prétend jamais avoir un code Graph qu'on n'a pas lu."""
+    rep = _RepCorps(500, {"quelquechose": "d'autre"}, text='{"quelquechose": "d\'autre"}')
+    with pytest.raises(server.ErreurGraph) as capture:
+        server._lever_erreur_graph(rep, "append de lignes")
+    assert capture.value.code == ""
+    assert "quelquechose" in capture.value.corps_brut
+
+
+def test_lever_erreur_graph_succes_ne_leve_rien_et_ne_lit_pas_le_corps():
+    """(86) NON-RÉGRESSION centrale : un statut de SUCCÈS ne lève rien **et ne touche pas au corps**.
+    Le comportement de succès des primitives est INCHANGÉ — l'ajout est strictement additif."""
+    for statut in (200, 201, 202, 204, 302, 399):
+        rep = _RepCorps(statut, _corps_graph("neJamaisLire", "ne jamais lire"))
+        assert server._lever_erreur_graph(rep, "peu importe") is None
+        assert rep.lu is False, f"le corps ne doit pas être lu sur un succès (statut {statut})."
+
+
+def test_erreur_graph_est_un_sous_type_de_httpstatuserror():
+    """(87) COMPATIBILITÉ : `ErreurGraph` est un sous-type de `httpx.HTTPStatusError`. Tout
+    consommateur (ou docstring) qui interceptait déjà `HTTPStatusError` continue de fonctionner — la
+    remontée du corps n'introduit AUCUNE classe d'erreur nouvelle à attraper."""
+    assert issubclass(server.ErreurGraph, server.httpx.HTTPStatusError)
+    rep = _RepCorps(429, _corps_graph("activityLimitReached", "throttled"))
+    with pytest.raises(server.httpx.HTTPStatusError):
+        server._lever_erreur_graph(rep, "contexte")
+
+
+# Fonctions PORTANT les appels Workbook (repérées dans server.py, pas devinées) : primitives exposées
+# ET helpers qu'elles appellent. Aucune ne doit plus masquer une réponse Graph derrière raise_for_status.
+_FONCTIONS_WORKBOOK = (
+    "_resoudre_item_gabarit",
+    "_resoudre_item_saisie",
+    "_entetes_physiques_t_structure",
+    "_lire_lignes_t_structure_indexees",
+    "inscrire_cout_structure",
+    "corriger_cout_structure",
+    "workbook_lire_table",
+    "lire_saisie_table",
+    "workbook_ajouter_lignes",
+    "workbook_maj_ligne",
+    "workbook_archiver_gabarit",
+    "workbook_instancier_gabarit",
+)
+
+
+def _fonctions_avec_raise_for_status() -> set:
+    """Noms des fonctions de server.py contenant encore un `.raise_for_status()` (analyse AST)."""
+    import ast
+    source = open(inspect.getsourcefile(server), encoding="utf-8").read()
+    trouvees = set()
+    for noeud in ast.parse(source).body:
+        if not isinstance(noeud, ast.FunctionDef):
+            continue
+        for interne in ast.walk(noeud):
+            if isinstance(interne, ast.Attribute) and interne.attr == "raise_for_status":
+                trouvees.add(noeud.name)
+    return trouvees
+
+
+def test_primitives_workbook_ne_masquent_plus_le_corps_graph():
+    """(88) GARDE ANTI-RÉGRESSION : plus AUCUNE fonction Workbook n'appelle `raise_for_status()` —
+    toutes passent par `_lever_erreur_graph`. Si quelqu'un rajoute un appel Graph masqué dans une
+    primitive Workbook, la CI casse ici (et non à la prochaine épreuve tenant, comme le 01/08)."""
+    masquantes = _fonctions_avec_raise_for_status() & set(_FONCTIONS_WORKBOOK)
+    assert not masquantes, (
+        f"ces fonctions Workbook avalent encore le corps d'erreur Graph : {sorted(masquantes)} — "
+        "utiliser _lever_erreur_graph(reponse, contexte)."
+    )
+
+
+def test_lever_erreur_graph_est_bien_appele_par_les_primitives_workbook():
+    """(88 bis) CONTRE-PREUVE de (88) : l'absence de `raise_for_status` ne suffirait pas (on aurait pu
+    simplement SUPPRIMER la garde). Chaque fonction Workbook appelle bien `_lever_erreur_graph`."""
+    import ast
+    source = open(inspect.getsourcefile(server), encoding="utf-8").read()
+    appelants = set()
+    for noeud in ast.parse(source).body:
+        if not isinstance(noeud, ast.FunctionDef):
+            continue
+        for interne in ast.walk(noeud):
+            if isinstance(interne, ast.Call) and isinstance(interne.func, ast.Name) \
+                    and interne.func.id == "_lever_erreur_graph":
+                appelants.add(noeud.name)
+    # `_metadonnees_item` est volontairement HORS liste : best effort, il ne lève jamais (cf. (105)).
+    attendues = set(_FONCTIONS_WORKBOOK)
+    assert attendues <= appelants, (
+        f"garde absente (ni raise_for_status, ni _lever_erreur_graph) dans : {sorted(attendues - appelants)}"
+    )
+
+
+# --------------------------------------------------------------------------------------------
+# Couche de SAISIE (T-0045, serveur 0.22.0) — lecture BORNÉE, aucune écriture par construction.
+# Projection machine de modele-donnees.md §5.6 v1.28 (faits MESURÉS le 01/08/2026 sur
+# `saisie-1-siteflow.xlsx`) : TROIS tables nommées, grille de 14 colonnes lue PAR POSITION, classeur
+# résolu par la convention de nommage `^saisie-(\d+)-`. La primitive LIT ; elle n'interprète RIEN.
+# --------------------------------------------------------------------------------------------
+
+# --- ANTI-DIVERGENCE de projection (même discipline que §5.2 / §5.3) : ces littéraux RECOPIENT §5.6.
+_TABLES_CONTRAT_56_MILLESIMEES = ("SAISIE_Prevu", "SAISIE_Realise")
+_TABLE_CONTRAT_56_FACTURATION = "SAISIE_Facturation"
+
+
+def test_tables_saisie_projettent_exactement_modele_donnees_56():
+    """(89) ANTI-DIVERGENCE : la projection serveur des tables de saisie == §5.6 v1.28. Casse la CI si
+    elle re-diverge du contrat (même classe de bug que l'écart 3g sur T_Echeancier)."""
+    assert server.PREFIXES_TABLES_SAISIE_MILLESIMEES == _TABLES_CONTRAT_56_MILLESIMEES
+    assert server.TABLE_SAISIE_FACTURATION == _TABLE_CONTRAT_56_FACTURATION
+
+
+@pytest.mark.parametrize("nom", [
+    "SAISIE_Prevu_2026",
+    "SAISIE_Realise_2026",
+    "SAISIE_Facturation",
+    "SAISIE_Prevu_2027",       # le millésime est porté par le NOM : une année nouvelle = table nouvelle.
+    "  SAISIE_Realise_2025  ",  # strippé
+])
+def test_valider_table_saisie_accepte_les_trois_tables_contractuelles(nom):
+    """(90) Les TROIS tables de §5.6 sont acceptées (millésime variable pour les deux grilles)."""
+    assert server._valider_table_saisie(nom) == nom.strip()
+
+
+def test_valider_table_saisie_refuse_t_imputations_en_nommant_la_cause():
+    """(91) REJEU EN RÉGRESSION DU FAIT DU 01/08/2026 : `T_Imputations` demandée sur une SAISIE est
+    refusée, et le message NOMME la cause — T_Imputations est la table du GABARIT (§5.2), pas de la
+    saisie. C'est l'origine du 404 opaque de l'épreuve ; il ne peut plus se reproduire en silence."""
+    with pytest.raises(ValueError) as capture:
+        server._valider_table_saisie("T_Imputations")
+    message = str(capture.value)
+    assert "T_Imputations" in message
+    assert "GABARIT" in message, "le message doit dire que c'est la table du GABARIT."
+    assert "saisie" in message.lower(), "et qu'elle n'est PAS de la saisie."
+    assert "§5.2" in message and "§5.6" in message, "les deux sections doivent être citées."
+
+
+@pytest.mark.parametrize("gabarit", ["T_Imputations", "T_Affectations", "T_Echeancier"])
+def test_valider_table_saisie_refuse_toutes_les_tables_du_gabarit(gabarit):
+    """(91 bis) Les TROIS tables du gabarit §5.2 sont refusées sur la saisie, pas seulement celle qui
+    a mordu le 01/08 — la confusion de modèle est fermée en entier."""
+    with pytest.raises(ValueError):
+        server._valider_table_saisie(gabarit)
+
+
+@pytest.mark.parametrize("mauvais", [
+    "", "   ", None, 42,
+    "SAISIE_Prevu",             # millésime manquant
+    "SAISIE_Realise_26",        # millésime pas sur 4 chiffres
+    "SAISIE_Facturation_2026",  # la facturation n'est PAS millésimée
+    "saisie_prevu_2026",        # la casse du nom de TABLE n'est pas libre (seul le nom de FICHIER l'est)
+    "Feuil1", "SAISIE_Autre_2026", "'; DROP TABLE",
+])
+def test_valider_table_saisie_refuse_tout_nom_hors_liste(mauvais):
+    """(92) Aucun nom de table LIBRE : hors des trois tables contractuelles → ValueError."""
+    with pytest.raises(ValueError):
+        server._valider_table_saisie(mauvais)
+
+
+@pytest.mark.parametrize("hors_bornes", ["SAISIE_Prevu_1999", "SAISIE_Realise_2101", "SAISIE_Prevu_0000"])
+def test_valider_table_saisie_refuse_un_millesime_hors_bornes(hors_bornes):
+    """(93) Millésime borné [2020..2100] — mêmes bornes que l'année d'un nom d'espace de mission."""
+    with pytest.raises(ValueError):
+        server._valider_table_saisie(hors_bornes)
+
+
+# Grille RÉELLE telle que MESURÉE le 01/08/2026 (schéma §5.6 : 14 colonnes
+# [Ressource, Janvier … Décembre (12 positions), TOTAL]) — reproduite AVEC ses vides.
+_GRILLE_REALISE_14 = [
+    # (a) ligne d'ENTÊTE TECHNIQUE « Nb. jours ouvres max » : un plafond de calendrier, PAS une
+    #     ressource. §5.6 l'écarte à la DÉRIVATION — jamais à la LECTURE.
+    ["Nb. jours ouvres max", 22, 20, 22, 21, 20, 22, 23, 21, 22, 22, 20, 22, 257],
+    # (b) une ressource : JUILLET en position 7 (22 j) et AOÛT en position 8 (10 j) — les dix autres
+    #     mois sont des cellules VIDES, jamais des colonnes absentes. C'est CE fait qui explique
+    #     l'écart de 22 j de l'épreuve 3g : les jours manquants étaient juillet, à sa POSITION.
+    ["adrien.raque@allia-consulting.com", "", "", "", "", "", "", 22, 10, "", "", "", "", 32],
+    # (c) LIGNE FANTÔME de la zone de saisie pré-dimensionnée : TOTAL = 0. §5.6 l'écarte à la
+    #     DÉRIVATION (même famille que le prédicat « vierge » de T-0035) — jamais à la LECTURE.
+    ["", "", "", "", "", "", "", "", "", "", "", "", "", 0],
+]
+
+
+class _FauxClientSaisie:
+    """Client httpx factice pour `lire_saisie_table` (drive de SAISIE, LECTURE SEULE).
+
+    Routes :
+      - GET  .../items/{folder}/children            → enfants du dossier de saisie figé (`enfants`) ;
+      - GET  .../workbook/tables/{table}/rows       → lignes de la grille (statut `rows_status`) ;
+      - GET  .../drives/{d}/items/{i}?$select=…     → métadonnées eTag/cTag (statut `meta_status`).
+    POST et PATCH sont des ÉCHECS DE TEST : il n'existe AUCUN chemin d'écriture vers le drive de
+    saisie — c'est le pendant serveur de l'invariant §5.6, et le mock le prouve structurellement.
+    """
+
+    def __init__(self, enfants=None, rows=None, rows_status=200, rows_corps=None,
+                 meta_status=200, pages=None):
+        self._enfants = enfants if enfants is not None else [
+            {"id": "ITEM-SAISIE-1", "name": "saisie-1-siteflow.xlsx"},
+        ]
+        self._rows = _GRILLE_REALISE_14 if rows is None else rows
+        self._rows_status = rows_status
+        self._rows_corps = rows_corps
+        self._meta_status = meta_status
+        self._pages = pages or []   # pages SUPPLÉMENTAIRES de children (@odata.nextLink)
+        self.appels = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get(self, url, headers=None, params=None):
+        self.appels.append(("GET", url, params))
+        if url.endswith("/children") or url.startswith("nextlink://"):
+            if url.startswith("nextlink://"):
+                page = self._pages[int(url.rsplit("/", 1)[-1])]
+                return _RepCorps(200, page)
+            corps = {"value": list(self._enfants)}
+            if self._pages:
+                corps["@odata.nextLink"] = "nextlink://page/0"
+            return _RepCorps(200, corps)
+        if url.endswith("/rows"):
+            if self._rows_status != 200:
+                return _RepCorps(self._rows_status, self._rows_corps, text="")
+            return _RepCorps(200, {"value": [{"values": [list(r)]} for r in self._rows]})
+        # métadonnées de l'item (eTag / cTag)
+        if self._meta_status != 200:
+            return _RepCorps(self._meta_status, _corps_graph("accessDenied", "no"))
+        return _RepCorps(200, {
+            "id": "ITEM-SAISIE-1",
+            "name": "saisie-1-siteflow.xlsx",
+            "eTag": '"{ETAG-SAISIE-1},7"',
+            "cTag": '"c:{CTAG-SAISIE-1},2"',
+            "lastModifiedDateTime": "2026-08-01T09:12:33Z",
+        })
+
+    def post(self, url, headers=None, json=None, content=None, params=None):
+        raise AssertionError(
+            "AUCUNE écriture ne doit exister sur le drive de SAISIE (POST tenté sur %s) — "
+            "l'invariant §5.6 « la machine n'écrit jamais la saisie » est structurel." % url
+        )
+
+    def patch(self, url, headers=None, json=None):
+        raise AssertionError(
+            "AUCUNE écriture ne doit exister sur le drive de SAISIE (PATCH tenté sur %s)." % url
+        )
+
+    def put(self, url, headers=None, json=None, content=None, params=None):
+        raise AssertionError(
+            "AUCUNE écriture ne doit exister sur le drive de SAISIE (PUT tenté sur %s)." % url
+        )
+
+    def delete(self, url, headers=None):
+        raise AssertionError("AUCUNE suppression ne doit exister sur le drive de SAISIE.")
+
+
+@pytest.fixture
+def _saisie_factice(monkeypatch):
+    """Config « couche de saisie » valide + jeton neutralisé. Aucun secret, aucune env réelle."""
+    monkeypatch.setattr(
+        server, "_config_saisie",
+        lambda: {"drive_id": "DRIVE-SAISIE", "folder_id": "FOLDER-SAISIE"},
+    )
+    monkeypatch.setattr(server, "_entetes", lambda: {"Authorization": "Bearer faketoken"})
+
+
+def test_lire_saisie_table_ne_prend_aucune_cible_libre():
+    """(94) SIGNATURE : `lire_saisie_table` n'expose AUCUN drive_id / item_id / chemin / dossier — la
+    cible est BORNÉE au drive de saisie figé côté serveur. L'appelant ne fournit que code_mission et
+    table. C'est le CONTRASTE voulu avec `workbook_lire_table` (lecture non bornée, cible libre)."""
+    params = _params(server.lire_saisie_table)
+    assert params == {"code_mission", "table"}
+    for interdit in ("drive_id", "item_id", "folder_id", "drive", "item", "chemin", "path", "url"):
+        assert interdit not in params, f"{interdit} ne doit jamais être exposé (cible bornée)."
+
+
+def test_lire_saisie_table_est_au_cran_auto():
+    """(95) Cran AUTO : lecture seule, réversible, interne — comme les autres lectures. Le journal
+    d'observabilité doit le porter (un outil hors CRAN_PAR_OUTIL journaliserait « inconnu »)."""
+    assert server.CRAN_PAR_OUTIL["lire_saisie_table"] == "auto"
+    assert server.CRAN_PAR_OUTIL["lire_saisie_table"] == server.CRAN_PAR_OUTIL["workbook_lire_table"]
+
+
+def test_lire_saisie_table_nominal_rend_les_positions_et_PRESERVE_les_vides(
+    _sans_porte, _saisie_factice, monkeypatch
+):
+    """(96) NOMINAL — LA FIDÉLITÉ MÊME. La grille des 14 colonnes est rendue TELLE QUELLE :
+       - les cellules VIDES SORTENT vides, à leur POSITION (l'index porte le mois, §5.6) ;
+       - la ligne d'entête technique « Nb. jours ouvres max » est TOUJOURS LÀ ;
+       - la ligne FANTÔME (TOTAL = 0) est TOUJOURS LÀ.
+    La primitive ne DÉRIVE RIEN : pas de filtrage, pas de somme, pas de mapping mois — la règle de
+    dérivation §5.6 appartient au consommateur. Lire ≠ interpréter."""
+    client = _FauxClientSaisie()
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    resultat = fn(None, code_mission="1", table="SAISIE_Realise_2026")
+
+    # (a) IDENTITÉ STRICTE avec ce que Graph a servi — aucune transformation.
+    assert resultat["lignes"] == _GRILLE_REALISE_14
+    assert resultat["count"] == 3, "les 3 lignes servies sortent : aucune n'est filtrée à la LECTURE."
+    # (b) 14 colonnes par ligne : [Ressource, 12 mois, TOTAL].
+    for ligne in resultat["lignes"]:
+        assert len(ligne) == 14, "schéma §5.6 : 1 + 12 + 1 colonnes, jamais compacté."
+    # (c) les VIDES sont préservés à leur position, et JUILLET est bien en position 7.
+    ressource = resultat["lignes"][1]
+    assert ressource[7] == 22, "juillet = position 7 (l'index de colonne porte le mois)."
+    assert ressource[8] == 10, "août = position 8."
+    assert ressource[1] == "" and ressource[12] == "", "un mois sans imputation reste une cellule VIDE."
+    assert ressource[13] == 32, "la colonne TOTAL est la 14e."
+    # (d) les lignes que la DÉRIVATION écartera sont présentes ICI (elle, pas nous).
+    assert resultat["lignes"][0][0] == "Nb. jours ouvres max"
+    assert resultat["lignes"][2][13] == 0, "la ligne fantôme (TOTAL=0) n'est pas filtrée à la lecture."
+    # (e) traçabilité de la cible résolue côté serveur.
+    assert resultat["code_mission"] == "1"
+    assert resultat["nom_classeur"] == "saisie-1-siteflow.xlsx"
+    assert resultat["item_id"] == "ITEM-SAISIE-1"
+    assert resultat["table"] == "SAISIE_Realise_2026"
+    # (f) AUCUNE écriture : le mock lèverait sur POST/PATCH/PUT/DELETE ; seuls des GET ont eu lieu.
+    assert all(methode == "GET" for (methode, _u, _p) in client.appels), (
+        "lire_saisie_table ne doit émettre que des GET — aucune écriture sur la saisie."
+    )
+
+
+def test_lire_saisie_table_expose_les_etag_de_l_item(_sans_porte, _saisie_factice, monkeypatch):
+    """(97) ETag/cTag EXPOSÉS (0.22.0) : plus besoin d'une sonde REST navigateur à côté du connecteur
+    pour savoir si le classeur a bougé. Additif : rien n'est retiré du retour."""
+    client = _FauxClientSaisie()
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    resultat = fn(None, code_mission="1", table="SAISIE_Prevu_2026")
+
+    meta = resultat["metadonnees_item"]
+    assert meta["eTag"] == '"{ETAG-SAISIE-1},7"'
+    assert meta["cTag"] == '"c:{CTAG-SAISIE-1},2"'
+    assert meta["name"] == "saisie-1-siteflow.xlsx"
+    assert meta["lastModifiedDateTime"] == "2026-08-01T09:12:33Z"
+
+
+def test_lire_saisie_table_metadonnees_illisibles_ne_cassent_pas_la_lecture(
+    _sans_porte, _saisie_factice, monkeypatch
+):
+    """(98) Les métadonnées sont ACCESSOIRES : un 403 sur elles ne doit PAS faire échouer une lecture
+    de lignes RÉUSSIE (ce serait une régression pour les consommateurs). Elles sortent vides."""
+    client = _FauxClientSaisie(meta_status=403)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    resultat = fn(None, code_mission="1", table="SAISIE_Realise_2026")
+
+    assert resultat["lignes"] == _GRILLE_REALISE_14, "le CONTENU fait foi (§5.6) — il est rendu."
+    assert resultat["metadonnees_item"] == {
+        "eTag": "", "cTag": "", "name": "", "lastModifiedDateTime": "",
+    }
+
+
+def test_lire_saisie_table_refuse_t_imputations_AVANT_reseau(_sans_porte, monkeypatch):
+    """(99) RÉGRESSION DU 01/08, BOUT EN BOUT : `T_Imputations` demandée à `lire_saisie_table` est
+    refusée AVANT toute ouverture de client httpx — le refus nomme la cause, et Graph n'est même pas
+    sollicité (plus de 404 opaque à diagnostiquer après coup)."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré un nom de table hors §5.6.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.lire_saisie_table)
+    with pytest.raises(ValueError) as capture:
+        fn(None, code_mission="1", table="T_Imputations")
+    assert "GABARIT" in str(capture.value)
+
+
+def test_lire_saisie_table_config_absente_leve_configmanquante(_sans_porte, monkeypatch):
+    """(100) `GRAPH_SAISIE_DRIVE_ID` / `GRAPH_SAISIE_FOLDER_ID` absentes → `ConfigManquante`, AVANT
+    tout réseau (fail-closed, aucun fallback, aucune cible par défaut). Fait mesuré le 01/08 :
+    GRAPH_SAISIE_DRIVE_ID est ABSENTE du conteneur déployé — la pose est un geste runbook gardien."""
+    monkeypatch.delenv("GRAPH_SAISIE_DRIVE_ID", raising=False)
+    monkeypatch.delenv("GRAPH_SAISIE_FOLDER_ID", raising=False)
+
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une config « saisie » absente.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.lire_saisie_table)
+    with pytest.raises(server.ConfigManquante):
+        fn(None, code_mission="1", table="SAISIE_Realise_2026")
+
+
+@pytest.mark.parametrize("mauvais_code", ["", "   ", "a/b", "..", "1\x01", "M-2026-1", "1.0", "abc"])
+def test_lire_saisie_table_code_mission_invalide_refuse(_sans_porte, _saisie_factice, mauvais_code, monkeypatch):
+    """(101) `code_mission` vide / non numérique / portant un motif d'évasion → ValueError. §5.6 exige
+    des CHIFFRES (`^saisie-(\\d+)-`) ; ce n'est jamais un chemin."""
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: _FauxClientSaisie())
+    fn = _sous_jacente(server.lire_saisie_table)
+    with pytest.raises(ValueError):
+        fn(None, code_mission=mauvais_code, table="SAISIE_Realise_2026")
+
+
+def test_lire_saisie_table_resout_par_convention_de_nommage_libelle_libre(
+    _sans_porte, _saisie_factice, monkeypatch
+):
+    """(102) RÉSOLUTION PAR NOMMAGE §5.6 : le libellé après le code est LIBRE et la casse est LIBRE —
+    le nom de fichier n'est donc PAS déductible du code. On liste le dossier figé et on apparie sur
+    `^saisie-(\\d+)-`. Les SOUS-DOSSIERS et les codes voisins (11, 1bis) ne matchent pas."""
+    client = _FauxClientSaisie(enfants=[
+        {"id": "F1", "name": "00 - Template Mission"},          # sous-dossier — écarté par le motif
+        {"id": "F2", "name": "01 - Missions cloturees"},         # sous-dossier — écarté
+        {"id": "X1", "name": "saisie-11-datalab.xlsx"},           # code VOISIN (11 ≠ 1) — écarté
+        {"id": "X2", "name": "saisie-1bis-vieux.xlsx"},           # pas `\\d+-` après le code — écarté
+        {"id": "X3", "name": "Saisie-1-SiteFlow ARABELLE.xlsx"},  # LA cible : casse et libellé libres
+        {"id": "X4", "name": "saisie-1-notes.docx"},              # pas un .xlsx — écarté
+    ])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    resultat = fn(None, code_mission="1", table="SAISIE_Facturation")
+
+    assert resultat["item_id"] == "X3"
+    assert resultat["nom_classeur"] == "Saisie-1-SiteFlow ARABELLE.xlsx"
+
+
+def test_lire_saisie_table_aucun_classeur_leve_filenotfound_sans_lire_de_table(
+    _sans_porte, _saisie_factice, monkeypatch
+):
+    """(103) Aucun classeur pour ce code → `FileNotFoundError`, et AUCUNE lecture de table n'est
+    tentée : on ne lit rien qui n'existe pas."""
+    client = _FauxClientSaisie(enfants=[{"id": "X", "name": "saisie-9-autre.xlsx"}])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    with pytest.raises(FileNotFoundError):
+        fn(None, code_mission="1", table="SAISIE_Realise_2026")
+    assert not any(u.endswith("/rows") for (_m, u, _p) in client.appels), (
+        "aucune table ne doit être lue si le classeur de la mission n'existe pas."
+    )
+
+
+def test_lire_saisie_table_deux_classeurs_pour_un_code_refuse(_sans_porte, _saisie_factice, monkeypatch):
+    """(104) AMBIGUÏTÉ = REFUS : deux classeurs portant le même code → `RuntimeError`. On ne devine
+    jamais laquelle des deux sources est la bonne (même discipline que l'unicité exigée par
+    `corriger_cout_structure`) — anomalie signalée, réconciliation gardien."""
+    client = _FauxClientSaisie(enfants=[
+        {"id": "A", "name": "saisie-1-siteflow.xlsx"},
+        {"id": "B", "name": "saisie-1-siteflow-copie.xlsx"},
+    ])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    with pytest.raises(RuntimeError) as capture:
+        fn(None, code_mission="1", table="SAISIE_Realise_2026")
+    assert "2 classeurs" in str(capture.value)
+    assert not any(u.endswith("/rows") for (_m, u, _p) in client.appels)
+
+
+def test_lire_saisie_table_suit_la_pagination_du_dossier(_sans_porte, _saisie_factice, monkeypatch):
+    """(105) Le dossier de saisie peut être paginé (`@odata.nextLink`) : le classeur cible doit être
+    trouvé même s'il n'est pas sur la 1re page — sinon une mission « disparaîtrait » silencieusement."""
+    client = _FauxClientSaisie(
+        enfants=[{"id": "Z", "name": "saisie-7-autre.xlsx"}],
+        pages=[{"value": [{"id": "ITEM-SAISIE-1", "name": "saisie-1-siteflow.xlsx"}]}],
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    resultat = fn(None, code_mission="1", table="SAISIE_Realise_2026")
+    assert resultat["item_id"] == "ITEM-SAISIE-1"
+
+
+def test_lire_saisie_table_remonte_le_corps_d_erreur_graph(_sans_porte, _saisie_factice, monkeypatch):
+    """(106) BOUT EN BOUT : un échec Graph sur la lecture de la table remonte le `code` et le
+    `message` du CORPS — plus jamais un statut nu. C'est précisément ce qui manquait le 01/08."""
+    client = _FauxClientSaisie(
+        rows_status=404,
+        rows_corps=_corps_graph("ItemNotFound", "Table 'SAISIE_Realise_2026' not found."),
+    )
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.lire_saisie_table)
+
+    with pytest.raises(server.ErreurGraph) as capture:
+        fn(None, code_mission="1", table="SAISIE_Realise_2026")
+    exc = capture.value
+    assert exc.statut == 404 and exc.code == "ItemNotFound"
+    assert "SAISIE_Realise_2026" in str(exc) and "saisie-1-siteflow.xlsx" in str(exc), (
+        "le contexte doit nommer la table ET le classeur visés."
+    )
+
+
+def test_lire_saisie_table_aucun_chemin_d_ecriture_vers_le_drive_de_saisie():
+    """(107) INVARIANT STRUCTUREL §5.6 : `GRAPH_SAISIE_DRIVE_ID` n'est lu que par `_config_saisie`, et
+    aucune fonction d'ÉCRITURE ne consomme cette config. Le seul consommateur est la LECTURE."""
+    import ast
+    source = open(inspect.getsourcefile(server), encoding="utf-8").read()
+    consommateurs = set()
+    for noeud in ast.parse(source).body:
+        if not isinstance(noeud, ast.FunctionDef):
+            continue
+        for interne in ast.walk(noeud):
+            if isinstance(interne, ast.Call) and isinstance(interne.func, ast.Name) \
+                    and interne.func.id == "_config_saisie":
+                consommateurs.add(noeud.name)
+    assert consommateurs == {"lire_saisie_table", "_resoudre_item_saisie"}, (
+        f"la config de saisie ne doit être consommée que par la LECTURE — trouvé {sorted(consommateurs)}."
+    )
+
+
+def test_workbook_lire_table_retour_reste_additif():
+    """(108) NON-RÉGRESSION de `workbook_lire_table` : sa signature est INCHANGÉE (lecture non bornée,
+    drive_id + item_id) et son retour ne perd rien — `metadonnees_item` s'AJOUTE à table/lignes/count."""
+    params = _params(server.workbook_lire_table)
+    assert {"drive_id", "item_id", "table"} == params, "signature publique inchangée."
+    source = inspect.getsource(_sous_jacente(server.workbook_lire_table))
+    for cle in ('"table"', '"lignes"', '"count"', '"metadonnees_item"'):
+        assert cle in source, f"la clé {cle} doit figurer au retour (ajout strictement additif)."
+
+
+def test_compte_des_outils_decores_est_dix_neuf():
+    """(109) Le compte annoncé par la docstring du module est VÉRIFIÉ, plus seulement déclaré : 19
+    outils décorés en 0.22.0 (18 en 0.21.0 + `lire_saisie_table`). Le chapeau disait « DIX-SEPT »
+    alors que 18 étaient exposés — un compte déclaré à la main se périme ; celui-ci casse la CI."""
+    import ast
+    source = open(inspect.getsourcefile(server), encoding="utf-8").read()
+    arbre = ast.parse(source)
+    outils = []
+    for noeud in arbre.body:
+        if not isinstance(noeud, ast.FunctionDef):
+            continue
+        for deco in noeud.decorator_list:
+            cible = deco.func if isinstance(deco, ast.Call) else deco
+            if isinstance(cible, ast.Attribute) and cible.attr == "tool":
+                outils.append(noeud.name)
+    assert len(outils) == 19, f"19 outils attendus, {len(outils)} décorés : {outils}"
+    assert "lire_saisie_table" in outils
+    assert "DIX-NEUF opérations" in (ast.get_docstring(arbre) or ""), (
+        "le chapeau du module doit annoncer le compte réel."
+    )
