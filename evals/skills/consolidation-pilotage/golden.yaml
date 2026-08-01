@@ -94,3 +94,73 @@ cas:
     contient:
       - "Allouer le `NumFacture` d'une ligne émise (`allouer_num_facture`)"
       - "séquence légale irréversible"
+  # --- v1.6 (T-0045) — dérivation du Réalisé par POSITION, lecture bornée des saisies -----------
+  # Cause racine mesurée le 01/08/2026 : le §2 faisait lire la saisie par le connecteur M365
+  # (surface humaine) qui APLATIT la grille — c'est LÀ que les 22 j de juillet se perdaient, ni
+  # dans Graph ni dans les droits. Ces ancres verrouillent la correction, cas par cas.
+  - id: lecture-bornee-saisie-16
+    type: invariant
+    description: "v1.6 — la saisie se lit par la primitive BORNÉE lire_saisie_table (image 0.22.0), plus par le connecteur M365 : le connecteur aplatit la grille et détruit les positions."
+    contient:
+      - "`lire_saisie_table(code_mission, table)`"
+      - "le connecteur M365 **aplatit** la grille"
+      - "lignes POSITIONNELLES"
+  - id: tables-saisie-17
+    type: invariant
+    description: "v1.6 — noms RÉELS mesurés : onglets sans accents et TROIS tables nommées SAISIE_* ; piège consigné, T_Imputations est la table du GABARIT, jamais de la saisie."
+    contient:
+      - "`SAISIE_Realise_<millésime>`"
+      - "`T_Imputations` est la table du **GABARIT**"
+  - id: derivation-position-18
+    type: invariant
+    description: "v1.6 (§5.6 v1.28) — la dérivation lit PAR POSITION : l'index de colonne porte le mois, jamais un en-tête relu ni une inférence."
+    contient:
+      - "l'**INDEX de colonne porte le mois**"
+      - "jamais un en-tête relu, jamais une inférence"
+  - id: vides-non-resserres-19
+    type: invariant
+    description: "v1.6 — une cellule vide est un mois sans imputation : elle n'est ni comptée ni resserrée. C'est le resserrement qui décale (mécanique exacte de l'écart 3g)."
+    contient:
+      - "une cellule VIDE est un mois SANS imputation"
+      - "ni comptée, ni « resserrée »"
+      - "c'est le resserrement qui DÉCALE"
+  - id: lignes-ecartees-20
+    type: invariant
+    description: "v1.6 — lignes écartées de la dérivation : l'en-tête technique « Nb. jours ouvres max » (pas une ressource) et les lignes fantômes de la zone pré-dimensionnée (TOTAL == 0)."
+    contient:
+      - "« Nb. jours ouvres max »"
+      - "dont le `TOTAL` vaut **0**"
+      - "lignes fantômes"
+  - id: controle-somme-21
+    type: invariant
+    description: "v1.6 — CONTRÔLE OBLIGATOIRE avant toute écriture : Σ des douze positions == TOTAL sur chaque ligne retenue ; sinon anomalie et zéro écriture pour la mission."
+    contient:
+      - "**Σ des douze positions == colonne `TOTAL`**"
+      - "zéro écriture pour cette mission"
+  - id: jamais-mois-forge-22
+    type: invariant
+    description: "v1.6 — fail-closed honnête : jamais de mois forgé ni déduit par recoupement quand l'égalité ne tombe pas (c'est ce qui a tenu à l'épreuve 3g, à conserver)."
+    contient:
+      - "JAMAIS de mois forgé ni déduit par recoupement"
+  - id: controle-miroir-mission-23
+    type: invariant
+    description: "v1.6 — contrôle miroir au niveau mission : Σ JoursRealises dérivés == Σ des TOTAL des lignes retenues (une ligne juste ne garantit pas un total juste)."
+    contient:
+      - "Σ `JoursRealises` dérivés == Σ des `TOTAL` des lignes retenues"
+  - id: anomalie-table-saisie-absente-24
+    type: invariant
+    description: "v1.6 — anomalie : table de saisie absente ou renommée (millésime nouveau, onglet renommé) → signalée, aucune dérivation muette de la mission."
+    contient:
+      - "Table de saisie ABSENTE ou RENOMMÉE"
+  - id: anomalie-ressource-hors-referentiel-25
+    type: invariant
+    description: "v1.6 — anomalie : ressource présente en saisie mais absente de T_Ressources → signalée, JAMAIS créée par l'agent (le référentiel est une source, pas un dérivé)."
+    contient:
+      - "présente en saisie mais ABSENTE de `T_Ressources`"
+      - "signalée, jamais créée"
+  - id: mesure-3g-26
+    type: invariant
+    description: "v1.6 — note d'usage datée : l'écart de 22 j de l'épreuve 3g s'expliquait par la lecture APLATIE ; mesure du 01/08 sur la mission 1 (Réalisé 61 = TOTAL, Prévu 148 = TOTAL)."
+    contient:
+      - "les 22 j de juillet se perdaient dans la LECTURE APLATIE"
+      - "Mai 17 + Juin 22 + Juillet 22 = 61 = TOTAL"
