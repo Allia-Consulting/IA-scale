@@ -36,3 +36,29 @@ note: >
   l'épreuve 3g) n'ont aujourd'hui aucune ligne d'échéancier source dans la saisie ; leur place
   dans la couche de saisie reste à définir pour que leur facturation passe par la boucle plutôt
   que par une entrée directe sur go gardien. NOMMAGE SEUL, aucun code ; non ouvert.
+note_acces_et_fidelite_01_08_2026: >
+  FAIT NOUVEAU du 01/08/2026 (la note ci-dessus reste l'HISTORIQUE tel qu'écrit à l'ouverture,
+  y compris sa description des trois voies fermées — on ne réécrit pas un relevé). Les voies
+  (a) et (b) sont ROUVERTES par l'octroi Sites.Selected role=read sur le seul site Management
+  et Gestion : le 403 venait d'une ABSENCE D'OCTROI, PAS d'une limite de l'API Workbook — fait
+  mesuré, read SUFFIT en app-only, contrairement à ce que laisse penser la table de permissions
+  de la doc Graph (« Application : Not supported »). Le 404 initial, lui, venait du NOM DE TABLE :
+  T_Imputations est la table du GABARIT (modele-donnees §5.2), pas de la saisie — la saisie porte
+  SAISIE_Prevu_2026, SAISIE_Realise_2026 et SAISIE_Facturation (millésime dans le nom).
+  L'ÉCART 22 j DE L'ÉPREUVE 3g EST EXPLIQUÉ : les 22 jours manquants étaient JUILLET, mesuré à
+  sa POSITION dans la grille des 14 colonnes [Ressource, Janvier..Décembre, TOTAL] — rien n'était
+  perdu, seule la lecture positionnelle manquait. Consigné au canon en candidat modele-donnees
+  v1.28 (§5.6 : trois tables nommées, schéma de ligne à 14 colonnes lu PAR POSITION, règle de
+  dérivation du Réalisé avec contrôle Σ douze positions == TOTAL et anomalie signalée, accès read
+  au moindre privilège avec interdiction de tout scope Files.*).
+  RESTE À CONSTRUIRE (ce chantier demeure à_faire) : (1) le DÉRIVATEUR T_Imputations depuis
+  SAISIE_Realise_2026 (application de la règle §5.6 consignée) ; (2) la REMONTÉE DU CORPS
+  D'ERREUR GRAPH par la primitive workbook_lire_table — aujourd'hui AVALÉ par raise_for_status,
+  ce qui a coûté le temps de diagnostic entre 403-sans-octroi et 404-mauvais-nom ; (3) la
+  variable d'environnement GRAPH_SAISIE_DRIVE_ID, ABSENTE du conteneur déployé ; (4) la dette
+  Workbook de outils/mcp-graph/server.py.
+  ANOMALIE À INSTRUIRE (nommée, non résolue) : DIVERGENCE entre le relevé du 14/07/2026
+  (juillet 23 j / août 7 j) et la lecture du 01/08/2026 (juillet 22 j / août 10 j) sur la même
+  saisie — le TOTAL est IDENTIQUE (148 j). Deux hypothèses non tranchées : saisie humaine
+  révisée entre les deux dates, ou relevé du 14/07 imprécis. À instruire, jamais à trancher
+  par recoupement.
