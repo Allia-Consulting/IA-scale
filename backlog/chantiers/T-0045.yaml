@@ -137,3 +137,20 @@ note_solde_derivation_realise_01_08_2026: >
   co-édition l'horodatage est différé, le contenu fait foi — §5.6) ; jamais à trancher par
   recoupement ; (e) la MODÉLISATION DES FRAIS REFACTURÉS en saisie (note d'ouverture) reste
   ouverte, inchangée.
+# --- Note d'arbitrages gardien S46 (01/08/2026 au soir) — statut INCHANGÉ (soldé). Note AJOUTÉE ; tout l'historique ci-dessus reste, immutable. ---
+note_arbitrages_s46_01_08_2026: >
+  Deux points reportés par note_solde sont CLOS par arbitrage gardien du 01/08/2026 au soir (S46).
+  (a) CoutJour du gardien : 0 ASSUMÉ — décision, pas un manque. L'EBITDA réalisé compte le travail
+  du gardien à coût nul (juillet : 22 j facturés 19 800 € à coût 0) ; le cockpit AFFICHE l'EBITDA
+  réalisé de juillet (16 939 € constaté au DOM le 01/08 au soir) — le masquage « CoutJour manquant »
+  (acquis T-0043) ne joue pas, le point (a) de note_solde est clos.
+  (d) L'ANOMALIE de divergence du relevé 14/07 (juil 23/août 7) vs lectures 01/08 (juil 22/août 10),
+  TOTAL 148 identique, est TRANCHÉE : SAISIE RÉVISÉE. Faits : historique de versions SharePoint de
+  saisie-1-siteflow.xlsx constaté le 01/08 au soir — v1.0 créée le 14/07 15:10Z, v2.0/v3.0 le 28/07
+  (~19:45Z), v4.0 le 31/07 12:56Z, v5.0 courante le 31/07 15:30Z, ÉDITEUR UNIQUE = le gardien — et
+  confirmation du gardien : les classeurs de saisie et les référentiels sont des sources VIVANTES,
+  réactualisées au fil du réel. Règle confirmée, déjà au canon (§5.6) : la DERNIÈRE version fait foi,
+  toute dérivation recalcule depuis elle ; le relevé du 14/07 précédait la lecture positionnelle.
+  Tranchée par l'AUTEUR de la saisie — jamais par recoupement (la règle tient).
+  Restent ouverts, inchangés : orchestration lun-ven (b), dette Workbook 0.23.0 (c), frais
+  refacturés en saisie (e).
