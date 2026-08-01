@@ -369,3 +369,34 @@ def test_docs_epreuves_isole_reste_faible(tmp_path):
     assert res["risque"] == "faible", res
     fiche = res["par_fichier"]["docs/epreuves/2026-07-31-journal.md"]
     assert fiche["risque"] == "faible", fiche
+
+
+# ---------------------------------------------------------------------------
+# (n) NON-RÉGRESSION #290 : un fichier de chantier (backlog/chantiers/*.yaml)
+#     porte un STATUT — un état de vérité. Avant le fix, un passage à
+#     « soldé » sortait « faible » (sous backlog/, LOW_PREFIXES) et la PR #290
+#     fut auto-mergée en ~40 s — un état de vérité passait sans porte humaine.
+#     Désormais TOUJOURS « large », même isolé sans consommateur.
+# ---------------------------------------------------------------------------
+def test_chantier_backlog_sensible_toujours_large_meme_isole(tmp_path):
+    root = str(tmp_path)
+    # Aucun consommateur déclaré : sans le fix, LOW_PREFIXES -> « faible ».
+    _ecrire(root, "backlog/chantiers/T-0045.yaml", "id: T-0045\nstatut: soldé\n")
+    res = impact.analyze(root, ["backlog/chantiers/T-0045.yaml"])
+    assert res["risque"] == "large", res
+    fiche = res["par_fichier"]["backlog/chantiers/T-0045.yaml"]
+    assert fiche["risque"] == "large", fiche
+
+
+# ---------------------------------------------------------------------------
+# (o) CONTRE-CAS : backlog/plan.md reste NON-large — nommer un reste au plan
+#     doit rester gratuit (auto-merge de nommage type #276, usage prévu). Le
+#     fix ne doit pas élargir backlog/plan.md.
+# ---------------------------------------------------------------------------
+def test_plan_backlog_isole_reste_faible(tmp_path):
+    root = str(tmp_path)
+    _ecrire(root, "backlog/plan.md", "# plan\n## §14 — reste à nommer\n")
+    res = impact.analyze(root, ["backlog/plan.md"])
+    assert res["risque"] == "faible", res
+    fiche = res["par_fichier"]["backlog/plan.md"]
+    assert fiche["risque"] == "faible", fiche
