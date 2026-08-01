@@ -62,3 +62,37 @@ note_acces_et_fidelite_01_08_2026: >
   saisie — le TOTAL est IDENTIQUE (148 j). Deux hypothèses non tranchées : saisie humaine
   révisée entre les deux dates, ou relevé du 14/07 imprécis. À instruire, jamais à trancher
   par recoupement.
+note_epreuves_vertes_01_08_2026: >
+  FAIT NOUVEAU du 01/08/2026, postérieur aux deux notes ci-dessus, qui restent l'HISTORIQUE tel
+  qu'écrit (on ne réécrit pas un relevé). Journal : docs/epreuves/2026-08-01-t0045-acces-et-lecture-saisie.md.
+  DEUX ÉPREUVES VERTES — l'ACCÈS et la LECTURE de la couche de saisie sont SOLDÉS.
+  Épreuve 1/2 (accès) : octroi gardien Sites.Selected role=READ sur le seul site Management et
+  Gestion ; la lecture app-only FONCTIONNE sous read seul, CONTRE la doc Learn qui annonce
+  « Application : Not supported » sur l'endpoint même que nous appelons (table-list-rows). La preuve
+  d'ouverture de la porte est un 404 (et non un 403) sur un nom de table erroné : Graph résout
+  l'autorisation AVANT la ressource. Conséquence doctrinale : l'invariant §5.6 « la machine n'écrit
+  JAMAIS la saisie » est garanti AU NIVEAU DU DROIT, plus seulement par le code — ne JAMAIS ajouter
+  de scope Files.* à l'identité managée.
+  Épreuve 2/2 (lecture bornée, image 0.22.0 / révision --0000032) : lire_saisie_table VERTE sur les
+  quatre étapes — résolution du classeur par la convention ^saisie-(\d+)- SANS aucun chemin fourni,
+  positions préservées (vides rendus tels quels), contrôle Σ douze positions == TOTAL vert sur les
+  deux grilles, eTag d'item exposé ; refus PRÉ-RÉSEAU nommant la cause sur T_Imputations (le fait du
+  jour rejoué en garde) ; refus explicite sur code_mission inconnu ; 404 Graph remonté AVEC code
+  (« ItemNotFound ») et message mot pour mot.
+  LES QUATRE CAUSES DU BLOCAGE SONT LEVÉES : absence d'octroi, mauvais nom de table, corps d'erreur
+  avalé (points (2) de la note précédente — ACQUIS 0.22.0) et GRAPH_SAISIE_DRIVE_ID absente du
+  conteneur (point (3) — variables posées par le gardien).
+  ARBITRAGE GARDIEN DU 01/08, tracé comme DÉCISION et NON comme dette : le millésime n'est PAS gaté
+  côté serveur (le motif SAISIE_Realise_<millésime> suffit) — une liste blanche exigerait une
+  maintenance annuelle et CASSERAIT EN JANVIER ; un 404 lisible est préférable à une garde qui
+  périme. Ne pas la « corriger » par réflexe.
+  RESTE — ET CE CHANTIER DEMEURE à_faire : le DÉRIVATEUR du Réalisé (T_Imputations depuis
+  SAISIE_Realise_2026, application de la règle §5.6 déjà consignée) côté CONSOMMATEUR, et SON
+  ÉPREUVE. C'est la DERNIÈRE CONDITION DE SOLDE du chantier : la lecture est acquise, la dérivation
+  n'est pas construite. PIÈGE À TENIR POUR CE DÉRIVATEUR (mesuré) : la table rend 21 lignes dont
+  l'en-tête technique « Nb. jours ouvres max » (plafond de calendrier, pas une ressource) et 19
+  lignes de zone pré-dimensionnée à TOTAL=0 — soit 20 lignes à écarter pour 1 ligne de sens ; la
+  primitive les rend VOLONTAIREMENT (lire n'est pas interpréter), le filtrage appartient au
+  consommateur. Restent aussi ouverts, inchangés : la modélisation des FRAIS REFACTURÉS en saisie
+  (note d'ouverture), la dette Workbook de server.py (point (4)) et l'ANOMALIE de divergence du
+  relevé 14/07 vs 01/08 (note précédente), toutes trois non résolues.
