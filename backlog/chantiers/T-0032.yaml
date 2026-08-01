@@ -71,3 +71,40 @@ note_arbitrage_01_08_2026: >
   ultérieures, HORS de ce candidat) : la primitive serveur (dépôt de la ligne candidate + inscription
   bornée dans T_Structure), le skill de contrôle mensuel (lecture boîte mail, triple test, lissage,
   rapport d'écart), et la lecture cockpit de T_Parametres.
+
+# --- Note d'avancement du VOLET 4a (01/08/2026, S45) — statut INCHANGÉ (à_faire). Note AJOUTÉE ; la note initiale, note_epreuve_01_08_2026 et note_arbitrage_01_08_2026 restent, historique immutable. ---
+note_avancement_volet_4a_01_08_2026: >
+  Le VOLET 4a — référentiel de coûts + EBITDA + CONTRÔLE MENSUEL D'ÉCART + CORRECTION GOUVERNÉE — est
+  ÉPROUVÉ SUR LE RÉEL le 01/08/2026. Journal :
+  docs/epreuves/2026-08-01-t0032-couts-standards-controle-mensuel.md (qui fait le récit ; cette note
+  n'en est que le renvoi). Chaîne livrée et mergée le même jour : contrats modele-donnees v1.26 +
+  table-des-crans v1.15 (PR #279) → serveur 0.20.0 inscrire_cout_structure (PR #280) → skill
+  controle-structure-mensuel v1.0 (PR #281) → correctif serveur 0.20.1, sérial Excel (PR #282) →
+  serveur 0.21.0 corriger_cout_structure + table-des-crans v1.16 (PR #283) → skill v1.1, étape F de
+  correction + conversion de devise tracée (PR #284) ; précédée le matin du correctif d'honnêteté
+  EBITDA (PR #277) et du solde de T-0043 (PR #278). Convention HT gravée au canon
+  (modele-donnees v1.27, §5.4) sur arbitrage gardien du 01/08.
+  MESURES DE L'ÉPREUVE : contrôle de juillet 2026 — forfait 2 salariés actifs × 1 500 € = 3 000 €
+  (sous-traitant EXCLU, exclusion mesurée) ; réel 706,84 € sur 5 pièces qualifiées par le triple test ;
+  réel < forfait → consigné SANS alerte (seuil asymétrique joué comme écrit) ; ANTI-INJECTION ÉPROUVÉE
+  SUR UN VRAI MAIL porteur d'une consigne, signalée au rapport et NON EXÉCUTÉE. Puis re-contrôle après
+  arbitrages : recalcul INDÉPENDANT 2 860,67 €, correction gouvernée appliquée (ancien 706,84 →
+  nouveau 2 860,67, proposition_id 18), relecture = TOUJOURS UNE SEULE LIGNE pour le mois (doublon
+  impossible par construction, vérifié sur le réel). Cockpit constaté en trois temps : EBITDA juillet
+  22 972 → 22 265 → 20 111 € ; Total EBITDA budget 216 500 → 150 500 → 147 639 € (contre-preuves :
+  22 265 − 20 111 = 2 154 ≈ pièce Apple 2 153,83 € ; 150 500 − 147 639 = 2 861 ≈ structure juillet
+  2 860,67 €). INCIDENT INSTRUCTIF : la post-vérification de 0.20.0 a rendu un FAUX-ROUGE (mois comparé
+  en ISO alors que Workbook restitue le sérial Excel 46204) ; l'agent d'exécution a STOPPÉ sans réparer
+  ET REFUSÉ le rejeu d'idempotence, au motif que la garde anti-doublon portait le MÊME biais — le rejeu
+  aurait pu ÉCRIRE le doublon au lieu de le prouver impossible. Refus JUSTE, à retenir : un prédicat de
+  preuve suspect se répare avant de jouer l'épreuve. Correctif 0.20.1 (normaliseur unique _mois_en_iso,
+  fail-closed, incident rejoué en régression CI) puis rejeu différé APRÈS déploiement : refus propre
+  citant la ligne existante, zéro écriture, T_Structure identique.
+  LE CHANTIER RESTE à_faire. Il manque : (1) l'ORCHESTRATION du contrôle (rythme de déclenchement, mail
+  de synthèse au gardien, rangement des pièces) — l'exécution v1 est MANUELLE, pilotée en session ;
+  (2) la PREUVE DE RÉCURRENCE — un seul mois a été contrôlé ; la démonstration que le contrôle REVIENT
+  (contrôle d'AOÛT) n'existe pas encore, et c'est la raison principale du statut. Restes mineurs nommés
+  au journal §7 et au backlog/plan.md §15 : pièce Anthropic 15,03 USD non comptée (aucun taux BCE
+  lisible à la date de la pièce — AUCUN taux inventé, entrera par correction) ; source du taux de change
+  à arrêter au canon ; écart CoutJour du sous-traitant (référentiel 550 €/j vs 500 €/j facturé) à
+  TRANCHER par le gardien ; hygiène du Type au référentiel (« Sous traitant » vs sous-traitant).
