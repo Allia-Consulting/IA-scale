@@ -15,7 +15,7 @@ criteres_acceptation:
   - "T_Imputations (le Réalisé) est dérivable FIDÈLEMENT : Σ jours réels = total de la grille de saisie, sans écart ni mois forgé (rejoue l'écart 22 j de l'épreuve 3g)"
   - "Aucun mois n'est jamais forgé ni déduit par recoupement en l'absence de lecture fidèle : anomalie signalée, jamais résolue seule"
 rayon_impact: firme
-statut: à_faire
+statut: soldé   # 01/08/2026 : SOLDÉ par la 3e épreuve du jour (dérivateur du Réalisé, VERTE — docs/epreuves/2026-08-01-t0045-derivation-realise-verte.md). Les deux premiers critères sont TENUS PAR MESURE ; le 3e (fail-closed sur écart) est tenu par construction + CI, non exercé sur le tenant — arbitrage gardien assumé, cf. note_solde. Ligne statut seule modifiée ; historique ci-dessous AJOUTÉ, aucune ligne existante réécrite.
 note: >
   Nommé en session S45 (01/08/2026) par l'épreuve 3g VERTE (T-0030/T-0035 point 5 —
   docs/epreuves/2026-08-01-t0030-t0035-epreuve-3g-verte.md). CAUSE RACINE : aucune surface
@@ -96,3 +96,44 @@ note_epreuves_vertes_01_08_2026: >
   consommateur. Restent aussi ouverts, inchangés : la modélisation des FRAIS REFACTURÉS en saisie
   (note d'ouverture), la dette Workbook de server.py (point (4)) et l'ANOMALIE de divergence du
   relevé 14/07 vs 01/08 (note précédente), toutes trois non résolues.
+note_solde_derivation_realise_01_08_2026: >
+  SOLDÉ le 01/08/2026 par la TROISIÈME épreuve du jour — le DÉRIVATEUR du Réalisé, VERTE
+  (docs/epreuves/2026-08-01-t0045-derivation-realise-verte.md). Les notes ci-dessus restent
+  l'HISTORIQUE tel qu'écrit — on ne réécrit pas un relevé, on ne requalifie pas un soldé.
+  CHAÎNE À L'ÉPREUVE : main cd9e314 (PR #289), skill consolidation-pilotage v1.6, image serveur
+  0.22.0 révision --0000032, GRAPH_SAISIE_DRIVE_ID / GRAPH_SAISIE_FOLDER_ID posées.
+  MESURE : mission 1, SAISIE_Realise_2026 lue par lire_saisie_table (21 lignes × 14 colonnes,
+  positions et vides préservés) ; 1 entête technique « Nb. jours ouvres max » et 19 lignes
+  fantômes (TOTAL=0) écartées ; ligne retenue lue PAR POSITION — position 5 Mai 17, position 6
+  Juin 22, position 7 Juillet 22, position 8 Août VIDE. Contrôles §4 ter : Σ douze positions ==
+  TOTAL (61 == 61) ET miroir mission (61 == 61), zéro anomalie. Régénération réconciliée :
+  archive gabarit-1-20260801T171502Z.xlsx (déplacement, nom libéré) → ré-instanciation (preuve
+  FROIDE verte, lignes_vides:1 ×3, nouvel item 01BWFCBZDZMDH26VHVXJCIB66N5MVYEYES) →
+  repeuplement 8/3/8. PREUVES relues À FROID : T_Imputations 3 lignes, Σ JoursRealises = 61
+  (baseline 39 → +22 j = JUILLET, l'écart de 3g est comblé), les trois mois portent leurs valeurs
+  exactes, AUCUN MOIS FORGÉ (Août vide en saisie reste ABSENT du gabarit) ; non-régression
+  T_Affectations Σ 148 j et T_Echeancier Σ 133 200 € HT avec F-2026-001/002/003 reportés SANS
+  réallocation (aucun cran validé sollicité). ETag après écriture
+  "{AFCF6079-F554-44BA-80FB-CDEB2B826092},9" (17:15:48Z) — NB : une régénération produit un
+  fichier NEUF, le GUID change par construction, un ETag ne traverse pas une régénération.
+  CRITÈRES : (1) lecture machine à la position exacte sous identité au moindre privilège = TENU
+  par mesure ; (2) T_Imputations dérivable fidèlement, Σ = total, sans écart ni mois forgé =
+  TENU par mesure ; (3) aucun mois forgé ni déduit, anomalie signalée = TENU PAR CONSTRUCTION
+  (skill §4 ter) ET PAR LA CI (golden controle-somme-21 / jamais-mois-forge-22, rouge-puis-vert),
+  MAIS NON EXERCÉ sur le tenant — aucun écart réel ne s'est présenté, et on ne fabrique pas un
+  faux écart dans une source pour se prouver qu'on le détecte. Solde prononcé sur cet arbitrage,
+  dit explicitement.
+  NON CLOS PAR CE CHANTIER, reporté et nommé : (a) le contrôle §6 « ressource en saisie absente
+  de T_Ressources » n'a PAS pu être clos — le référentiel de coûts est à audience restreinte
+  (§5.3) et n'est atteignable par aucune surface de l'agent ; à vérifier par le gardien, car si
+  adrien.raque@allia-consulting.com n'y porte pas de CoutJour le cockpit MASQUERA l'EBITDA de
+  juillet (acquis T-0043) ; (b) l'ORCHESTRATION lun-ven 05h/13h Paris (§5.6) reste NON CONSTRUITE
+  — la dérivation demeure un déclenchement manuel du gardien, ce qui tient aussi la porte du cran
+  validé de allouer_num_facture (skill §7) ; (c) la DETTE WORKBOOK de server.py (sessions
+  persistantes, $batch) = chantier 0.23.0 nommé, non ouvert ; (d) l'ANOMALIE de divergence du
+  relevé du 14/07 (juil 23 / août 7) vs les lectures du 01/08 (juil 22 / août 10), TOTAL 148
+  identique, reste OUVERTE et NON TRANCHÉE : la saisie porte lastModifiedDateTime 2026-07-31,
+  postérieur au relevé du 14/07, ce qui ORIENTE vers « saisie révisée » sans le prouver (en
+  co-édition l'horodatage est différé, le contenu fait foi — §5.6) ; jamais à trancher par
+  recoupement ; (e) la MODÉLISATION DES FRAIS REFACTURÉS en saisie (note d'ouverture) reste
+  ouverte, inchangée.
