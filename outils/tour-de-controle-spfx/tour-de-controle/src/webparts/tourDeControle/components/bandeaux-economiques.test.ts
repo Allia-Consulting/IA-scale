@@ -16,6 +16,7 @@ import {
   construireRentabilite,
   construireFactures,
   MENTION_REFERENTIEL_RESTREINT,
+  MENTION_COUTJOUR_MANQUANT,
   joursOuvres,
   tjmParMission,
   joursPrevusTotal,
@@ -236,6 +237,75 @@ describe('§5.4 — bandeau Rentabilité (firme, 12 mois) sur le golden', () => 
     expect(ebitda && ebitda.mention).toBeUndefined();
     expect(ebitda && ebitda.cellules[0].budget).toBe(formaterEuros(4000));
     expect(ebitda && ebitda.total.budget).toBe(formaterEuros(4000));
+  });
+});
+
+describe('§3 bandeau 4 — EBITDA honnête : coût jour manquant au référentiel', () => {
+  // Mission dont janvier porte une ressource TARIFÉE (r@allia) et février une ressource ABSENTE
+  // du référentiel (x@ghost). TJM = (9000 + 4500) ÷ (10 + 5) = 900. CA janv 9 000, CA févr 4 500.
+  function missionMixte(ressourceFevrier: string): ContenuGabarit {
+    return {
+      codeMission: '1',
+      affectations: [
+        { codeMission: '1', ressource: 'r@allia', mois: moisDate(0), joursPrevus: 10 },
+        { codeMission: '1', ressource: ressourceFevrier, mois: moisDate(1), joursPrevus: 5 }
+      ],
+      imputations: [],
+      echeancier: [
+        { numFacture: 'F0', codeMission: '1', moisCA: moisDate(0), montantHT: 9000, echeance: moisDate(0), statut: 'émise', lienFacture: '' },
+        { numFacture: 'F1', codeMission: '1', moisCA: moisDate(1), montantHT: 4500, echeance: moisDate(1), statut: 'émise', lienFacture: '' }
+      ]
+    };
+  }
+
+  it('cas 1 — ressource affectée sans coût jour : cellule « · », mention posée, Total sans le mois masqué', () => {
+    const ref: ContenuReferentiel = {
+      ressources: [{ ressource: 'r@allia', type: 'salarié', coutJour: 400, dateEntree: moisDate(0) }],
+      structure: []
+    };
+    const m = construireRentabilite(etatEconomique([missionMixte('x@ghost')], ref, true), 2026);
+    const ebitda = m.lignes.find(l => l.libelle === 'EBITDA');
+    // Janvier tarifé : 9 000 − 10×400 − 0 = 5 000.
+    expect(ebitda && ebitda.cellules[0].budget).toBe(formaterEuros(5000));
+    // Février : x@ghost absent du référentiel → « · » (jamais un coût compté 0).
+    expect(ebitda && ebitda.cellules[1].budget).toBe(PLACEHOLDER);
+    // Mention de la ligne EBITDA posée.
+    expect(ebitda && ebitda.mention).toBe(MENTION_COUTJOUR_MANQUANT);
+    // Total = janvier seul (février masqué exclu) = 5 000.
+    expect(ebitda && ebitda.total.budget).toBe(formaterEuros(5000));
+    // Le CA n'est PAS affecté : février reste affiché (5 j × 900 = 4 500).
+    const caTotal = m.lignes.find(l => l.libelle === 'CA total');
+    expect(caTotal && caTotal.cellules[1].budget).toBe(formaterEuros(4500));
+  });
+
+  it('cas 2 — toutes les ressources appariées (dont une à CoutJour 0) : calcul inchangé, aucune mention', () => {
+    const ref: ContenuReferentiel = {
+      ressources: [
+        { ressource: 'r@allia', type: 'salarié', coutJour: 400, dateEntree: moisDate(0) },
+        // CoutJour 0 DÉCLARÉ = donnée valide (0 déclaré ≠ absent), ne masque rien.
+        { ressource: 'z@allia', type: 'salarié', coutJour: 0, dateEntree: moisDate(0) }
+      ],
+      structure: []
+    };
+    const m = construireRentabilite(etatEconomique([missionMixte('z@allia')], ref, true), 2026);
+    const ebitda = m.lignes.find(l => l.libelle === 'EBITDA');
+    expect(ebitda && ebitda.mention).toBeUndefined();
+    // Janvier 5 000 ; février 4 500 − 5×0 − 0 = 4 500 → Total 9 500.
+    expect(ebitda && ebitda.cellules[0].budget).toBe(formaterEuros(5000));
+    expect(ebitda && ebitda.cellules[1].budget).toBe(formaterEuros(4500));
+    expect(ebitda && ebitda.total.budget).toBe(formaterEuros(9500));
+  });
+
+  it('cas 3 — référentiel inaccessible : comportement existant intact (mention « restreinte », « · » partout)', () => {
+    // Même mission (ressource absente incluse), mais référentiel non accessible : la cause dominante
+    // reste le référentiel restreint, jamais la mention « coût jour manquant ».
+    const m = construireRentabilite(etatEconomique([missionMixte('x@ghost')]), 2026);
+    const ebitda = m.lignes.find(l => l.libelle === 'EBITDA');
+    expect(ebitda && ebitda.mention).toBe(MENTION_REFERENTIEL_RESTREINT);
+    for (const c of (ebitda ? ebitda.cellules : [])) {
+      expect(c.budget).toBe(PLACEHOLDER);
+      expect(c.realise).toBe(PLACEHOLDER);
+    }
   });
 });
 
