@@ -15,6 +15,7 @@ import hashlib
 import inspect
 import json
 import logging
+import re
 
 import pytest
 
@@ -1559,18 +1560,26 @@ class _FauxClientStructure:
     """Client httpx factice pour inscrire_cout_structure (table Workbook T_Structure).
 
     Maintient l'état des lignes `self.rows` (chaque ligne = liste de valeurs, ordre des colonnes).
-      - GET  .../columns → en-têtes physiques (self._columns) au format Workbook (statut columns_status) ;
-      - GET  .../rows    → lignes courantes {"values": [[...]]} ;
-      - POST .../rows    → append ({"index": None, "values": [[...]]}) → grandit self.rows (statut post_status).
+      - GET   .../columns → en-têtes physiques (self._columns) au format Workbook (statut columns_status) ;
+      - GET   .../rows    → lignes courantes {"values": [[...]]} ;
+      - POST  .../rows    → append ({"index": None, "values": [[...]]}) → grandit self.rows (statut post_status) ;
+      - PATCH .../rows/itemAt(index=N) → REMPLACE self.rows[N] ({"values": [[...]]}, statut patch_status),
+        chemin de `corriger_cout_structure` (0.21.0) : jamais un append, la table ne grandit pas.
     Enregistre chaque appel dans self.appels [(méthode, url, corps|params)]."""
 
-    def __init__(self, rows=None, columns=None, columns_status=200, post_status=201):
+    def __init__(self, rows=None, columns=None, columns_status=200, post_status=201, patch_status=200):
         self.rows = [list(r) for r in (rows or [])]
         self._columns = list(columns) if columns is not None else list(server.ENTETES_T_STRUCTURE)
         self._columns_status = columns_status
         self._post_status = post_status
+        self._patch_status = patch_status
         self.appels = []
         self.entetes_appels = []
+
+    def _stocker(self, ligne):
+        """Transformation appliquée à une ligne AU STOCKAGE (identité ici ; le sous-type SÉRIAL la surcharge).
+        Partagée par POST et PATCH : les deux chemins d'écriture stockent donc de la MÊME façon."""
+        return list(ligne)
 
     def __enter__(self):
         return self
@@ -1598,8 +1607,18 @@ class _FauxClientStructure:
         self.entetes_appels.append(("POST", url, headers or {}))
         if url.endswith("/rows"):
             for ligne in (json or {}).get("values", []):
-                self.rows.append(list(ligne))
+                self.rows.append(self._stocker(ligne))
         return _RepWb(self._post_status, {})
+
+    def patch(self, url, headers=None, json=None):
+        self.appels.append(("PATCH", url, json))
+        self.entetes_appels.append(("PATCH", url, headers or {}))
+        m = re.search(r"/rows/itemAt\(index=(\d+)\)$", url)
+        if m:
+            i = int(m.group(1))
+            for ligne in (json or {}).get("values", []):
+                self.rows[i] = self._stocker(ligne)  # REMPLACE en place — la table ne grandit jamais
+        return _RepWb(self._patch_status, {})
 
 
 @pytest.fixture
@@ -1783,18 +1802,15 @@ def _iso_vers_serial_excel(iso: str) -> int:
 class _FauxClientStructureSerialExcel(_FauxClientStructure):
     """Comme `_FauxClientStructure`, mais RESTITUE la colonne `Mois` en SÉRIAL Excel — reproduit le
     01/08 : la valeur ISO « AAAA-MM-01 » écrite est reconvertie en sérial au stockage, si bien que la
-    relecture (`/rows`) rend un NOMBRE, jamais la chaîne ISO écrite."""
+    relecture (`/rows`) rend un NOMBRE, jamais la chaîne ISO écrite.
 
-    def post(self, url, headers=None, json=None):
-        if url.endswith("/rows"):
-            self.appels.append(("POST", url, json))
-            self.entetes_appels.append(("POST", url, headers or {}))
-            for ligne in (json or {}).get("values", []):
-                l = list(ligne)
-                l[0] = _iso_vers_serial_excel(str(l[0]))  # col 0 = Mois → sérial Excel
-                self.rows.append(l)
-            return _RepWb(self._post_status, {})
-        return super().post(url, headers, json)
+    La conversion vit dans `_stocker`, donc elle vaut pour les DEUX chemins d'écriture — l'append de
+    `inscrire_cout_structure` ET le PATCH de `corriger_cout_structure` (0.21.0)."""
+
+    def _stocker(self, ligne):
+        l = list(ligne)
+        l[0] = _iso_vers_serial_excel(str(l[0]))  # col 0 = Mois → sérial Excel
+        return l
 
 
 def test_inscrire_cout_structure_incident_0108_mois_serial_excel(
@@ -1843,3 +1859,270 @@ def test_mois_en_iso_inconvertible_leve_valueerror(valeur):
     lève ValueError — jamais de devinette silencieuse (c'est le repli littéral buggé qui est supprimé)."""
     with pytest.raises(ValueError):
         server._mois_en_iso(valeur)
+
+
+# --------------------------------------------------------------------------------------------
+# corriger_cout_structure (0.21.0) — CORRECTION gouvernée d'un mois DÉJÀ inscrit dans T_Structure.
+# Besoin STRUCTUREL (pièce tardive, avoir, oubli), pas un incident. Jumeau de inscrire_cout_structure :
+# MÊME cible figée, MÊME `_mois_en_iso`, MÊME cran VALIDÉ (table-des-crans v1.16) — mais précondition
+# INVERSE : la ligne du mois DOIT exister (sinon refus « rien à corriger », jamais de création
+# déguisée). Écriture = PATCH itemAt de la ligne existante, JAMAIS un append : l'anti-doublon des
+# deux primitives est préservé par construction.
+# --------------------------------------------------------------------------------------------
+
+def _entrees_correction_ok():
+    return dict(mois="2026-07-01", montant=2860.67, proposition_id="ZP-2026-07-correction")
+
+
+def _ligne_juillet(montant=706.84):
+    """La ligne réellement inscrite sur le tenant le 01/08 (épreuve T-0032)."""
+    return ["2026-07-01", "fonctionnement-reel", montant]
+
+
+def test_corriger_cout_structure_chemin_nominal_patch_puis_relecture(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(70) CHEMIN NOMINAL : la ligne de 2026-07-01 existe à 706.84 → correction à 2860.67 → un PATCH
+    itemAt(index=0) portant les colonnes §5.3 dans l'ordre, relecture à 2860.67, et TOUJOURS UNE SEULE
+    ligne (jamais un append). L'ancien montant est rendu — la correction est auditable."""
+    client = _FauxClientStructure(rows=[_ligne_juillet()])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    res = fn(None, **_entrees_correction_ok())
+
+    patches = [(u, c) for (m, u, c) in client.appels if m == "PATCH"]
+    assert len(patches) == 1, "exactement un PATCH."
+    assert patches[0][0].endswith("/rows/itemAt(index=0)"), "la ligne EXISTANTE est adressée par index."
+    assert patches[0][1] == {"values": [["2026-07-01", "fonctionnement-reel", 2860.67]]}, \
+        "colonnes §5.3 dans l'ordre, PosteCout figé, NOUVEAU montant."
+    assert not [c for (m, _u, c) in client.appels if m == "POST"], "une correction n'APPEND jamais."
+    assert client.rows == [["2026-07-01", "fonctionnement-reel", 2860.67]], "une seule ligne, corrigée."
+    assert res["mois"] == "2026-07-01" and res["poste"] == "fonctionnement-reel"
+    assert res["ancien_montant"] == 706.84 and res["nouveau_montant"] == 2860.67
+    assert res["proposition_id"] == "ZP-2026-07-correction", "le fil d'audit est tracé."
+    assert res["ligne_relue"] == {"Mois": "2026-07-01", "PosteCout": "fonctionnement-reel", "Montant": 2860.67}
+
+
+def test_corriger_cout_structure_mois_absent_refuse_sans_ecriture(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(71) SÉMANTIQUE INVERSE de l'idempotence : AUCUNE ligne pour ce mois → RuntimeError « rien à
+    corriger », et AUCUNE écriture (ni PATCH ni POST) — jamais de création déguisée (c'est le rôle
+    exclusif d'inscrire_cout_structure, qui porte la porte humaine de la 1re inscription)."""
+    autres = [["2026-06-01", "fonctionnement-reel", 500]]   # un AUTRE mois, pas celui demandé
+    client = _FauxClientStructure(rows=autres)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    with pytest.raises(RuntimeError, match="[Rr]ien à corriger"):
+        fn(None, **_entrees_correction_ok())
+    assert not [c for (m, _u, c) in client.appels if m in ("PATCH", "POST")], \
+        "mois absent → zéro écriture."
+    assert client.rows == autres, "la table est intacte."
+
+
+def test_corriger_cout_structure_config_absente_leve_configmanquante(_sans_porte, monkeypatch):
+    """(72) GRAPH_REF_STRUCTURE_* absentes → ConfigManquante, AVANT tout réseau (fail-closed, comme le jumeau)."""
+    monkeypatch.delenv("GRAPH_REF_STRUCTURE_DRIVE_ID", raising=False)
+    monkeypatch.delenv("GRAPH_REF_STRUCTURE_ITEM_ID", raising=False)
+
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une config « réf. structure » absente.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.corriger_cout_structure)
+    with pytest.raises(server.ConfigManquante):
+        fn(None, **_entrees_correction_ok())
+
+
+@pytest.mark.parametrize("champ,valeur", [
+    ("mois", "2026-07-15"),      # pas le 1er du mois
+    ("mois", "2026-13-01"),      # mois calendaire invalide
+    ("mois", "juillet"),         # pas une date ISO
+    ("mois", ""),                # vide
+    ("montant", 0),              # pas > 0
+    ("montant", -100),           # négatif
+    ("montant", "pasunnombre"),  # pas un nombre
+    ("proposition_id", ""),      # obligatoire (fil d'audit de la correction)
+    ("proposition_id", "   "),
+])
+def test_corriger_cout_structure_preconditions_refusees_avant_reseau(
+    _sans_porte, _ref_structure_factice, champ, valeur, monkeypatch
+):
+    """(73) Précondition non tenue (mois pas au 1er / invalide, NOUVEAU montant ≤ 0, proposition_id
+    manquant) → ValueError AVANT toute ouverture de client httpx — mêmes gardes que le jumeau."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une précondition non tenue.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.corriger_cout_structure)
+    entrees = _entrees_correction_ok()
+    entrees[champ] = valeur
+    with pytest.raises(ValueError):
+        fn(None, **entrees)
+
+
+def test_corriger_cout_structure_schema_divergent_refuse(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(74) GARDE ANTI-DIVERGENCE à l'exécution : en-têtes servis ≠ §5.3 → RuntimeError et AUCUNE
+    écriture — on ne PATCHe pas des cellules à l'aveugle dans le mauvais ordre."""
+    client = _FauxClientStructure(rows=[_ligne_juillet()], columns=("Mois", "PosteCout"))
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    with pytest.raises(RuntimeError):
+        fn(None, **_entrees_correction_ok())
+    assert not [c for (m, _u, c) in client.appels if m in ("PATCH", "POST")], \
+        "schéma divergent → aucune écriture."
+
+
+def test_corriger_cout_structure_plusieurs_lignes_du_mois_refuse(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(75) UNICITÉ : si la source porte DEUX lignes du même mois (anomalie), on REFUSE — on ne devine
+    pas laquelle corriger ; réconciliation gardien. Aucune écriture."""
+    client = _FauxClientStructure(rows=[_ligne_juillet(), _ligne_juillet(999)])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    with pytest.raises(RuntimeError, match="[Aa]nomalie"):
+        fn(None, **_entrees_correction_ok())
+    assert not [c for (m, _u, c) in client.appels if m in ("PATCH", "POST")], "anomalie → aucune écriture."
+
+
+def test_corriger_cout_structure_ne_touche_que_la_ligne_du_mois(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(76) CIBLAGE : parmi plusieurs lignes (autre mois, autre poste), seule celle du mois demandé ET
+    du poste FIGÉ est corrigée — l'index PATCHé est bien le sien, les autres lignes sont intactes."""
+    rows = [
+        ["2026-06-01", "fonctionnement-reel", 500],   # autre mois
+        ["2026-07-01", "autre-poste", 111],           # bon mois, MAUVAIS poste
+        _ligne_juillet(),                             # la cible, en 3e position (index 2)
+    ]
+    client = _FauxClientStructure(rows=rows)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    fn(None, **_entrees_correction_ok())
+
+    patches = [u for (m, u, _c) in client.appels if m == "PATCH"]
+    assert len(patches) == 1 and patches[0].endswith("/rows/itemAt(index=2)")
+    assert client.rows[0] == ["2026-06-01", "fonctionnement-reel", 500], "autre mois intact."
+    assert client.rows[1] == ["2026-07-01", "autre-poste", 111], "autre poste intact."
+    assert client.rows[2] == ["2026-07-01", "fonctionnement-reel", 2860.67], "seule la cible est corrigée."
+
+
+def test_corriger_cout_structure_mois_serial_excel_reconnu(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(77) ACQUIS 0.20.1 RÉUTILISÉ : la source porte le mois en SÉRIAL Excel (46204 = 2026-07-01, la
+    forme RÉELLE relue sur le tenant). La correction (a) RECONNAÎT la ligne, (b) la PATCHe, (c) passe
+    sa post-vérification alors que la relecture rend, à nouveau, un sérial — aucun faux-rouge."""
+    serial = _iso_vers_serial_excel("2026-07-01")
+    assert serial == 46204, "sérial Excel de 2026-07-01 (époque 1899-12-30)."
+    client = _FauxClientStructureSerialExcel(rows=[[46204, "fonctionnement-reel", 706.84]])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    res = fn(None, **_entrees_correction_ok())
+
+    assert res["ancien_montant"] == 706.84 and res["nouveau_montant"] == 2860.67
+    assert res["ligne_relue"] == {"Mois": 46204, "PosteCout": "fonctionnement-reel", "Montant": 2860.67}, \
+        "la ligne relue (sérial) est reconnue comme celle du mois corrigé — pas de faux-rouge."
+    assert client.rows == [[46204, "fonctionnement-reel", 2860.67]], "une seule ligne, au nouveau montant."
+
+
+def test_corriger_cout_structure_honore_l_index_servi_par_graph(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(78) Quand Graph sert un champ `index` sur la ligne, c'est LUI qui adresse le PATCH (et non la
+    position dans la réponse) — sinon on corrigerait la mauvaise ligne. À défaut d'`index`, la position
+    fait foi (chemin exercé par tous les autres tests, dont le nominal)."""
+    class _ClientIndexDecale(_FauxClientStructure):
+        def get(self, url, headers=None, params=None):
+            if url.endswith("/rows"):
+                self.appels.append(("GET", url, params))
+                # Graph annonce que cette unique ligne occupe l'index 7 de la table.
+                return _RepWb(200, {"value": [{"index": 7, "values": [list(self.rows[0])]}]})
+            return super().get(url, headers, params)
+
+        def patch(self, url, headers=None, json=None):
+            self.appels.append(("PATCH", url, json))
+            for ligne in (json or {}).get("values", []):
+                self.rows[0] = self._stocker(ligne)   # une seule ligne réelle, quel que soit l'index annoncé
+            return _RepWb(self._patch_status, {})
+
+    client = _ClientIndexDecale(rows=[_ligne_juillet()])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    fn(None, **_entrees_correction_ok())
+
+    patches = [u for (m, u, _c) in client.appels if m == "PATCH"]
+    assert len(patches) == 1 and patches[0].endswith("/rows/itemAt(index=7)"), \
+        "l'index servi par Graph adresse le PATCH."
+
+
+def test_corriger_cout_structure_cible_figee_classeur_et_table(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(79) CIBLE FIGÉE : tous les appels (GET comme PATCH) visent le classeur DRIVE-REF /
+    ITEM-REFSTRUCT et la table T_Structure — l'appelant n'a fourni aucun drive/item/table/poste."""
+    client = _FauxClientStructure(rows=[_ligne_juillet()])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.corriger_cout_structure)
+
+    fn(None, **_entrees_correction_ok())
+
+    attendu = "/drives/DRIVE-REF/items/ITEM-REFSTRUCT/workbook/tables/T_Structure"
+    assert client.appels, "au moins un appel réseau."
+    for (m, u, _c) in client.appels:
+        assert attendu in u, f"appel {m} hors de la cible figée : {u}"
+
+
+def test_corriger_cout_structure_ne_prend_aucune_cible_libre():
+    """(80) Signature : corriger_cout_structure n'expose AUCUN drive_id / item_id / table / poste /
+    index — cible figée par construction ; l'appelant ne fournit que mois / montant / proposition_id.
+    L'index de la ligne est RÉSOLU côté serveur, jamais reçu (sinon on pourrait écraser n'importe quoi)."""
+    params = _params(server.corriger_cout_structure)
+    assert params == {"mois", "montant", "proposition_id"}
+    for interdit in ("drive_id", "item_id", "table", "poste", "poste_cout", "classeur", "index", "ligne"):
+        assert interdit not in params
+
+
+def test_corriger_cout_structure_est_au_cran_valide():
+    """(81) Le cran de corriger_cout_structure est VALIDÉ — jumeau d'inscrire_cout_structure : même
+    donnée financière à audience restreinte, même porte humaine (table-des-crans v1.16)."""
+    assert server.CRAN_PAR_OUTIL["corriger_cout_structure"] == "valide"
+    assert server.CRAN_PAR_OUTIL["corriger_cout_structure"] == server.CRAN_PAR_OUTIL["inscrire_cout_structure"]
+
+
+def test_inscrire_et_corriger_ont_des_preconditions_exclusives(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(82) INVARIANT DE LA PAIRE : sur un même état de source, exactement UNE des deux primitives peut
+    agir. Registre VIDE → inscrire passe, corriger refuse. Mois DÉJÀ inscrit → inscrire refuse, corriger
+    passe. Aucun état où les deux écrivent : le doublon est impossible par construction."""
+    inscrire = _sous_jacente(server.inscrire_cout_structure)
+    corriger = _sous_jacente(server.corriger_cout_structure)
+
+    # (a) registre VIDE : corriger REFUSE (rien à corriger), inscrire PASSE.
+    vide = _FauxClientStructure(rows=[])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: vide)
+    with pytest.raises(RuntimeError):
+        corriger(None, **_entrees_correction_ok())
+    assert vide.rows == [], "corriger n'a rien créé."
+    inscrire(None, mois="2026-07-01", montant=706.84, proposition_id="ZP-2026-07")
+    assert vide.rows == [["2026-07-01", "fonctionnement-reel", 706.84]]
+
+    # (b) mois DÉJÀ inscrit (le registre ci-dessus) : inscrire REFUSE, corriger PASSE.
+    with pytest.raises(RuntimeError):
+        inscrire(None, mois="2026-07-01", montant=2860.67, proposition_id="ZP-bis")
+    corriger(None, **_entrees_correction_ok())
+    assert vide.rows == [["2026-07-01", "fonctionnement-reel", 2860.67]], \
+        "une seule ligne du mois, au montant corrigé — jamais deux."
