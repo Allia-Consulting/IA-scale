@@ -225,6 +225,13 @@ export interface ModeleRentabilite {
 /** Mention affichée sur la ligne EBITDA quand le référentiel de coûts n'est pas accessible. */
 export const MENTION_REFERENTIEL_RESTREINT = 'référentiel à audience restreinte';
 
+/**
+ * Mention affichée sur la ligne EBITDA dès qu'au moins une cellule est masquée parce qu'une ressource
+ * porte des jours (prévus ou réalisés) sur un mois sans coût jour au référentiel (§3 bandeau 4 :
+ * jamais un zéro inventé). Une ressource PRÉSENTE avec CoutJour = 0 est une donnée valide, elle ne masque rien.
+ */
+export const MENTION_COUTJOUR_MANQUANT = 'CoutJour manquant au référentiel';
+
 function celluleVide(): CelluleRentabilite {
   return { budget: PLACEHOLDER, realise: PLACEHOLDER };
 }
@@ -272,6 +279,34 @@ function coutsMois(
     }
   }
   return s;
+}
+
+/**
+ * Y a-t-il, sur ce mois et pour ce régime, au moins une ressource portant des jours > 0 SANS entrée
+ * de coût jour au référentiel ? Un tel mois ne peut pas produire un EBITDA honnête : la part de coût
+ * de cette ressource serait comptée 0 (§3 bandeau 4 — jamais un zéro inventé), donc la cellule est
+ * masquée. Une ressource PRÉSENTE dans la map (y compris à CoutJour 0) est une donnée valide : le
+ * test porte sur `couts.has`, pas sur la valeur — 0 déclaré ≠ absent.
+ */
+function coutJourManquantMois(
+  contenus: ReadonlyArray<ContenuGabarit>,
+  couts: Map<string, number>,
+  annee: number,
+  moisIndex0: number,
+  regime: 'budget' | 'realise'
+): boolean {
+  for (const c of contenus) {
+    if (regime === 'budget') {
+      for (const a of c.affectations) {
+        if (memeMois(a.mois, annee, moisIndex0) && (a.joursPrevus ?? 0) > 0 && !couts.has(a.ressource)) { return true; }
+      }
+    } else {
+      for (const i of c.imputations) {
+        if (memeMois(i.mois, annee, moisIndex0) && (i.joursRealises ?? 0) > 0 && !couts.has(i.ressource)) { return true; }
+      }
+    }
+  }
+  return false;
 }
 
 /** Σ Montant (T_Structure) d'un mois. */
@@ -323,23 +358,33 @@ export function construireRentabilite(etat: EtatGabarits, annee: number): Modele
     const couts = coutParRessource(etat);
     const cells: CelluleRentabilite[] = [];
     let ebBudTotal = 0, ebBudAny = false, ebRealTotal = 0, ebRealAny = false;
+    let coutJourManquant = false; // au moins une cellule masquée faute de coût jour au référentiel
     for (let m = 0; m < 12; m++) {
       const struct = structureMois(etat, annee, m);
       let budStr = PLACEHOLDER, realStr = PLACEHOLDER;
       if (caBudMois[m] !== undefined) {
-        const eb = (caBudMois[m] as number) - coutsMois(contenus, couts, annee, m, 'budget') - struct;
-        budStr = formaterEuros(eb); ebBudTotal += eb; ebBudAny = true;
+        if (coutJourManquantMois(contenus, couts, annee, m, 'budget')) {
+          coutJourManquant = true; // cellule masquée « · », hors Total — jamais un coût compté 0
+        } else {
+          const eb = (caBudMois[m] as number) - coutsMois(contenus, couts, annee, m, 'budget') - struct;
+          budStr = formaterEuros(eb); ebBudTotal += eb; ebBudAny = true;
+        }
       }
       if (caRealMois[m] !== undefined) {
-        const eb = (caRealMois[m] as number) - coutsMois(contenus, couts, annee, m, 'realise') - struct;
-        realStr = formaterEuros(eb); ebRealTotal += eb; ebRealAny = true;
+        if (coutJourManquantMois(contenus, couts, annee, m, 'realise')) {
+          coutJourManquant = true; // cellule masquée « · », hors Total — jamais un coût compté 0
+        } else {
+          const eb = (caRealMois[m] as number) - coutsMois(contenus, couts, annee, m, 'realise') - struct;
+          realStr = formaterEuros(eb); ebRealTotal += eb; ebRealAny = true;
+        }
       }
       cells.push({ budget: budStr, realise: realStr });
     }
     ebitda = {
       libelle: 'EBITDA',
       cellules: cells,
-      total: { budget: ebBudAny ? formaterEuros(ebBudTotal) : PLACEHOLDER, realise: ebRealAny ? formaterEuros(ebRealTotal) : PLACEHOLDER }
+      total: { budget: ebBudAny ? formaterEuros(ebBudTotal) : PLACEHOLDER, realise: ebRealAny ? formaterEuros(ebRealTotal) : PLACEHOLDER },
+      mention: coutJourManquant ? MENTION_COUTJOUR_MANQUANT : undefined
     };
   }
 
