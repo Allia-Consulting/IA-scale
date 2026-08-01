@@ -1,0 +1,34 @@
+---
+id: T-0046
+titre: "Rituel des temps — déclaration mensuelle du réalisé, écran de déclaration, orchestration"
+capacite: "Socle d'exploitation — chaîne économique distribuée / couche de saisie, temps déclarés"
+phase: 1
+type_action: infrastructure
+cran: valide   # touche la couche de saisie (source humaine) et, à terme, une surface d'écriture déléguée du cockpit — rayon firme
+produit:
+  - "(règle — RITUEL, gravée) modele-donnees.md §5.6 v1.29 : déclaration MENSUELLE du réalisé par chaque collaborateur, sur sa ligne à la position du mois, à la clôture (M+1, 2e jour ouvré) — le présent candidat"
+  - "(épreuve — à jouer) PREMIÈRE DÉRIVATION RÉELLE de la mission 4 (saisie-4-CockpitM365.xlsx, gabarit-4 instancié le 26/07 jamais peuplé) après la première déclaration du rituel (juillet : 5 j Yousra, déclarés par le gardien — bootstrap) : non-régression du dérivateur v1.6 sur saisie fraîche, contrôles §4 ter, rapport de passage, relecture cockpit"
+  - "(nommé, non construit) ÉCRAN DE DÉCLARATION DE TEMPS : surface qui présente au collaborateur ses missions et son prévisionnel et écrit sa déclaration dans SA saisie sous son identité DÉLÉGUÉE (jamais l'identité machine) ; exige une évolution de tour-de-controle.md (§1/§4, cockpit lecture seule sur l'économique)"
+  - "(nommé, non construit) ORCHESTRATION du rituel : rappel de clôture, contrôle de complétude (déclarants attendus vs lignes déclarées), déclenchement de la dérivation — aujourd'hui gestes manuels du gardien"
+depend_de:
+  - T-0045   # lecteur fidèle de la saisie + dérivateur du Réalisé (soldé 01/08)
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"     # §5.6 rituel (v1.29, ce candidat)
+  - "contrats/socle/tour-de-controle.md"   # écran de déclaration futur (évolution nommée, non ouverte)
+criteres_acceptation:
+  - "Un mois déclaré par le rituel se dérive fidèlement jusqu'au gabarit (Σ douze positions == TOTAL + miroir mission, §4 ter) et se lit au cockpit"
+  - "La déclaration n'est JAMAIS écrite par une identité machine (droit read, §5.6) ; l'écran futur écrira sous identité déléguée du déclarant"
+  - "RÉCURRENCE : un deuxième mois déclaré et dérivé par le même rituel (même famille de preuve que le contrôle mensuel T-0032)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Institué en session S46 (01/08/2026 au soir). Arbitrages gardien : cadence MENSUELLE (l'option
+  hebdomadaire proposée est écartée) ; écran de déclaration NOMMÉ comme surface future (le
+  collaborateur déclarera fonction de ses missions et de son prévisionnel) ; première épreuve en
+  bootstrap — le gardien déclare POUR Yousra (5 j, mission 4, juillet 2026). Détail opératoire fixé
+  par l'architecte : clôture au 2e jour ouvré de M+1, pour que contrôle de structure (T-0032),
+  dérivation et EBITDA réalisé s'enchaînent derrière. Le rituel n'existait NULLE PART au canon
+  avant cette fiche (leçon S44/S45 : la §5.6 n'en portait aucun — il était à INSTITUER, pas à
+  lire). État du réel au nommage : saisie-4-CockpitM365.xlsx existe (modifiée 31/07),
+  gabarit-4.xlsx existe VIERGE (instancié 26/07, jamais peuplé), Yousra au référentiel
+  T_Ressources (CoutJour 418,35).
