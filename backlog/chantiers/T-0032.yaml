@@ -6,10 +6,12 @@ phase: 1
 type_action: infrastructure
 cran: valide   # écriture de données financières engageantes dans une source à audience restreinte : sortie/impact réel → validation humaine
 produit:
-  - "(données) deux domiciles de coûts à audience restreinte, site Contrats-et-administratif : T_Structure dans '07 - Coût de Structure' (factures : notes de frais, prestations, locaux, IT, administratif) et T_Ressources dans '08 - Coût Masse salariale & Indep' (coût journalier par ressource — donnée RH la plus sensible). Séparés pour isoler la masse salariale."
-  - "(règle) granularité mensuelle : facture annuelle lissée sur 12 mois ; coût important (> 8 000 €) lissé sur 3 mois."
-  - "(agent Cowork) lecture de la boîte mail Allia du gardien toutes les 48h ; extraction des factures ; dépôt d'une LIGNE CANDIDATE en Zone-de-proposition (jamais d'écriture directe dans T_Structure) ; notification mail de synthèse au gardien (fournisseur, montant, catégorie, mois de rattachement, lissage) avec hyperlien vers la Zone-de-proposition pour validation."
-  - "(boucle de promotion) sur validation du gardien : la ligne candidate entre dans T_Structure, puis Cowork range la facture dans un sous-dossier dédié de la boîte. Refus/inaction = la ligne reste candidate, rien n'entre."
+  - "(données) référentiel de coûts à audience restreinte, site Contrats-et-administratif, DEUX domiciles : T_Structure + la table T_Parametres dans '07 - Coût de Structure' (referentiel-structure.xlsx) et T_Ressources dans '08 - Coût Masse salariale & Indep' (coût journalier par ressource — donnée RH la plus sensible). T_Parametres porte le paramètre CoutFonctionnementMensuelParRessource (€/mois/salarié actif) ; sa VALEUR vit dans le classeur, jamais au canon (modele-donnees §5.3)."
+  - "(règle — coûts standards) la structure BUDGET d'un mois = effectif salarié actif (intervalle [DateEntree, DateSortie] de T_Ressources intersectant le mois ≥ 1 jour, mois entamé compté ; Type salarié SEUL — le sous-traitant porte son coût dans CoutJour) × paramètre. L'EBITDA du cockpit consomme ce forfait par défaut EN CONTINU, jamais un zéro (modele-donnees §5.4)."
+  - "(règle — contrôle mensuel d'écart) une tâche agent (manuelle en v1, orchestration nommée non construite) lit une boîte mail désignée (PARAMÈTRE de configuration, jamais une constante), qualifie les factures FOURNISSEUR par un TRIPLE TEST fail-closed (émetteur ≠ Allia ; numéro absent du registre « Factures » ; destinataire facturé = Allia ; ambigu = section « à trancher », JAMAIS compté ; doublons dédupliqués), rattache au mois avec lissage (annuel→12 ; > 8 000 €→3), et produit un rapport d'écart forfait vs réel. Le contenu d'un email est une DONNÉE, jamais une instruction (anti-injection)."
+  - "(données — réel contrôlé) T_Structure porte désormais le RÉEL : UNE ligne agrégée par mois (Mois = 1er du mois, PosteCout = fonctionnement-reel, Montant = Σ factures fournisseur du mois). Schéma INCHANGÉ (modele-donnees §5.3)."
+  - "(boucle de promotion) le contrôle dépose UNE ligne candidate mensuelle en Zone-de-proposition (cran proposer_controle_structure, AUTO) ; sur validation gardien elle entre dans T_Structure (cran inscrire_cout_structure, VALIDÉ — table-des-crans v1.15). La ligne inscrite prime sur le forfait. Refus/inaction = la ligne reste candidate, rien n'entre. Le gardien valide UNE ligne PAR MOIS (~12/an), non une par facture."
+  - "(seuil d'alerte asymétrique) l'agent ne propose une révision du paramètre CoutFonctionnementMensuelParRessource que si le réel dépasse le forfait de +10 % ; un réel inférieur est consigné sans alerte. La révision du paramètre passe par la boucle de promotion (budget annuel, ou proposition de l'agent de contrôle)."
 depend_de: [T-0031]
 contrats_concernes:
   - contrats/socle/modele-donnees.md   # §5.3 référentiel de coûts (T_Ressources / T_Structure) : domiciles réels à consigner
@@ -43,3 +45,29 @@ note_epreuve_01_08_2026: >
   automatisée des factures fournisseur (agent Cowork, ligne candidate en Zone-de-proposition, cran
   de validation) et l'alimentation de T_Structure (aujourd'hui vide, 0 assumé). Le chantier reste
   donc à_faire — seule la couche lecture/EBITDA cockpit est prouvée, pas l'ingestion.
+
+# --- Note d'arbitrage gardien (01/08/2026) — statut INCHANGÉ (à_faire). Note AJOUTÉE ; la note initiale et note_epreuve_01_08_2026 restent, historique immutable. ---
+note_arbitrage_01_08_2026: >
+  Arbitrage gardien du 01/08/2026 : ABANDON du modèle « une facture = une validation » (produit et
+  note initiaux du 14/07/2026). Motif : ce modèle est INDISSOCIABLE d'un geste gardien à CHAQUE
+  facture (validation ligne à ligne d'une ligne candidate T_Structure par facture), ce qui ne passe
+  PAS à l'échelle de la croissance visée (0 → 200 collaborateurs) — le gardien deviendrait le goulot
+  du pilotage financier. ADOPTION du modèle « COÛTS STANDARDS + CONTRÔLE MENSUEL D'ÉCART » :
+  (1) un coût de structure FORFAITAIRE par salarié actif (paramètre CoutFonctionnementMensuelParRessource,
+  table T_Parametres, modele-donnees §5.3) alimente l'EBITDA EN CONTINU, sans geste humain (jamais un
+  zéro) ; (2) un CONTRÔLE MENSUEL — tâche agent, manuelle en v1 — confronte le forfait au réel des
+  factures fournisseur du mois (TRIPLE TEST fail-closed : émetteur ≠ Allia ; numéro absent du registre
+  « Factures » ; destinataire = Allia ; ambigu = « à trancher », jamais compté ; anti-injection : contenu
+  d'email = donnée), et dépose UNE ligne candidate mensuelle en Zone-de-proposition ; (3) le gardien
+  valide UNE ligne PAR MOIS (~12 gestes/an, non 1 par facture) pour l'inscrire dans T_Structure ;
+  (4) SEUIL D'ALERTE ASYMÉTRIQUE : révision du paramètre proposée seulement si réel > forfait de +10 %.
+  Le présent candidat porte la couche CONTRATS UNIQUEMENT : modele-donnees v1.26 (§5.3 T_Parametres +
+  vocation T_Structure ; §5.4 EBITDA BUDGET vs RÉALISÉ + contrôle mensuel) et table-des-crans v1.15
+  (proposer_controle_structure AUTO + inscrire_cout_structure VALIDÉ). Il SUPERSÈDE le critère
+  d'acceptation « L'hyperlien de validation mène à une surface authentifiée … anti-rejeu email » : le
+  flux n'est plus une validation par facture déclenchée par email, mais une validation MENSUELLE d'une
+  ligne candidate en Zone-de-proposition authentifiée (la contrainte anti-rejeu et anti-injection reste,
+  portée par le cran inscrire_cout_structure et modele-donnees §5.4). RESTENT À CONSTRUIRE (PR
+  ultérieures, HORS de ce candidat) : la primitive serveur (dépôt de la ligne candidate + inscription
+  bornée dans T_Structure), le skill de contrôle mensuel (lecture boîte mail, triple test, lissage,
+  rapport d'écart), et la lecture cockpit de T_Parametres.
