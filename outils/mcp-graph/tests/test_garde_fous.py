@@ -1545,3 +1545,223 @@ def test_t_echeancier_porte_etiquettelocale_en_position_contractuelle():
     assert "EtiquetteLocale" in echeancier, "EtiquetteLocale absente — régression de l'écart 3g."
     assert echeancier.index("EtiquetteLocale") == 2, "EtiquetteLocale doit suivre CodeMission (§5.2)."
     assert len(echeancier) == 8, "T_Echeancier v1.25 a 8 en-têtes."
+
+
+# --------------------------------------------------------------------------------------------
+# inscrire_cout_structure — inscription du coût de structure RÉEL (T-0032), table T_Structure
+# Écriture SOURCE bornée par construction : cible FIGÉE (classeur referentiel-structure.xlsx via
+# GRAPH_REF_STRUCTURE_*, table T_Structure, PosteCout figé « fonctionnement-reel »), fail-closed,
+# idempotente par (Mois, fonctionnement-reel), sur validation d'une ligne candidate (proposition_id).
+# Cran VALIDÉ (table-des-crans v1.15). Miroir gouverné de allouer_num_facture.
+# --------------------------------------------------------------------------------------------
+
+class _FauxClientStructure:
+    """Client httpx factice pour inscrire_cout_structure (table Workbook T_Structure).
+
+    Maintient l'état des lignes `self.rows` (chaque ligne = liste de valeurs, ordre des colonnes).
+      - GET  .../columns → en-têtes physiques (self._columns) au format Workbook (statut columns_status) ;
+      - GET  .../rows    → lignes courantes {"values": [[...]]} ;
+      - POST .../rows    → append ({"index": None, "values": [[...]]}) → grandit self.rows (statut post_status).
+    Enregistre chaque appel dans self.appels [(méthode, url, corps|params)]."""
+
+    def __init__(self, rows=None, columns=None, columns_status=200, post_status=201):
+        self.rows = [list(r) for r in (rows or [])]
+        self._columns = list(columns) if columns is not None else list(server.ENTETES_T_STRUCTURE)
+        self._columns_status = columns_status
+        self._post_status = post_status
+        self.appels = []
+        self.entetes_appels = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get(self, url, headers=None, params=None):
+        self.appels.append(("GET", url, params))
+        self.entetes_appels.append(("GET", url, headers or {}))
+        if url.endswith("/columns"):
+            if self._columns_status != 200:
+                return _RepWb(self._columns_status, {})
+            value = [
+                {"name": nom, "values": [[nom]] + [[r[j] if j < len(r) else ""] for r in self.rows]}
+                for j, nom in enumerate(self._columns)
+            ]
+            return _RepWb(200, {"value": value})
+        if url.endswith("/rows"):
+            return _RepWb(200, {"value": [{"values": [list(r)]} for r in self.rows]})
+        return _RepWb(200, {})
+
+    def post(self, url, headers=None, json=None):
+        self.appels.append(("POST", url, json))
+        self.entetes_appels.append(("POST", url, headers or {}))
+        if url.endswith("/rows"):
+            for ligne in (json or {}).get("values", []):
+                self.rows.append(list(ligne))
+        return _RepWb(self._post_status, {})
+
+
+@pytest.fixture
+def _ref_structure_factice(monkeypatch):
+    """Config réf. structure valide + jeton neutralisé, pour exercer le corps réseau (mocké) de
+    l'inscription. Aucun secret ; aucune variable d'environnement réelle requise."""
+    monkeypatch.setattr(
+        server, "_config_ref_structure",
+        lambda: {"drive_id": "DRIVE-REF", "item_id": "ITEM-REFSTRUCT"},
+    )
+    monkeypatch.setattr(server, "_entetes", lambda: {"Authorization": "Bearer faketoken"})
+
+
+def _entrees_structure_ok():
+    return dict(mois="2026-07-01", montant=66000, proposition_id="ZP-2026-07-structure")
+
+
+# --- ANTI-DIVERGENCE de projection (leçon S45) : ENTETES_T_STRUCTURE recopie modele-donnees §5.3.
+# Le contrat FAIT FOI (Mois, PosteCout, Montant, dans l'ordre). Ce littéral casse la CI si la
+# projection serveur diverge du schéma T_Structure — rejeu de la classe de bug de l'écart 3g.
+_ENTETES_CONTRAT_53 = ("Mois", "PosteCout", "Montant")
+
+
+def test_entetes_t_structure_projette_exactement_modele_donnees_53():
+    """(57) ANTI-DIVERGENCE : ENTETES_T_STRUCTURE == §5.3 (Mois, PosteCout, Montant), dans l'ordre.
+    Casse la CI si la projection serveur diverge du contrat (leçon S45)."""
+    assert server.ENTETES_T_STRUCTURE == _ENTETES_CONTRAT_53
+
+
+def test_poste_cout_structure_reel_est_fige():
+    """(58) Le PosteCout du réel est figé côté serveur = « fonctionnement-reel » (§5.3, une ligne/mois)."""
+    assert server.POSTE_STRUCTURE_REEL == "fonctionnement-reel"
+
+
+def test_inscrire_cout_structure_config_absente_leve_configmanquante(_sans_porte, monkeypatch):
+    """(59) GRAPH_REF_STRUCTURE_* absentes → ConfigManquante, AVANT tout réseau (fail-closed, pas de fallback)."""
+    monkeypatch.delenv("GRAPH_REF_STRUCTURE_DRIVE_ID", raising=False)
+    monkeypatch.delenv("GRAPH_REF_STRUCTURE_ITEM_ID", raising=False)
+
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une config « réf. structure » absente.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+    with pytest.raises(server.ConfigManquante):
+        fn(None, **_entrees_structure_ok())
+
+
+@pytest.mark.parametrize("champ,valeur", [
+    ("mois", "2026-07-15"),      # pas le 1er du mois
+    ("mois", "2026-13-01"),      # mois calendaire invalide
+    ("mois", "juillet"),         # pas une date ISO
+    ("mois", ""),                # vide
+    ("montant", 0),              # pas > 0
+    ("montant", -100),           # négatif
+    ("montant", "pasunnombre"),  # pas un nombre
+    ("proposition_id", ""),      # obligatoire (fil d'audit)
+    ("proposition_id", "   "),
+])
+def test_inscrire_cout_structure_preconditions_refusees_avant_reseau(
+    _sans_porte, _ref_structure_factice, champ, valeur, monkeypatch
+):
+    """(60) Précondition non tenue (mois pas au 1er / invalide, montant ≤ 0, proposition_id manquant)
+    → ValueError, AVANT toute ouverture de client httpx (fail-closed, rien écrit)."""
+    class _ClientInterdit:
+        def __init__(self, *a, **k):
+            raise AssertionError("client httpx instancié malgré une précondition non tenue.")
+
+    monkeypatch.setattr(server.httpx, "Client", _ClientInterdit)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+    entrees = _entrees_structure_ok()
+    entrees[champ] = valeur
+    with pytest.raises(ValueError):
+        fn(None, **entrees)
+
+
+def test_inscrire_cout_structure_doublon_mois_refuse_sans_ecriture(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(61) IDEMPOTENCE : une ligne (Mois, « fonctionnement-reel ») déjà présente pour ce mois →
+    RuntimeError (REFUS explicite), et AUCUN POST (jamais d'écrasement, jamais de doublon)."""
+    existant = [["2026-07-01", "fonctionnement-reel", 50000]]
+    client = _FauxClientStructure(rows=existant)
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+    with pytest.raises(RuntimeError):
+        fn(None, **_entrees_structure_ok())
+    assert not [c for (m, _u, c) in client.appels if m == "POST"], "aucune écriture si le mois est déjà inscrit."
+
+
+def test_inscrire_cout_structure_schema_divergent_refuse(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(62) GARDE ANTI-DIVERGENCE à l'exécution : si T_Structure ne sert pas EXACTEMENT les en-têtes
+    §5.3, l'écriture est refusée (RuntimeError) et AUCUN POST (fail-closed, pas d'écriture aveugle)."""
+    client = _FauxClientStructure(columns=("Mois", "PosteCout"))  # « Montant » manquant → divergence
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+    with pytest.raises(RuntimeError):
+        fn(None, **_entrees_structure_ok())
+    assert not [c for (m, _u, c) in client.appels if m == "POST"], "schéma divergent → aucune écriture."
+
+
+def test_inscrire_cout_structure_chemin_nominal_append_puis_relecture(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(63) CHEMIN NOMINAL : registre vide → validations → /columns → /rows (idempotence) → append
+    d'UNE ligne (Mois, fonctionnement-reel, Montant, dans l'ordre §5.3) → relecture → retour tracé."""
+    client = _FauxClientStructure(rows=[])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+
+    res = fn(None, mois="2026-07-01", montant=66000, proposition_id="ZP-2026-07-structure")
+
+    posts = [c for (m, _u, c) in client.appels if m == "POST"]
+    assert len(posts) == 1, "exactement un append."
+    assert posts[0] == {"index": None, "values": [["2026-07-01", "fonctionnement-reel", 66000]]}, \
+        "la ligne écrite porte les colonnes §5.3 dans l'ordre, PosteCout figé, montant intègre."
+    assert res["mois"] == "2026-07-01"
+    assert res["poste"] == "fonctionnement-reel"
+    assert res["montant"] == 66000
+    assert res["proposition_id"] == "ZP-2026-07-structure", "le fil d'audit (proposition_id) est tracé."
+    assert res["ligne_relue"] == {"Mois": "2026-07-01", "PosteCout": "fonctionnement-reel", "Montant": 66000}
+
+
+def test_inscrire_cout_structure_normalise_le_mois_au_premier(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(64) « 2026-07-01 » est écrit au 1er du mois (v1.26 : une ligne agrégée par mois) ; un montant
+    intégral flottant (66000.0) est écrit sans « .0 »."""
+    client = _FauxClientStructure(rows=[])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+
+    res = fn(None, mois="2026-07-01", montant=66000.0, proposition_id="ZP-1")
+
+    assert res["mois"] == "2026-07-01" and res["montant"] == 66000
+    assert client.rows == [["2026-07-01", "fonctionnement-reel", 66000]]
+
+
+def test_inscrire_cout_structure_cible_figee_classeur_et_table(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(65) CIBLE FIGÉE : tous les appels visent le classeur (DRIVE-REF / ITEM-REFSTRUCT) et la table
+    T_Structure, et RIEN d'autre — l'appelant n'a fourni aucun drive/item/table/poste."""
+    client = _FauxClientStructure(rows=[])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+
+    fn(None, **_entrees_structure_ok())
+
+    attendu = "/drives/DRIVE-REF/items/ITEM-REFSTRUCT/workbook/tables/T_Structure"
+    assert client.appels, "au moins un appel réseau."
+    for (m, u, _c) in client.appels:
+        assert attendu in u, f"appel {m} hors de la cible figée : {u}"
+
+
+def test_inscrire_cout_structure_ne_prend_aucune_cible_libre():
+    """(66) Signature : inscrire_cout_structure n'expose AUCUN drive_id / item_id / table / poste —
+    cible figée par construction ; l'appelant ne fournit que mois / montant / proposition_id."""
+    params = _params(server.inscrire_cout_structure)
+    assert params == {"mois", "montant", "proposition_id"}
+    for interdit in ("drive_id", "item_id", "table", "poste", "poste_cout", "classeur"):
+        assert interdit not in params

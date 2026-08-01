@@ -3,7 +3,7 @@
 Allia · couture M365 (voir `contrats/socle/modele-donnees.md`). Chantier `backlog/chantiers/T-0002b.yaml`
 (sous-tâche `T-0002b-1` : transport stdio → HTTP streamable + identité managée).
 
-Ce serveur expose SEIZE opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
+Ce serveur expose DIX-SEPT opérations à un agent, via le Model Context Protocol (transport HTTP streamable) :
 
     - list_items                  : LIT les éléments d'une liste SharePoint (lecture seule).
     - create_list_item            : CRÉE un élément UNIQUEMENT dans la « Zone-de-proposition ».
@@ -21,8 +21,9 @@ Ce serveur expose SEIZE opérations à un agent, via le Model Context Protocol (
     - workbook_maj_ligne          : MET À JOUR une ligne par POSITION dans une table du GABARIT — cible FIGÉE « 06 - Gabarit ERP » (écriture bornée par construction).
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
     - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve FROIDE « vierge » (en-têtes §5.2 + lignes de corps VIDES tolérées, la ligne d'insertion Excel — T-0035 reprise n°5), rollback borné ET VÉRIFIÉ. Plus aucune souche binaire.
+    - inscrire_cout_structure     : INSCRIT le coût de structure RÉEL d'un mois dans la table T_Structure du réf. de coûts — cible FIGÉE (classeur referentiel-structure.xlsx, GRAPH_REF_STRUCTURE_*, table T_Structure, PosteCout figé « fonctionnement-reel »), écriture SOURCE bornée sur validation d'une ligne candidate (proposition_id), idempotente par (Mois, fonctionnement-reel) — jamais d'écrasement ni de doublon, cran VALIDÉ (T-0032).
 
-(Compte des opérations = 16 outils réellement décorés ; un `grep` du décorateur d'outil retourne 17,
+(Compte des opérations = 17 outils réellement décorés ; un `grep` du décorateur d'outil retourne 18,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
 
 Transport & santé :
@@ -157,6 +158,11 @@ CRAN_PAR_OUTIL = {
     "workbook_ajouter_lignes": "auto",
     "workbook_maj_ligne": "auto",
     "workbook_archiver_gabarit": "auto",
+    # Inscription du coût de structure réel (T-0032) : écriture SOURCE à cible figée (classeur
+    # referentiel-structure.xlsx, table T_Structure, PosteCout figé), à AUDIENCE RESTREINTE et
+    # alimentant le pilotage (EBITDA §5.4) — irréversible côté source : cran VALIDÉ (porte humaine
+    # avant l'action), sur le modèle gouverné de allouer_num_facture (table-des-crans v1.15).
+    "inscrire_cout_structure": "valide",
 }
 
 
@@ -227,6 +233,17 @@ TABLES_GABARIT = (
 ENV_NOTIFICATIONS_LIST_ID = "GRAPH_NOTIFICATIONS_LIST_ID"  # liste « Notifications » (SEULE cible de notifier_canal — relais vers Teams par flux M365)
 ENV_CRM_LIST_ID = "GRAPH_CRM_LIST_ID"  # liste « CRM » (SEULE cible de allouer_code_mission — écriture de la colonne CodeMission uniquement, T-0038)
 ENV_FACTURES_LIST_ID = "GRAPH_FACTURES_LIST_ID"  # liste « Factures » (SEULE cible de allouer_num_facture — registre du NumFacture, MÊME site que « CRM », T-0030)
+ENV_REF_STRUCTURE_DRIVE_ID = "GRAPH_REF_STRUCTURE_DRIVE_ID"  # drive du réf. de coûts (SEULE cible d'écriture de inscrire_cout_structure — classeur referentiel-structure.xlsx, T-0032)
+ENV_REF_STRUCTURE_ITEM_ID = "GRAPH_REF_STRUCTURE_ITEM_ID"    # driveItem du classeur referentiel-structure.xlsx (item FIGÉ — jamais choisi par l'appelant)
+
+# Table T_Structure du référentiel de coûts — PROJECTION machine de contrats/socle/modele-donnees.md
+# §5.3 (en-têtes figés ; le CONTRAT fait foi, cette constante en est la recopie). inscrire_cout_structure
+# (T-0032) n'écrit QUE cette table, dans CE classeur, avec CES colonnes — jamais T_Parametres, jamais
+# T_Ressources, jamais un autre classeur (aucune cible acceptée de l'appelant). Le PosteCout est figé
+# côté serveur à « fonctionnement-reel » : le réel de fonctionnement est une ligne AGRÉGÉE par mois (v1.26).
+TABLE_STRUCTURE = "T_Structure"
+ENTETES_T_STRUCTURE = ("Mois", "PosteCout", "Montant")
+POSTE_STRUCTURE_REEL = "fonctionnement-reel"
 
 # Arbre FIGÉ d'un espace de mission (aucun choix de l'appelant) — convention « NN - Nom », dans cet ordre.
 # Le support de kick-off se dépose dans « 01 - Pilotage » (décision gardien, amendement n°2 après test 0.8.0).
@@ -733,6 +750,38 @@ def _config_factures() -> dict[str, str]:
             "Configuration « Factures » incomplète. Variables d'environnement manquantes : "
             f"{absentes}. Liste « Factures » créée et id posé au runbook T-0030. "
             "Voir outils/mcp-graph/README.md."
+        )
+    return valeurs
+
+
+def _config_ref_structure() -> dict[str, str]:
+    """Lit la configuration du réf. de coûts « structure » (cible FIGÉE de inscrire_cout_structure, T-0032).
+
+    Config DÉDIÉE, sur le modèle de `_config_factures()` / `_config_gabarit()` : les autres outils ne
+    dépendent PAS de ces variables (aucune régression de leur contrat). L'inscription lit sa propre
+    configuration et échoue clairement (ConfigManquante) si l'une manque — FAIL-CLOSED, aucun fallback,
+    aucune valeur au canon. Aucun secret (identité managée).
+
+    Deux cibles FIGÉES côté serveur (jamais choisies par l'appelant) :
+        - drive_id : drive du site Contrats-et-administratif hébergeant le référentiel de coûts ;
+        - item_id  : classeur `referentiel-structure.xlsx` (« 07 - Coût de Structure ») — le SEUL
+          classeur que inscrire_cout_structure lit et écrit (table T_Structure, §5.3).
+    """
+    valeurs = {
+        "drive_id": os.environ.get(ENV_REF_STRUCTURE_DRIVE_ID, ""),
+        "item_id": os.environ.get(ENV_REF_STRUCTURE_ITEM_ID, ""),
+    }
+    manquantes = [k for k, v in valeurs.items() if not v]
+    if manquantes:
+        noms_env = {
+            "drive_id": ENV_REF_STRUCTURE_DRIVE_ID,
+            "item_id": ENV_REF_STRUCTURE_ITEM_ID,
+        }
+        absentes = ", ".join(noms_env[k] for k in manquantes)
+        raise ConfigManquante(
+            "Configuration « référentiel structure » incomplète. Variables d'environnement "
+            f"manquantes : {absentes}. Classeur referentiel-structure.xlsx (07 - Coût de Structure) "
+            "et ses coordonnées tenant posés au runbook gardien (T-0032). Voir outils/mcp-graph/README.md."
         )
     return valeurs
 
@@ -1773,6 +1822,226 @@ def allouer_num_facture(
             f"(dernière cause : {derniere_cause}). Élément « {item_id} » créé ; réconciliation "
             "gardien requise (aucune suppression automatique, aucun numéro recyclé)."
         )
+
+
+# --- Inscription du coût de structure réel (T-0032) — table T_Structure du réf. de coûts ------
+# Miroir gouverné de allouer_num_facture (T-0030), cran VALIDÉ : cible FIGÉE côté serveur (classeur
+# referentiel-structure.xlsx via GRAPH_REF_STRUCTURE_*, table T_Structure, colonnes §5.3 uniquement),
+# l'appelant ne choisit NI le classeur NI la table NI le PosteCout (figé « fonctionnement-reel »). Ce
+# n'est pas allouer_num_facture (qui écrit une LISTE et alloue une séquence légale) : ici on APPEND une
+# ligne à une TABLE Workbook (API Workbook/Tables) sur validation d'une ligne candidate (proposition_id).
+_RE_MOIS_ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
+
+
+def _valider_mois_premier(mois: Any) -> str:
+    """Valide que `mois` est une date ISO « AAAA-MM-JJ » au 1er du mois (jour == 1). Retourne « AAAA-MM-01 ».
+
+    v1.26 (§5.3) : le réel de fonctionnement est une ligne AGRÉGÉE par mois — le mois est donc porté au
+    1er du mois, jamais une date intra-mois. Fail-closed : toute forme douteuse = ValueError, avant réseau."""
+    if not isinstance(mois, str) or not mois.strip():
+        raise ValueError("`mois` doit être une chaîne date non vide (1er du mois, ex. « 2026-07-01 »).")
+    m = _RE_MOIS_ISO.match(mois.strip())
+    if not m:
+        raise ValueError(f"`mois` doit être une date ISO « AAAA-MM-JJ » (reçu : {mois!r}). Rien écrit.")
+    annee, moisnum, jour = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    try:
+        datetime(annee, moisnum, jour)
+    except ValueError:
+        raise ValueError(f"`mois` n'est pas une date valide (reçu : {mois!r}). Rien écrit.")
+    if jour != 1:
+        raise ValueError(
+            f"`mois` doit être le 1er du mois (jour == 1) — une ligne agrégée par mois, §5.3 (reçu : {mois!r})."
+        )
+    return f"{annee:04d}-{moisnum:02d}-01"
+
+
+def _valider_montant_structure(montant: Any) -> float | int:
+    """Valide que `montant` est un nombre strictement positif. Retourne un int si intégral (évite « 1234.0 »)."""
+    try:
+        m = float(montant)
+    except (TypeError, ValueError):
+        raise ValueError(f"`montant` doit être un nombre (reçu : {montant!r}). Rien écrit.")
+    if not m > 0:
+        raise ValueError(f"`montant` doit être strictement positif (reçu : {m}). Rien écrit.")
+    return int(m) if m.is_integer() else m
+
+
+def _valider_proposition_id(proposition_id: Any) -> str:
+    """Valide que `proposition_id` (id de la ligne candidate validée en Zone-de-proposition) est non vide.
+
+    C'est le FIL D'AUDIT du cran validé : la primitive consigne d'où vient l'inscription. Fail-closed."""
+    if not isinstance(proposition_id, str) or not proposition_id.strip():
+        raise ValueError(
+            "`proposition_id` obligatoire : id de la ligne candidate VALIDÉE en Zone-de-proposition "
+            "(fil d'audit du cran validé). Rien écrit."
+        )
+    return proposition_id.strip()
+
+
+def _mois_cle_comparaison(valeur: Any) -> str:
+    """Clé de comparaison d'un mois : « AAAA-MM » extrait d'une valeur de cellule (repli littéral).
+
+    inscrire_cout_structure écrit `Mois` en « AAAA-MM-01 » ; à la relecture Graph rend une chaîne date.
+    On compare sur l'année-mois (le jour est toujours 01 par construction)."""
+    s = str(valeur).strip()
+    m = re.match(r"^(\d{4})-(\d{2})", s)
+    return f"{m.group(1)}-{m.group(2)}" if m else s
+
+
+def _entetes_physiques_t_structure(client_http: httpx.Client, base_table_url: str) -> list[str]:
+    """Lit les en-têtes PHYSIQUES de T_Structure (/columns) et les confronte à la projection §5.3.
+
+    GARDE ANTI-DIVERGENCE À L'EXÉCUTION (leçon S45, en plus du test statique) : si les en-têtes servis
+    ne sont pas EXACTEMENT (comme ensemble) ceux du contrat, on REFUSE d'écrire (fail-closed) plutôt que
+    de poser des cellules à l'aveugle dans le mauvais ordre. Retourne l'ordre PHYSIQUE (pour aligner la
+    ligne écrite). Lecture seule ; honore Retry-After sur 429/503."""
+    rep = _get_crm_avec_backoff(client_http, f"{base_table_url}/columns")
+    rep.raise_for_status()
+    noms = [c.get("name") for c in rep.json().get("value", [])]
+    if set(noms) != set(ENTETES_T_STRUCTURE):
+        raise RuntimeError(
+            f"Schéma T_Structure divergent : en-têtes servis {noms!r} ≠ contrat §5.3 "
+            f"{list(ENTETES_T_STRUCTURE)!r}. Écriture REFUSÉE (fail-closed) — réconciliation gardien requise."
+        )
+    return noms
+
+
+def _lire_lignes_t_structure(
+    client_http: httpx.Client, base_table_url: str, noms: list[str]
+) -> list[dict[str, Any]]:
+    """Lit les lignes de T_Structure (/rows) et les mappe {en-tête physique: valeur}. Lecture seule."""
+    rep = _get_crm_avec_backoff(client_http, f"{base_table_url}/rows")
+    rep.raise_for_status()
+    lignes: list[dict[str, Any]] = []
+    for row in rep.json().get("value", []):
+        valeurs = row.get("values") or [[]]
+        cellules = valeurs[0] if valeurs else []
+        lignes.append({nom: (cellules[i] if i < len(cellules) else None) for i, nom in enumerate(noms)})
+    return lignes
+
+
+def _post_workbook_rows_avec_backoff(client_http: httpx.Client, url: str, valeurs_ligne: list):
+    """POST append d'UNE ligne à une table Workbook (index:null), honorant Retry-After sur 429/503 (borné)."""
+    entetes = {**_entetes(), "Content-Type": "application/json"}
+    corps = {"index": None, "values": [valeurs_ligne]}
+    reponse = client_http.post(url, headers=entetes, json=corps)
+    for _ in range(2):
+        if reponse.status_code not in _STATUTS_TRANSITOIRES_CRM:
+            break
+        time.sleep(_delai_retry_after(reponse))
+        reponse = client_http.post(url, headers=entetes, json=corps)
+    return reponse
+
+
+@mcp.tool()
+@_journal_appel("inscrire_cout_structure")
+def inscrire_cout_structure(
+    ctx: Context, mois: str, montant: float, proposition_id: str
+) -> dict[str, Any]:
+    """INSCRIT le coût de structure RÉEL d'un mois dans la table T_Structure du référentiel de coûts.
+
+    Modèle « coûts standards + contrôle mensuel d'écart » (T-0032, modele-donnees §5.3/§5.4) : sur
+    validation gardien d'une LIGNE CANDIDATE déposée en Zone-de-proposition, la machine inscrit le réel
+    contrôlé du mois — une ligne AGRÉGÉE (Mois, PosteCout = « fonctionnement-reel », Montant = Σ des
+    factures fournisseur du mois qualifiées). Cran VALIDÉ (table-des-crans v1.15 : inscrire_cout_structure)
+    — écriture d'une donnée financière à audience restreinte qui alimente le pilotage, porte humaine avant
+    l'action.
+
+    Cible FIGÉE côté serveur par GRAPH_REF_STRUCTURE_DRIVE_ID + GRAPH_REF_STRUCTURE_ITEM_ID
+    (`_config_ref_structure()`), table `T_Structure` en dur, PosteCout figé « fonctionnement-reel » :
+    l'outil est STRUCTURELLEMENT INCAPABLE d'écrire T_Parametres, T_Ressources ou tout autre classeur —
+    l'appelant ne fournit AUCUN drive_id / item_id / nom de table / poste. Il ne fournit que le mois, le
+    montant, et l'id de la ligne candidate validée.
+
+    Garde-fous inscrits dans le code (fail-closed, AVANT toute écriture, dans cet ordre) :
+        1. `_config_ref_structure()` : variables d'environnement présentes, sinon ConfigManquante (aucun
+           fallback, aucune cible par défaut) ;
+        2. `mois` = date ISO au 1er du mois (jour == 1), sinon ValueError (une ligne agrégée par mois) ;
+        3. `montant` nombre strictement positif, sinon ValueError ;
+        4. PosteCout FIGÉ à « fonctionnement-reel » côté serveur — pas un paramètre ;
+        5. IDEMPOTENCE : le référentiel est lu D'ABORD ; s'il porte déjà une ligne (Mois,
+           « fonctionnement-reel ») pour ce mois → REFUS explicite (RuntimeError), la ligne existante
+           citée — jamais d'écrasement, jamais de doublon (aucune primitive de suppression) ;
+        6. `proposition_id` obligatoire (id de la ligne candidate validée) — tracé dans le retour, c'est
+           le fil d'audit du cran validé.
+    Une GARDE ANTI-DIVERGENCE à l'exécution confronte en plus les en-têtes servis par T_Structure à la
+    projection contractuelle §5.3 (`ENTETES_T_STRUCTURE`) : un schéma divergent REFUSE l'écriture. Après
+    l'append, la ligne est RELUE et rendue (post-vérification). Retry-After honoré sur 429/503 (GET/POST).
+
+    Args:
+        mois: mois de rattachement, date ISO au 1er du mois (ex. « 2026-07-01 »).
+        montant: coût de structure réel du mois, en euros (nombre > 0) — Σ des factures fournisseur.
+        proposition_id: id de la ligne candidate VALIDÉE en Zone-de-proposition (fil d'audit).
+
+    Returns:
+        dict {"mois", "poste", "montant", "proposition_id", "ligne_relue"} — la ligne inscrite, relue
+        depuis T_Structure (mappée {en-tête: valeur}).
+
+    Raises:
+        ValueError: précondition non tenue (mois, montant, proposition_id invalides).
+        RuntimeError: doublon (Mois, fonctionnement-reel) déjà présent ; schéma T_Structure divergent ;
+            ou ligne introuvable à la relecture — réconciliation gardien requise (jamais de suppression).
+        ConfigManquante: GRAPH_REF_STRUCTURE_DRIVE_ID / GRAPH_REF_STRUCTURE_ITEM_ID absentes.
+    """
+    _verifier_appelant(ctx)
+
+    cfg = _config_ref_structure()                     # (1) env présentes, sinon ConfigManquante
+    mois_norm = _valider_mois_premier(mois)           # (2) 1er du mois
+    montant_norm = _valider_montant_structure(montant)  # (3) > 0
+    prop = _valider_proposition_id(proposition_id)    # (6) obligatoire, fil d'audit
+    # (4) PosteCout figé côté serveur : POSTE_STRUCTURE_REEL — jamais un paramètre.
+
+    base_table = (
+        f"{GRAPH_BASE}/drives/{cfg['drive_id']}/items/{cfg['item_id']}"
+        f"/workbook/tables/{TABLE_STRUCTURE}"
+    )
+    cle_mois = _mois_cle_comparaison(mois_norm)
+    with httpx.Client(timeout=30) as client_http:
+        # Garde anti-divergence à l'exécution + ordre physique des colonnes.
+        noms = _entetes_physiques_t_structure(client_http, base_table)
+        # (5) IDEMPOTENCE : lire T_Structure d'abord, refuser tout doublon (Mois, fonctionnement-reel).
+        lignes = _lire_lignes_t_structure(client_http, base_table, noms)
+        deja = [
+            d for d in lignes
+            if _mois_cle_comparaison(d.get("Mois")) == cle_mois
+            and str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+        ]
+        if deja:
+            raise RuntimeError(
+                f"Coût de structure déjà inscrit pour {mois_norm} (PosteCout « {POSTE_STRUCTURE_REEL} ») : "
+                f"ligne existante {deja[0]!r}. REFUS (jamais d'écrasement ni de doublon) — révision = boucle "
+                "de promotion (§5.3), pas une réinscription."
+            )
+
+        # Écriture : append d'UNE ligne, alignée sur l'ordre PHYSIQUE des colonnes.
+        valeur_par_nom = {"Mois": mois_norm, "PosteCout": POSTE_STRUCTURE_REEL, "Montant": montant_norm}
+        ligne_valeurs = [valeur_par_nom[nom] for nom in noms]
+        rep_post = _post_workbook_rows_avec_backoff(client_http, f"{base_table}/rows", ligne_valeurs)
+        rep_post.raise_for_status()
+
+        # Post-vérification : relire et rendre la ligne inscrite.
+        apres = _lire_lignes_t_structure(client_http, base_table, noms)
+        relue = next(
+            (
+                d for d in apres
+                if _mois_cle_comparaison(d.get("Mois")) == cle_mois
+                and str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+            ),
+            None,
+        )
+        if relue is None:
+            raise RuntimeError(
+                f"Ligne inscrite pour {mois_norm} introuvable à la relecture — état incertain, "
+                "réconciliation gardien requise (aucune suppression automatique)."
+            )
+
+    return {
+        "mois": mois_norm,
+        "poste": POSTE_STRUCTURE_REEL,
+        "montant": montant_norm,
+        "proposition_id": prop,
+        "ligne_relue": relue,
+    }
 
 
 @mcp.tool()
