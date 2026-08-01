@@ -32,3 +32,30 @@ note: >
   lire). État du réel au nommage : saisie-4-CockpitM365.xlsx existe (modifiée 31/07),
   gabarit-4.xlsx existe VIERGE (instancié 26/07, jamais peuplé), Yousra au référentiel
   T_Ressources (CoutJour 418,35).
+note_epreuve_01_08_2026: >
+  ÉPREUVE VERTE, 01/08/2026 ~18h49 UTC — journal
+  docs/epreuves/2026-08-01-t0046-premiere-derivation-rituel.md. PREMIÈRE DÉRIVATION NÉE DU RITUEL
+  (mission 4) et non-régression du dérivateur consolidation-pilotage v1.6 sur une saisie FRAÎCHE,
+  mission jamais dérivée. Chaîne éprouvée : main 729e324, §5.6 v1.29 promu, skill v1.6 promu, image
+  serveur 0.22.0, saisie-4-CockpitM365.xlsx eTag {4A817C3E-…},15 (18:28:30Z). Déclaration du rituel
+  en bootstrap (le gardien déclare POUR Yousra) : 5 j, position 7, juillet 2026, sous son
+  identifiant §5.3. MESURES — Realise : 21 lignes servies, 1 retenue (entête technique « Nb. jours
+  ouvres max » + 19 lignes fantômes TOTAL=0 écartées), Σ douze positions 5 == TOTAL 5, miroir
+  mission 5 == 5 ; Prevu : Σ 109 == TOTAL 109 (6 mois) ; Facturation : 1 ligne
+  « 2026-07-cockpitM365 », 3 350 € HT, statut « a emettre » — AUCUNE ligne émise, donc
+  allouer_num_facture NON appelé et cran validé NON sollicité (épreuve intégralement en crans auto).
+  Sérials normalisés : 46204 = 2026-07-01, 46235 = 2026-08-01. Yousra PRÉSENTE dans T_Ressources,
+  identifiant identique caractère pour caractère — aucune anomalie §6. ÉCRITURE (bornée gabarit-4) :
+  archivage par DÉPLACEMENT gabarit-4-20260801T184907Z.xlsx (item_id de l'original conservé — preuve
+  que c'est un déplacement, pas une copie), ré-instanciation preuve FROIDE verte (lignes_vides:1 ×3),
+  repeuplement 6/1/1. PREUVES à froid : T_Imputations = 1 ligne et une seule
+  [4, yousra.boukiaou@allia-consulting.com, 46204, 5, « à valider »], AUCUN autre mois présent (les
+  onze mois vides sont ABSENTS, pas à zéro) ; §5 ter tous verts (6/1/1, Σ réalisé 5, Σ prévu 109,
+  Σ MontantHT 3 350). NON-RÉGRESSION : gabarit-1 {AFCF6079-…},9 et gabarit-2 {644CACC0-…},8 eTag ET
+  mtime INCHANGÉS ; l'eTag NEUF de gabarit-4 ({00125DF9-…},9) est attendu par construction
+  (régénération = fichier neuf, leçon T-0045), ce n'est pas un incident. INVARIANT TENU : la saisie
+  relue APRÈS écriture porte le même eTag {4A817C3E-…},15 — la machine n'a pas écrit la saisie, et
+  le droit (Sites.Selected role=read) le garantit avant le code. AUCUNE ANOMALIE. STATUT INCHANGÉ
+  à_faire : la RÉCURRENCE manque (un seul mois dérivé ; le 2e critère se jouera à la clôture
+  d'août), le rituel n'a pas encore été exercé par un collaborateur sur sa propre ligne, et l'écran
+  de déclaration comme l'orchestration restent NOMMÉS non construits.
