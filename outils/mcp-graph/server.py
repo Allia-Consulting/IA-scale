@@ -71,7 +71,7 @@ import logging
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -1878,14 +1878,63 @@ def _valider_proposition_id(proposition_id: Any) -> str:
     return proposition_id.strip()
 
 
-def _mois_cle_comparaison(valeur: Any) -> str:
-    """Clé de comparaison d'un mois : « AAAA-MM » extrait d'une valeur de cellule (repli littéral).
+# Époque des sérials Excel : le sérial 1 = 1900-01-01, mais Excel compte à tort le 29 février 1900 →
+# l'origine EFFECTIVE partagée par Excel et l'API Workbook est le 1899-12-30 (46204 = 2026-07-01, vérifié).
+# Une DATE PURE est un sérial ENTIER ; une éventuelle fraction (heure) est ignorée (Mois est une date).
+_EPOQUE_EXCEL = datetime(1899, 12, 30, tzinfo=timezone.utc)
+_RE_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")             # préfixe ISO (tolère un suffixe « T… »)
+_RE_DATE_EXCEL_US = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")   # « m/j/aaaa » (chaîne date Excel US)
 
-    inscrire_cout_structure écrit `Mois` en « AAAA-MM-01 » ; à la relecture Graph rend une chaîne date.
-    On compare sur l'année-mois (le jour est toujours 01 par construction)."""
-    s = str(valeur).strip()
-    m = re.match(r"^(\d{4})-(\d{2})", s)
-    return f"{m.group(1)}-{m.group(2)}" if m else s
+
+def _mois_en_iso(valeur: Any) -> str:
+    """Normalise une valeur de cellule « Mois » en date ISO « AAAA-MM-JJ », quelle que soit sa forme.
+
+    L'API Workbook restitue une cellule DATE de trois façons selon le formatage du classeur : un **SÉRIAL
+    Excel** (nombre — ex. `46204` pour 2026-07-01 ; époque 1899-12-30), une **chaîne ISO**
+    (« 2026-07-01 », éventuellement suffixée « T00:00:00Z »), ou une **chaîne date Excel** « m/j/aaaa ».
+    `inscrire_cout_structure` ÉCRIT « AAAA-MM-01 » mais ne contrôle pas la forme RELUE — incident du
+    01/08 : l'écriture réussissait, la post-vérification tombait en **FAUX-ROUGE** car la relecture rendait
+    le sérial et la comparaison ISO ne matchait jamais ; la garde d'idempotence portait le **même biais**
+    (risque de doublon). Même famille de piège que le faux-vert « ouvrabilité à froid » (§5.6, T-0035) : la
+    forme RELUE n'est pas la forme ÉCRITE — on la normalise, on ne la suppose pas.
+
+    FAIL-CLOSED : une valeur **inconvertible** lève `ValueError` (jamais de devinette silencieuse)."""
+    if valeur is None:
+        raise ValueError("valeur « Mois » vide (None) — inconvertible en date (fail-closed).")
+    if isinstance(valeur, bool):  # bool est un sous-type de int : refusé explicitement
+        raise ValueError(f"valeur « Mois » booléenne inconvertible : {valeur!r} (fail-closed).")
+
+    serial: float | None = None
+    if isinstance(valeur, (int, float)):
+        serial = float(valeur)
+    else:
+        s = str(valeur).strip()
+        if not s:
+            raise ValueError("valeur « Mois » vide — inconvertible en date (fail-closed).")
+        m = _RE_ISO_DATE.match(s)                       # 1. préfixe ISO « AAAA-MM-JJ »
+        if not m:
+            m = _RE_DATE_EXCEL_US.match(s)              # 2. « m/j/aaaa » → (annee, mois, jour)
+            if m:
+                mo, jour, annee = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                try:
+                    return datetime(annee, mo, jour).strftime("%Y-%m-%d")
+                except ValueError:
+                    raise ValueError(f"valeur « Mois » date invalide : {s!r} (fail-closed).")
+        else:
+            annee, mo, jour = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            try:
+                return datetime(annee, mo, jour).strftime("%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"valeur « Mois » ISO invalide : {s!r} (fail-closed).")
+        try:                                            # 3. chaîne purement numérique = sérial Excel textuel
+            serial = float(s)
+        except ValueError:
+            raise ValueError(f"valeur « Mois » inconvertible en date : {valeur!r} (fail-closed).")
+
+    try:                                                # sérial Excel → date (partie entière = jour)
+        return (_EPOQUE_EXCEL + timedelta(days=int(serial))).strftime("%Y-%m-%d")
+    except (ValueError, OverflowError):
+        raise ValueError(f"valeur « Mois » sérial hors bornes : {valeur!r} (fail-closed).")
 
 
 def _entetes_physiques_t_structure(client_http: httpx.Client, base_table_url: str) -> list[str]:
@@ -1995,16 +2044,19 @@ def inscrire_cout_structure(
         f"{GRAPH_BASE}/drives/{cfg['drive_id']}/items/{cfg['item_id']}"
         f"/workbook/tables/{TABLE_STRUCTURE}"
     )
-    cle_mois = _mois_cle_comparaison(mois_norm)
     with httpx.Client(timeout=30) as client_http:
         # Garde anti-divergence à l'exécution + ordre physique des colonnes.
         noms = _entetes_physiques_t_structure(client_http, base_table)
         # (5) IDEMPOTENCE : lire T_Structure d'abord, refuser tout doublon (Mois, fonctionnement-reel).
+        # Le poste est testé AVANT le mois (court-circuit) : `_mois_en_iso` ne normalise que les lignes
+        # du bon poste — une cellule Mois inconvertible d'un autre poste ne fait pas échouer la garde.
+        # `_mois_en_iso` neutralise le biais SÉRIAL/ISO (correctif 0.20.1) : la relecture Workbook peut
+        # rendre un sérial Excel là où l'on a écrit « AAAA-MM-01 ».
         lignes = _lire_lignes_t_structure(client_http, base_table, noms)
         deja = [
             d for d in lignes
-            if _mois_cle_comparaison(d.get("Mois")) == cle_mois
-            and str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+            if str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+            and _mois_en_iso(d.get("Mois")) == mois_norm
         ]
         if deja:
             raise RuntimeError(
@@ -2019,13 +2071,14 @@ def inscrire_cout_structure(
         rep_post = _post_workbook_rows_avec_backoff(client_http, f"{base_table}/rows", ligne_valeurs)
         rep_post.raise_for_status()
 
-        # Post-vérification : relire et rendre la ligne inscrite.
+        # Post-vérification : relire et rendre la ligne inscrite. Même normalisation SÉRIAL/ISO que la
+        # garde d'idempotence (correctif 0.20.1) — sinon FAUX-ROUGE quand la relecture rend un sérial.
         apres = _lire_lignes_t_structure(client_http, base_table, noms)
         relue = next(
             (
                 d for d in apres
-                if _mois_cle_comparaison(d.get("Mois")) == cle_mois
-                and str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+                if str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+                and _mois_en_iso(d.get("Mois")) == mois_norm
             ),
             None,
         )

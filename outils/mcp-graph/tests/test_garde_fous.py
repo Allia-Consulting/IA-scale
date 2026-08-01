@@ -1765,3 +1765,81 @@ def test_inscrire_cout_structure_ne_prend_aucune_cible_libre():
     assert params == {"mois", "montant", "proposition_id"}
     for interdit in ("drive_id", "item_id", "table", "poste", "poste_cout", "classeur"):
         assert interdit not in params
+
+
+# --------------------------------------------------------------------------------------------
+# Correctif 0.20.1 — le mois RELU n'est pas le mois ÉCRIT : l'API Workbook restitue un SÉRIAL Excel
+# là où l'on a écrit « AAAA-MM-01 » (incident tenant du 01/08 : écriture OK, post-vérification en
+# FAUX-ROUGE ; garde d'idempotence porteuse du même biais → risque de doublon). Un incident devient
+# une régression CI (leçon S38). `_mois_en_iso` normalise sérial / ISO / date Excel, fail-closed.
+# --------------------------------------------------------------------------------------------
+
+def _iso_vers_serial_excel(iso: str) -> int:
+    """Sérial Excel (jours depuis l'époque 1899-12-30 du serveur) d'une date ISO — comme le fait Excel."""
+    d = server.datetime.strptime(iso, "%Y-%m-%d").replace(tzinfo=server.timezone.utc)
+    return (d - server._EPOQUE_EXCEL).days
+
+
+class _FauxClientStructureSerialExcel(_FauxClientStructure):
+    """Comme `_FauxClientStructure`, mais RESTITUE la colonne `Mois` en SÉRIAL Excel — reproduit le
+    01/08 : la valeur ISO « AAAA-MM-01 » écrite est reconvertie en sérial au stockage, si bien que la
+    relecture (`/rows`) rend un NOMBRE, jamais la chaîne ISO écrite."""
+
+    def post(self, url, headers=None, json=None):
+        if url.endswith("/rows"):
+            self.appels.append(("POST", url, json))
+            self.entetes_appels.append(("POST", url, headers or {}))
+            for ligne in (json or {}).get("values", []):
+                l = list(ligne)
+                l[0] = _iso_vers_serial_excel(str(l[0]))  # col 0 = Mois → sérial Excel
+                self.rows.append(l)
+            return _RepWb(self._post_status, {})
+        return super().post(url, headers, json)
+
+
+def test_inscrire_cout_structure_incident_0108_mois_serial_excel(
+    _sans_porte, _ref_structure_factice, monkeypatch
+):
+    """(67) INCIDENT 01/08, rejoué : la relecture Workbook rend le mois en SÉRIAL Excel. Le correctif
+    0.20.1 fait que (a) la POST-VÉRIFICATION reconnaît la ligne (plus de faux-rouge) et (b) une SECONDE
+    inscription du même mois est REFUSÉE par la garde d'idempotence (jamais de doublon)."""
+    serial = _iso_vers_serial_excel("2026-07-01")
+    assert serial == 46204, "sérial Excel de 2026-07-01 (époque 1899-12-30)."
+    client = _FauxClientStructureSerialExcel(rows=[])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.inscrire_cout_structure)
+
+    # (a) 1re inscription : écriture ISO, relecture SÉRIAL → la post-vérification RECONNAÎT la ligne.
+    res = fn(None, mois="2026-07-01", montant=706.84, proposition_id="ZP-2026-07")
+    assert res["mois"] == "2026-07-01" and res["montant"] == 706.84
+    assert res["ligne_relue"] == {"Mois": 46204, "PosteCout": "fonctionnement-reel", "Montant": 706.84}, \
+        "la ligne relue (sérial Excel) est reconnue comme celle du mois écrit — plus de faux-rouge."
+    assert len([c for (m, _u, c) in client.appels if m == "POST"]) == 1
+
+    # (b) 2de inscription du MÊME mois (le registre porte désormais le sérial) → REFUS, aucun 2e POST.
+    with pytest.raises(RuntimeError):
+        fn(None, mois="2026-07-01", montant=999, proposition_id="ZP-2026-07-bis")
+    assert len([c for (m, _u, c) in client.appels if m == "POST"]) == 1, \
+        "aucune 2de écriture : la garde d'idempotence reconnaît le sérial comme 2026-07-01."
+
+
+@pytest.mark.parametrize("valeur,attendu", [
+    (46204, "2026-07-01"),        # sérial entier
+    (46204.0, "2026-07-01"),      # sérial flottant
+    ("46204", "2026-07-01"),      # sérial en chaîne
+    ("2026-07-01", "2026-07-01"), # ISO
+    ("2026-07-01T00:00:00Z", "2026-07-01"),  # ISO + heure
+    ("7/1/2026", "2026-07-01"),   # date Excel « m/j/aaaa »
+])
+def test_mois_en_iso_normalise_toutes_les_formes(valeur, attendu):
+    """(68) `_mois_en_iso` rend « AAAA-MM-JJ » depuis un sérial Excel (entier/flottant/chaîne), une
+    chaîne ISO (avec ou sans heure) ou une date Excel « m/j/aaaa »."""
+    assert server._mois_en_iso(valeur) == attendu
+
+
+@pytest.mark.parametrize("valeur", [None, "", "   ", "juillet", "abc", True, "2026-13-01", "13/40/2026"])
+def test_mois_en_iso_inconvertible_leve_valueerror(valeur):
+    """(69) FAIL-CLOSED : une valeur « Mois » inconvertible (vide, texte libre, booléen, date invalide)
+    lève ValueError — jamais de devinette silencieuse (c'est le repli littéral buggé qui est supprimé)."""
+    with pytest.raises(ValueError):
+        server._mois_en_iso(valeur)
