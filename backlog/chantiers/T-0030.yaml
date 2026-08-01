@@ -18,7 +18,7 @@ criteres_acceptation:
   - "La clé de réconciliation est (CodeMission, ÉtiquetteLocale) avant allocation, puis NumFacture une fois le numéro posé ; une re-ingestion ne réalloue jamais un numéro déjà attribué"
   - "Fusion incrémentale : mise à jour montant/échéance/statut sur ligne existante, ajout sur ligne neuve, jamais de suppression silencieuse (anomalie signalée)"
 rayon_impact: firme
-statut: à_faire
+statut: soldé   # 01/08/2026 : allocation automatique du NumFacture ÉPROUVÉE sur le réel (épreuve 3g VERTE) ; registre légal vivant à 5, séquence 1→5 sans trou. Ligne statut seule modifiée ; note d'historique AJOUTÉE ci-dessous, aucune ligne existante réécrite.
 note: >
   Nommé en session S34 (14/07/2026) en dérivation de la tuyauterie économique du cockpit.
   Origine : la colonne NumFacture de T_Echeancier ne peut être saisie à la main sans casser
@@ -27,3 +27,23 @@ note: >
   la présente tâche construit le registre et l'agent qui allouent et réconcilient. Chantier
   différé par arbitrage gardien hors du cap S34 (gabarit → MCP Workbook → consolidation →
   cockpit v3), à mener en session dédiée.
+
+# --- Solde S45 (01/08/2026) — note d'historique AJOUTÉE ; aucune ligne ci-dessus réécrite. ---
+avancement:
+  - date: 2026-08-01
+    fait: >
+      SOLDÉ par l'épreuve 3g VERTE (docs/epreuves/2026-08-01-t0030-t0035-epreuve-3g-verte.md).
+      L'allocation automatique du NumFacture est éprouvée sur le réel DANS LES DEUX SENS :
+      (1) allocation NEUVE — mission 2 (Datalab), geste « émise » → dérivation skill v1.5 →
+      allouer_num_facture = F-2026-0004 (idempotent false, item de registre neuf) ; (2) IDEMPOTENCE
+      stricte — mission 1 (Siteflow), re-dérivation → F-2026-001/002/003 rendus (idempotent true,
+      tentatives 0, registre intact, aucune réallocation). Registre « Factures » LÉGAL VIVANT à
+      5 éléments, séquence 1→5 SANS TROU ; clé (CodeMission, EtiquetteLocale) opérante ; la SAISIE
+      n'est JAMAIS écrite (§5.6, ETag inchangé) ; numéro alloué UNIQUEMENT à l'émission, jamais
+      recyclé. Outillage : outil MCP allouer_num_facture (T-0030, serveur 0.19.x — 0.19.0 initiale,
+      correctifs 0.19.1 idempotence/séquence et 0.19.2 projection §5.2 EtiquetteLocale), cran validé,
+      porte humaine tenue par le déclenchement manuel de la dérivation (skill v1.5, cran validé §7).
+      RÉSERVE NON BLOQUANTE (nommée, hors périmètre) : lecture PRÉCISE des saisies impossible
+      (403/accessDenied/connecteur lossy) → T_Imputations non dérivable fidèlement (écart 22 j
+      nommé, aucun mois forgé) ; frais refacturés sans modélisation en saisie (entrée directe
+      F-2026-0005 sur go gardien). Cause racine ouverte au chantier T-0045 (lecteur de saisie fidèle).

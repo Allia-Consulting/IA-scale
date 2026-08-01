@@ -21,7 +21,7 @@ criteres_acceptation:
   - "La page Tour-de-contrôle est le point d'entrée unique du site (bascule hub effectuée)"
   - "Les gestes d'écriture guidée (ex. « Émise ») et les cascades sont confirmés et suivent les crans en vigueur"
 rayon_impact: firme
-statut: en_cours
+statut: soldé   # 01/08/2026 : POINT 5 (facturation) SOLDÉ par l'épreuve 3g VERTE (docs/epreuves/2026-08-01-t0030-t0035-epreuve-3g-verte.md) ; points 1→4 déjà soldés → chantier soldé. Ligne statut seule modifiée ; historique ci-dessous AJOUTÉ, aucune ligne existante réécrite.
 note: >
   Nommé en session S35 (14/07/2026). Le contrat tour-de-controle.md v2.1 (promu) est la SPÉCIFICATION
   COMPLÈTE ET NORMATIVE : aucune re-conception n'est requise ni autorisée. État réel constaté le
@@ -277,6 +277,34 @@ avancement:
         (bascule « Gagnée ») avaient été éprouvées en S42 (T-0038, épreuve du 24/07). Point 4 soldé ;
         le chantier T-0035 reste en_cours pour le seul point 5 (facturation / statut « émise »).
         Journal d'épreuve : docs/epreuves/2026-07-26-t0039-gestes-recrutement.md (PR #264, mergée).
+    - date: 2026-08-01
+      fait: >
+        POINT 5 SOLDÉ — facturation bout-en-bout sur factures RÉELLES (épreuve 3g VERTE, S45).
+        Chaîne éprouvée dans les DEUX SENS : (a) mission 2 (Datalab, 31/07) — geste humain « émise »
+        (étiquette 2026-07-datalab) → dérivation skill consolidation-pilotage v1.5 → allocation NEUVE
+        allouer_num_facture = F-2026-0004 (idempotent false, item de registre neuf) ; archive
+        gabarit-2-20260731T165519Z, gabarit-2 neuf à 8 colonnes (T_Echeancier porte EtiquetteLocale,
+        projection §5.2 v1.25 = correctif 0.19.2) ; saisie-2 JAMAIS écrite (ETag ,4 inchangé) ; bandeau 5
+        juste (contre-sondes gardien). Premier passage stoppé PROPREMENT à l'ancrage périmé (l'épreuve
+        avait changé sous son propre correctif 0.19.2) — deuxième passage vert. (b) mission 1 (Siteflow,
+        01/08) — re-dérivation, ATTENDU STRICT tenu : trois numéros RENDUS par IDEMPOTENCE (F-2026-001/
+        002/003, idempotent true, tentatives 0, registre intact à 4) ; placeholders pré-migration
+        emportés par l'archive gabarit-1-20260801T092111Z ; Σ 133 200 € / 148 j ; saisie-1 jamais écrite.
+        Réconciliation du réel (gardien, 31/07) : PDF « N° 1..6 » raccordés à la séquence légale —
+        futurs au format F-2026-000N (N° 3/4 déjà envoyées en forme courte, écart de forme assumé,
+        séquence numérique continue) ; correction registre item 3 (19 800 €, DateEmission 31/07,
+        le PDF du 31/07 remplace celui du 28/07) ; entrée directe F-2026-0005 (frais Siteflow
+        mai-juin 796,63 €, étiquette 2026-0506-siteflow-frais — les frais refacturés n'ont pas de
+        modélisation en saisie, nommé T-0045) ; PDF N° 6 supprimé, ré-émission par la boucle. Registre
+        FINAL : 5 éléments, séquence 1→5 SANS TROU. ANOMALIES PERSISTANTES NOMMÉES (non résolues seul) :
+        lecture précise des saisies impossible (403 Workbook sur GRAPH_SAISIE_DRIVE_ID identité managée,
+        accessDenied délégué, connecteur M365 aplatit la grille) → T_Imputations dérivé à 2 lignes/39 j
+        contre 61 j au total saisie-1 (écart 22 j nommé, aucun mois forgé, positions déduites par
+        recoupement) — bloque le Réalisé (étape 4), cause racine ouverte en T-0045 ; convention MoisCA
+        date-série gabarit vs texte saisie (à arbitrer) ; mixité de forme 3/4 chiffres au registre
+        (héritage assumé, lecture \d{3,4} depuis 0.19.1). SOLDE : point 5 soldé → tous les points de
+        T-0035 soldés → chantier SOLDÉ (statut ci-dessus). T-0030 soldé conjointement (fiche propre).
+        Journal d'épreuve : docs/epreuves/2026-08-01-t0030-t0035-epreuve-3g-verte.md.
 
   reste_pour_solder:
     - "Point 2 — SOLDÉ le 19/07/2026 (S39) : régénération M1+M2 verte, lecture froide différée verte, rejeu cockpit vert le 19/07 à 16:28 (8 appels Workbook 200, bandeaux justes) ; correctifs porteurs PR #238 (scope Files.ReadWrite.All) + PR #239 (adressage par item id, 1.4.4.0 déployée) ; voir avancement.journal 2026-07-19 et docs/epreuves/2026-07-19-s39-epreuve-t0035-cockpit.md. HISTORIQUE DE LA REPRISE conservé ci-dessous : câblage réel CONSTRUIT (PR #232, 1.4.0.0), rendu AUTO-DIAGNOSTIQUANT (reprise n°1, 1.4.1.0), épreuve du réel qui a NOMMÉ la cause (« chemin hors des drives du site » ×8), CORRIGÉ pour la localisation (reprise n°2, 1.4.2.0), puis CAUSE RACINE DU 403 confirmée et corrigée dans la FABRICATION (reprise n°3, serveur 0.13.0 -> 0.14.0 : ré-émission service + preuve FROIDE sans session — gabarit ouvrable à froid). RESTE À REJOUER SUR LE RÉEL PAR LE GARDIEN, DANS L'ORDRE : (a) build+déploiement de l'image serveur 0.14.0 ; (b) ré-instanciation des gabarits (workbook_instancier_gabarit ×2) — la preuve FROIDE interne doit passer, puis lecture FROIDE en Graph DÉLÉGUÉ count:0 ×6 (là où l'ancienne fabrication rendait 403) ; (c) (re)déploiement du .sppkg cockpit 1.4.2.0 (déjà prêt) + vérification navigateur des 3 bandeaux — les gabarits doivent désormais être lus, plus aucune anomalie de fabrication ; toute anomalie résiduelle nommera encore sa cause exacte. REPRISE n°4 (régénération d'un gabarit EXISTANT rendue machine, serveur 0.14.0 -> 0.15.0 : workbook_archiver_gabarit copie -> DÉPLACEMENT, nom libéré ; orchestration de réconciliation dans le skill consolidation-pilotage v1.3). RESTE gardien : build+déploiement 0.15.0 ; promotion du skill v1.3 ; épreuve tenant = régénérer un gabarit existant (archiver-déplacer -> ré-instancier count:0 froid, plus de collision -> repeupler depuis la saisie -> relecture count + invariants), puis lecture froide en Graph délégué sur les tables régénérées"

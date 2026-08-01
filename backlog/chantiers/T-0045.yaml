@@ -1,0 +1,38 @@
+---
+id: T-0045
+titre: "Lecteur machine fidèle des classeurs de saisie (position de cellule exacte) — débloque le Réalisé"
+capacite: "Socle d'exploitation — chaîne économique distribuée / lecture fidèle de la couche de saisie"
+phase: 1
+type_action: outil
+cran: valide   # touche l'accès en lecture aux classeurs de saisie (drive Management et Gestion) et la dette Workbook de server.py — rayon firme, à instruire avec T-0032
+produit: []    # NOMMAGE SEUL — aucun code ici ; correctif à instruire à l'ouverture
+depend_de:
+  - T-0031   # primitives Workbook (workbook_lire_table) dont la lecture bute sur le drive de saisie
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"   # §5.2 T_Imputations (le Réalisé) ; §5.6 couche de saisie
+criteres_acceptation:
+  - "Une surface machine lit une table d'un classeur de SAISIE (racine Management et Gestion) avec la POSITION DE CELLULE EXACTE (grille ressource × mois non aplatie), sous une identité gouvernée au moindre privilège"
+  - "T_Imputations (le Réalisé) est dérivable FIDÈLEMENT : Σ jours réels = total de la grille de saisie, sans écart ni mois forgé (rejoue l'écart 22 j de l'épreuve 3g)"
+  - "Aucun mois n'est jamais forgé ni déduit par recoupement en l'absence de lecture fidèle : anomalie signalée, jamais résolue seule"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Nommé en session S45 (01/08/2026) par l'épreuve 3g VERTE (T-0030/T-0035 point 5 —
+  docs/epreuves/2026-08-01-t0030-t0035-epreuve-3g-verte.md). CAUSE RACINE : aucune surface
+  ne lit aujourd'hui les classeurs de SAISIE avec la position de cellule exacte. Trois voies
+  fermées, mesurées à l'épreuve : (a) workbook_lire_table (identité managée) rend 403 sur
+  GRAPH_SAISIE_DRIVE_ID (l'API Workbook n'est pas ouverte à l'app sur ce drive) ; (b) le token
+  DÉLÉGUÉ rend accessDenied ; (c) le connecteur M365 (surface humaine) APLATIT la grille
+  (ressource × mois), perdant les positions. CONSÉQUENCE : T_Imputations (le Réalisé, étape 4
+  de la séquence du skill consolidation-pilotage §5) n'est pas dérivable fidèlement — à l'épreuve,
+  2 lignes / 39 j dérivés contre 61 j au total réel de la saisie-1, écart de 22 j NOMMÉ, positions
+  déduites par recoupement, AUCUN mois forgé (fail-closed honnête). Le Réalisé reste donc le
+  maillon manquant de la chaîne économique, alors que le Prévu (T_Affectations) et l'Échéancier
+  (T_Echeancier, T-0030 soldé) sont vivants. À INSTRUIRE AVEC : la dette Workbook de
+  outils/mcp-graph/server.py (droits de lecture sur le drive de saisie, au moindre privilège —
+  jamais d'écriture sur la saisie, §5.6) et le rituel/temps (T-0032, référentiel & réalisé).
+  À Y ADOSSER (nommé, non construit) : la MODÉLISATION DES FRAIS REFACTURÉS EN SAISIE — les
+  frais refacturés (ex. frais Siteflow mai-juin, entrée directe F-2026-0005 au registre lors de
+  l'épreuve 3g) n'ont aujourd'hui aucune ligne d'échéancier source dans la saisie ; leur place
+  dans la couche de saisie reste à définir pour que leur facturation passe par la boucle plutôt
+  que par une entrée directe sur go gardien. NOMMAGE SEUL, aucun code ; non ouvert.
