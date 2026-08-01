@@ -31,3 +31,15 @@ note: >
   Zone-de-proposition, ligne candidate hébergée en Zone-de-proposition (patron create_list_item).
   L'app mobile de scan/déclaration des notes de frais (seule source collaborateur) est un jalon
   ULTÉRIEUR, hors de cette fiche.
+
+# --- Note d'épreuve S45 (01/08/2026) — statut INCHANGÉ (à_faire). Note AJOUTÉE ; aucune ligne réécrite. ---
+note_epreuve_01_08_2026: >
+  Le 01/08/2026, le volet RÉFÉRENTIEL de coûts + le calcul EBITDA du cockpit a été éprouvé sur le
+  réel (journal docs/epreuves/2026-08-01-ebitda-honnete-et-porte-t0043.md) : le référentiel
+  ressources '08' semi-vide depuis le 14/07 laissait des ressources non tarifées ; après saisie
+  gardien des CoutJour (referentiel-ressources ETag ,2→,5 : Yousra 418,35 / Guillaume 575,23,
+  A8 = abdelhak.chmaimi@gmail.com), l'EBITDA se calcule juste (contre-preuve : CA 216 500 −
+  EBITDA 150 500 = 66 000 = 120 j × 550 €, budget mission 2). RESTENT non construits : l'ingestion
+  automatisée des factures fournisseur (agent Cowork, ligne candidate en Zone-de-proposition, cran
+  de validation) et l'alimentation de T_Structure (aujourd'hui vide, 0 assumé). Le chantier reste
+  donc à_faire — seule la couche lecture/EBITDA cockpit est prouvée, pas l'ingestion.

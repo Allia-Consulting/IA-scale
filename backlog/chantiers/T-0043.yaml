@@ -15,7 +15,7 @@ criteres_acceptation:
   - "Un diff sous outils/tour-de-controle-spfx/ (artefact SPFx déployable en production) sort systématiquement RISQUE: large → porte humaine, jamais auto-merge"
   - "Un test de non-régression rejoue l'incident PR #263 (diff SPFx isolé → large) et échoue si la règle régresse"
 rayon_impact: firme
-statut: en_cours
+statut: soldé
 note: >
   Nommé en session S43 (26/07/2026) par l'épreuve T-0039. INCIDENT : la PR #263
   (cockpit 1.5.1.0, artefact .sppkg DÉPLOYABLE EN PRODUCTION) a été AUTO-MERGÉE
@@ -49,3 +49,13 @@ note_correctif_s45: >
   (SKILL.md isolé -> large), contre-cas docs/epreuves/ (reste « faible »). Statut en_cours :
   SOLDE à l'épreuve réelle — la prochaine PR sous skills/ ou outils/tour-de-controle-spfx/
   doit être TENUE en porte humaine (auto-approbation « skipping »), preuve à journaliser.
+
+# --- Solde S45 (01/08/2026) — épreuve réelle tenue. Note AJOUTÉE ; aucune ligne existante réécrite. ---
+note_solde_01_08_2026: >
+  SOLDÉ le 01/08/2026 par épreuve réelle sur PR #277 (correctif honnêteté EBITDA du cockpit,
+  head 1fd97bf4, merge gardien c3ecaaa0). La condition de solde est prouvée vivante : diff sous
+  outils/tour-de-controle-spfx/ → Avis d'impact RISQUE « large » (0 consommateur, DELEGUE non),
+  auto-approbation agent-gardien[bot] « skipped », merge par geste gardien EXPLICITE (jamais
+  auto-mergé, contrairement à l'incident fondateur #263). Le trou de chemin de #263 est refermé
+  et éprouvé : un artefact SPFx déployable ne franchit plus la porte sans le gardien. Journal :
+  docs/epreuves/2026-08-01-ebitda-honnete-et-porte-t0043.md.
