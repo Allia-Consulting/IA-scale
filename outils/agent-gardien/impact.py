@@ -80,6 +80,14 @@ PREFIXES_SENSIBLES_LARGE = (
     # Désormais TOUT diff sous ces deux arbres est « large » → porte humaine.
     "outils/tour-de-controle-spfx/",
     "skills/",
+    # Arbitrage gardien du 01/08/2026 (S46) : backlog/chantiers/ passe sensible
+    # après l'incident #290 — la PR qui portait « statut: soldé » de T-0045 fut
+    # auto-mergée en ~40 s (risque « faible » : docs+backlog). Un statut de
+    # chantier (à_faire/en_cours/soldé) est un ÉTAT DE VÉRITÉ : il ne passe
+    # jamais sans porte humaine. Même classe de trou que #263/#272 (le risque
+    # se déclare par CHEMIN — T-0037). backlog/plan.md RESTE hors porte :
+    # nommer un reste doit rester gratuit (contre-cas au test).
+    "backlog/chantiers/",
 )
 N_RAYON_LARGE = 3           # au-delà de N artefacts touchés : rayon large
 
