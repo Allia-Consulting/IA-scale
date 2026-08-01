@@ -22,8 +22,9 @@ Ce serveur expose DIX-SEPT opérations à un agent, via le Model Context Protoco
     - workbook_archiver_gabarit   : ARCHIVE le gabarit courant d'une mission par DÉPLACEMENT horodaté vers « 00 - Old » (libère le nom pour la régénération) — synchrone, borné, réversible.
     - workbook_instancier_gabarit : INSTANCIE le gabarit d'une mission par FABRICATION SERVICE (API Workbook : création service-authored + tables/add sur les en-têtes §5.2) — cible FIGÉE « 06 - Gabarit ERP », fail-closed, preuve FROIDE « vierge » (en-têtes §5.2 + lignes de corps VIDES tolérées, la ligne d'insertion Excel — T-0035 reprise n°5), rollback borné ET VÉRIFIÉ. Plus aucune souche binaire.
     - inscrire_cout_structure     : INSCRIT le coût de structure RÉEL d'un mois dans la table T_Structure du réf. de coûts — cible FIGÉE (classeur referentiel-structure.xlsx, GRAPH_REF_STRUCTURE_*, table T_Structure, PosteCout figé « fonctionnement-reel »), écriture SOURCE bornée sur validation d'une ligne candidate (proposition_id), idempotente par (Mois, fonctionnement-reel) — jamais d'écrasement ni de doublon, cran VALIDÉ (T-0032).
+    - corriger_cout_structure     : CORRIGE le montant d'un mois DÉJÀ inscrit dans T_Structure (pièce tardive, avoir, oubli — besoin structurel) — MÊME cible figée, PATCH de la ligne existante (jamais un append), précondition INVERSE de l'idempotence (la ligne DOIT exister, sinon refus « rien à corriger » — jamais de création déguisée), sur validation d'une NOUVELLE ligne candidate, cran VALIDÉ (T-0032, 0.21.0).
 
-(Compte des opérations = 17 outils réellement décorés ; un `grep` du décorateur d'outil retourne 18,
+(Compte des opérations = 18 outils réellement décorés ; un `grep` du décorateur d'outil retourne 19,
 car il compte aussi la mention littérale dans la docstring de `_journal_appel`, qui n'est pas un outil.)
 
 Transport & santé :
@@ -163,6 +164,11 @@ CRAN_PAR_OUTIL = {
     # alimentant le pilotage (EBITDA §5.4) — irréversible côté source : cran VALIDÉ (porte humaine
     # avant l'action), sur le modèle gouverné de allouer_num_facture (table-des-crans v1.15).
     "inscrire_cout_structure": "valide",
+    # Correction d'un mois DÉJÀ inscrit (T-0032, 0.21.0) : même cible figée, même donnée financière à
+    # audience restreinte alimentant le pilotage — jumeau de inscrire_cout_structure, donc MÊME cran
+    # VALIDÉ (table-des-crans v1.16). La correction n'entre que sur validation d'une NOUVELLE ligne
+    # candidate ; elle ne peut pas créer de ligne (précondition inverse : le mois DOIT exister).
+    "corriger_cout_structure": "valide",
 }
 
 
@@ -1955,18 +1961,54 @@ def _entetes_physiques_t_structure(client_http: httpx.Client, base_table_url: st
     return noms
 
 
+def _lire_lignes_t_structure_indexees(
+    client_http: httpx.Client, base_table_url: str, noms: list[str]
+) -> list[tuple[int, dict[str, Any]]]:
+    """Lit les lignes de T_Structure (/rows) en CONSERVANT l'index Workbook de chaque ligne.
+
+    Rend une liste de `(index 0-based, {en-tête physique: valeur})`. L'index est celui qu'adresse
+    `itemAt(index=…)` : c'est ce dont `corriger_cout_structure` (0.21.0) a besoin pour PATCHer la
+    ligne EXISTANTE d'un mois au lieu d'en ajouter une seconde. Graph sert un champ `index` sur
+    chaque ligne ; s'il manque (ou n'est pas un entier), la POSITION dans la réponse fait foi —
+    c'est l'ordre documenté de la table, déjà retenu par `workbook_maj_ligne`. Lecture seule."""
+    rep = _get_crm_avec_backoff(client_http, f"{base_table_url}/rows")
+    rep.raise_for_status()
+    lignes: list[tuple[int, dict[str, Any]]] = []
+    for position, row in enumerate(rep.json().get("value", [])):
+        valeurs = row.get("values") or [[]]
+        cellules = valeurs[0] if valeurs else []
+        brut = row.get("index")
+        # bool est un sous-type de int : refusé explicitement (repli sur la position).
+        index = brut if isinstance(brut, int) and not isinstance(brut, bool) else position
+        lignes.append(
+            (index, {nom: (cellules[i] if i < len(cellules) else None) for i, nom in enumerate(noms)})
+        )
+    return lignes
+
+
 def _lire_lignes_t_structure(
     client_http: httpx.Client, base_table_url: str, noms: list[str]
 ) -> list[dict[str, Any]]:
     """Lit les lignes de T_Structure (/rows) et les mappe {en-tête physique: valeur}. Lecture seule."""
-    rep = _get_crm_avec_backoff(client_http, f"{base_table_url}/rows")
-    rep.raise_for_status()
-    lignes: list[dict[str, Any]] = []
-    for row in rep.json().get("value", []):
-        valeurs = row.get("values") or [[]]
-        cellules = valeurs[0] if valeurs else []
-        lignes.append({nom: (cellules[i] if i < len(cellules) else None) for i, nom in enumerate(noms)})
-    return lignes
+    return [ligne for _idx, ligne in _lire_lignes_t_structure_indexees(client_http, base_table_url, noms)]
+
+
+def _est_ligne_du_mois(ligne: dict[str, Any], mois_norm: str) -> bool:
+    """Vrai si `ligne` porte le poste FIGÉ « fonctionnement-reel » ET le mois demandé (normalisé).
+
+    PRÉDICAT UNIQUE partagé par les DEUX primitives de T_Structure (0.21.0) : la garde d'idempotence
+    et la post-vérification de `inscrire_cout_structure`, la sélection de la ligne à corriger et la
+    post-vérification de `corriger_cout_structure`. Une seule définition, quatre usages — les jumeaux
+    ne peuvent pas diverger sur « qu'est-ce que la ligne de ce mois ».
+
+    Le POSTE est testé AVANT le mois (court-circuit) : `_mois_en_iso` ne normalise que les lignes du
+    bon poste — une cellule `Mois` inconvertible portée par un AUTRE poste ne fait donc pas échouer
+    la garde. `_mois_en_iso` neutralise le biais SÉRIAL/ISO (correctif 0.20.1) : la relecture
+    Workbook peut rendre un sérial Excel là où l'on a écrit « AAAA-MM-01 »."""
+    return (
+        str(ligne.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
+        and _mois_en_iso(ligne.get("Mois")) == mois_norm
+    )
 
 
 def _post_workbook_rows_avec_backoff(client_http: httpx.Client, url: str, valeurs_ligne: list):
@@ -1979,6 +2021,22 @@ def _post_workbook_rows_avec_backoff(client_http: httpx.Client, url: str, valeur
             break
         time.sleep(_delai_retry_after(reponse))
         reponse = client_http.post(url, headers=entetes, json=corps)
+    return reponse
+
+
+def _patch_workbook_row_avec_backoff(client_http: httpx.Client, url: str, valeurs_ligne: list):
+    """PATCH d'UNE ligne EXISTANTE d'une table Workbook (itemAt), honorant Retry-After sur 429/503 (borné).
+
+    Miroir strict de `_post_workbook_rows_avec_backoff` (append) pour la CORRECTION (0.21.0) : même
+    idiome, même bornage des reprises (2 au plus), même séquentialité — un seul appel en vol."""
+    entetes = {**_entetes(), "Content-Type": "application/json"}
+    corps = {"values": [valeurs_ligne]}
+    reponse = client_http.patch(url, headers=entetes, json=corps)
+    for _ in range(2):
+        if reponse.status_code not in _STATUTS_TRANSITOIRES_CRM:
+            break
+        time.sleep(_delai_retry_after(reponse))
+        reponse = client_http.patch(url, headers=entetes, json=corps)
     return reponse
 
 
@@ -2048,21 +2106,16 @@ def inscrire_cout_structure(
         # Garde anti-divergence à l'exécution + ordre physique des colonnes.
         noms = _entetes_physiques_t_structure(client_http, base_table)
         # (5) IDEMPOTENCE : lire T_Structure d'abord, refuser tout doublon (Mois, fonctionnement-reel).
-        # Le poste est testé AVANT le mois (court-circuit) : `_mois_en_iso` ne normalise que les lignes
-        # du bon poste — une cellule Mois inconvertible d'un autre poste ne fait pas échouer la garde.
-        # `_mois_en_iso` neutralise le biais SÉRIAL/ISO (correctif 0.20.1) : la relecture Workbook peut
-        # rendre un sérial Excel là où l'on a écrit « AAAA-MM-01 ».
+        # `_est_ligne_du_mois` porte le prédicat (poste figé + mois normalisé) — PARTAGÉ avec le jumeau
+        # corriger_cout_structure, pour que les deux primitives ne puissent pas diverger (0.21.0).
         lignes = _lire_lignes_t_structure(client_http, base_table, noms)
-        deja = [
-            d for d in lignes
-            if str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
-            and _mois_en_iso(d.get("Mois")) == mois_norm
-        ]
+        deja = [d for d in lignes if _est_ligne_du_mois(d, mois_norm)]
         if deja:
             raise RuntimeError(
                 f"Coût de structure déjà inscrit pour {mois_norm} (PosteCout « {POSTE_STRUCTURE_REEL} ») : "
                 f"ligne existante {deja[0]!r}. REFUS (jamais d'écrasement ni de doublon) — révision = boucle "
-                "de promotion (§5.3), pas une réinscription."
+                "de promotion (§5.3), pas une réinscription : la CORRECTION d'un mois déjà inscrit passe par "
+                "corriger_cout_structure (cran validé, sur validation d'une NOUVELLE ligne candidate)."
             )
 
         # Écriture : append d'UNE ligne, alignée sur l'ordre PHYSIQUE des colonnes.
@@ -2071,17 +2124,10 @@ def inscrire_cout_structure(
         rep_post = _post_workbook_rows_avec_backoff(client_http, f"{base_table}/rows", ligne_valeurs)
         rep_post.raise_for_status()
 
-        # Post-vérification : relire et rendre la ligne inscrite. Même normalisation SÉRIAL/ISO que la
-        # garde d'idempotence (correctif 0.20.1) — sinon FAUX-ROUGE quand la relecture rend un sérial.
+        # Post-vérification : relire et rendre la ligne inscrite. Même prédicat que la garde
+        # d'idempotence (correctif 0.20.1) — sinon FAUX-ROUGE quand la relecture rend un sérial.
         apres = _lire_lignes_t_structure(client_http, base_table, noms)
-        relue = next(
-            (
-                d for d in apres
-                if str(d.get("PosteCout", "")).strip() == POSTE_STRUCTURE_REEL
-                and _mois_en_iso(d.get("Mois")) == mois_norm
-            ),
-            None,
-        )
+        relue = next((d for d in apres if _est_ligne_du_mois(d, mois_norm)), None)
         if relue is None:
             raise RuntimeError(
                 f"Ligne inscrite pour {mois_norm} introuvable à la relecture — état incertain, "
@@ -2092,6 +2138,142 @@ def inscrire_cout_structure(
         "mois": mois_norm,
         "poste": POSTE_STRUCTURE_REEL,
         "montant": montant_norm,
+        "proposition_id": prop,
+        "ligne_relue": relue,
+    }
+
+
+@mcp.tool()
+@_journal_appel("corriger_cout_structure")
+def corriger_cout_structure(
+    ctx: Context, mois: str, montant: float, proposition_id: str
+) -> dict[str, Any]:
+    """CORRIGE le montant d'un mois DÉJÀ INSCRIT dans T_Structure — jumeau gouverné de inscrire_cout_structure.
+
+    BESOIN STRUCTUREL, pas un incident (T-0032) : le réel d'un mois se connaît par vagues — une pièce
+    arrive en retard, un avoir tombe, une facture avait été oubliée du contrôle mensuel. Sans cette
+    primitive, un mois inscrit serait DÉFINITIF côté source alors que la doctrine ne fige que la
+    SÉQUENCE LÉGALE (le NumFacture), jamais un agrégat de gestion. La correction reste GOUVERNÉE :
+    elle n'entre que sur validation gardien d'une NOUVELLE ligne candidate déposée en
+    Zone-de-proposition (`proposition_id`) — c'est la boucle de promotion (§5.3), pas une écriture
+    libre. Cran VALIDÉ (`table-des-crans.yaml` v1.16 : `corriger_cout_structure`), comme son jumeau.
+
+    SÉMANTIQUE INVERSE DE L'IDEMPOTENCE. `inscrire_cout_structure` exige que le mois soit ABSENT et
+    refuse s'il est présent ; `corriger_cout_structure` exige qu'il soit PRÉSENT et refuse s'il est
+    absent (« rien à corriger »). Les deux préconditions sont donc EXCLUSIVES : aucune des deux
+    primitives ne peut jamais créer un DOUBLON, et la correction ne peut JAMAIS être une création
+    déguisée — inscrire un mois neuf reste le rôle exclusif de `inscrire_cout_structure`, qui porte
+    la porte humaine de la PREMIÈRE inscription.
+
+    Cible FIGÉE, identique au jumeau : `GRAPH_REF_STRUCTURE_DRIVE_ID` + `GRAPH_REF_STRUCTURE_ITEM_ID`
+    (`_config_ref_structure()`), table `T_Structure` en dur, `PosteCout` figé « fonctionnement-reel ».
+    L'appelant ne fournit AUCUN drive_id / item_id / nom de table / poste : écrire `T_Parametres`,
+    `T_Ressources` ou un autre classeur est structurellement impossible. Seule la colonne `Montant`
+    change de valeur — `Mois` et `PosteCout` sont réécrits à l'identique de ce qui a été validé.
+
+    Garde-fous inscrits dans le code (fail-closed, AVANT toute écriture, dans cet ordre) :
+        1. `_config_ref_structure()` : variables d'environnement présentes, sinon ConfigManquante ;
+        2. `mois` = date ISO au 1er du mois (jour == 1), sinon ValueError ;
+        3. `montant` (le NOUVEAU) nombre strictement positif, sinon ValueError ;
+        4. `proposition_id` obligatoire — id de la ligne candidate de CORRECTION validée (fil d'audit) ;
+        5. GARDE ANTI-DIVERGENCE à l'exécution : en-têtes servis par `T_Structure` == projection §5.3
+           (`ENTETES_T_STRUCTURE`), sinon refus — jamais de cellule posée à l'aveugle ;
+        6. EXISTENCE : le référentiel est lu D'ABORD ; AUCUNE ligne (Mois, « fonctionnement-reel ») pour
+           ce mois → REFUS explicite (RuntimeError « rien à corriger »), zéro écriture ;
+        7. UNICITÉ : PLUSIEURS lignes pour ce mois → REFUS (anomalie de source, réconciliation gardien)
+           — on ne devine pas laquelle corriger.
+    L'écriture est un PATCH de la ligne existante (`itemAt(index=…)`), séquentiel, `Retry-After` honoré
+    sur 429/503 (GET/PATCH) : jamais un append — l'anti-doublon est donc préservé par construction.
+    Post-vérification par RELECTURE (même prédicat `_est_ligne_du_mois`, donc même normalisation
+    SÉRIAL/ISO qu'en 0.20.1 — pas de faux-rouge) : le mois porte TOUJOURS exactement UNE ligne, et
+    cette ligne porte le NOUVEAU montant. Aucune suppression (aucune primitive ne l'expose).
+
+    Args:
+        mois: mois à corriger, date ISO au 1er du mois (ex. « 2026-07-01 ») — la ligne DOIT exister.
+        montant: NOUVEAU coût de structure réel du mois, en euros (nombre > 0) — remplace l'ancien.
+        proposition_id: id de la ligne candidate de CORRECTION validée en Zone-de-proposition (fil d'audit).
+
+    Returns:
+        dict {"mois", "poste", "ancien_montant", "nouveau_montant", "proposition_id", "ligne_relue"} —
+        l'ancien montant est rendu pour que la correction soit AUDITABLE (l'écart est lisible dans le
+        journal du cran validé), et `ligne_relue` est la ligne effectivement relue après le PATCH.
+
+    Raises:
+        ValueError: précondition non tenue (mois, montant, proposition_id invalides).
+        RuntimeError: aucune ligne pour ce mois (« rien à corriger ») ; plusieurs lignes (anomalie) ;
+            schéma T_Structure divergent ; ou post-vérification en échec — réconciliation gardien.
+        ConfigManquante: GRAPH_REF_STRUCTURE_DRIVE_ID / GRAPH_REF_STRUCTURE_ITEM_ID absentes.
+    """
+    _verifier_appelant(ctx)
+
+    cfg = _config_ref_structure()                     # (1) env présentes, sinon ConfigManquante
+    mois_norm = _valider_mois_premier(mois)           # (2) 1er du mois
+    montant_norm = _valider_montant_structure(montant)  # (3) > 0
+    prop = _valider_proposition_id(proposition_id)    # (4) obligatoire, fil d'audit
+    # PosteCout figé côté serveur : POSTE_STRUCTURE_REEL — jamais un paramètre.
+
+    base_table = (
+        f"{GRAPH_BASE}/drives/{cfg['drive_id']}/items/{cfg['item_id']}"
+        f"/workbook/tables/{TABLE_STRUCTURE}"
+    )
+    with httpx.Client(timeout=30) as client_http:
+        # (5) Garde anti-divergence à l'exécution + ordre physique des colonnes.
+        noms = _entetes_physiques_t_structure(client_http, base_table)
+        # (6) EXISTENCE : la ligne du mois DOIT être là — sinon on REFUSE (jamais de création déguisée).
+        indexees = _lire_lignes_t_structure_indexees(client_http, base_table, noms)
+        cibles = [(idx, d) for idx, d in indexees if _est_ligne_du_mois(d, mois_norm)]
+        if not cibles:
+            raise RuntimeError(
+                f"Rien à corriger pour {mois_norm} (PosteCout « {POSTE_STRUCTURE_REEL} ») : aucune ligne "
+                "inscrite pour ce mois. REFUS — corriger_cout_structure ne CRÉE jamais une ligne ; la "
+                "première inscription d'un mois passe par inscrire_cout_structure (sa propre porte humaine)."
+            )
+        if len(cibles) > 1:
+            raise RuntimeError(
+                f"Anomalie de source : {len(cibles)} lignes portent ({mois_norm}, « {POSTE_STRUCTURE_REEL} ») "
+                f"— {[d for _i, d in cibles]!r}. REFUS (on ne devine pas laquelle corriger) — "
+                "réconciliation gardien requise."
+            )
+        index_cible, ligne_avant = cibles[0]
+        ancien_montant = ligne_avant.get("Montant")
+
+        # Écriture : PATCH de la ligne EXISTANTE (jamais un append) — colonnes §5.3 dans l'ordre PHYSIQUE ;
+        # seule la valeur de « Montant » change, Mois et PosteCout sont réécrits à l'identique.
+        valeur_par_nom = {"Mois": mois_norm, "PosteCout": POSTE_STRUCTURE_REEL, "Montant": montant_norm}
+        ligne_valeurs = [valeur_par_nom[nom] for nom in noms]
+        rep_patch = _patch_workbook_row_avec_backoff(
+            client_http, f"{base_table}/rows/itemAt(index={index_cible})", ligne_valeurs
+        )
+        rep_patch.raise_for_status()
+
+        # Post-vérification : le mois porte TOUJOURS exactement une ligne, et elle porte le NOUVEAU montant.
+        apres = _lire_lignes_t_structure(client_http, base_table, noms)
+        candidates = [d for d in apres if _est_ligne_du_mois(d, mois_norm)]
+        if len(candidates) != 1:
+            raise RuntimeError(
+                f"Post-vérification en échec pour {mois_norm} : {len(candidates)} ligne(s) après correction "
+                "(attendu : exactement 1) — état incertain, réconciliation gardien requise "
+                "(aucune suppression automatique)."
+            )
+        relue = candidates[0]
+        try:
+            montant_relu = float(relue.get("Montant"))
+        except (TypeError, ValueError):
+            raise RuntimeError(
+                f"Post-vérification en échec pour {mois_norm} : montant relu illisible "
+                f"({relue.get('Montant')!r}) — réconciliation gardien requise."
+            )
+        if abs(montant_relu - float(montant_norm)) > 1e-6:
+            raise RuntimeError(
+                f"Post-vérification en échec pour {mois_norm} : montant relu {montant_relu!r} ≠ montant "
+                f"corrigé {montant_norm!r} — la correction n'a pas pris, réconciliation gardien requise."
+            )
+
+    return {
+        "mois": mois_norm,
+        "poste": POSTE_STRUCTURE_REEL,
+        "ancien_montant": ancien_montant,
+        "nouveau_montant": montant_norm,
         "proposition_id": prop,
         "ligne_relue": relue,
     }
