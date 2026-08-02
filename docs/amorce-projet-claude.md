@@ -1,7 +1,7 @@
 # Amorce — Projet claude.ai « IA-scale » (pointeur de résolution)
 
 Statut : consommateur du canon — jamais un double éditable.
-Canon : dépôt privé `Allia-Consulting/IA-scale`, branche `main`. Cette amorce a été produite au HEAD 500f5939 ; elle pointe, elle ne photographie pas.
+Canon : dépôt privé `Allia-Consulting/IA-scale`, branche `main`. Cette amorce a été produite au HEAD 0ac6d3a5 ; elle pointe, elle ne photographie pas.
 
 Règle de résolution, obligatoire en début de session :
 1. Lire le HEAD réel : `https://api.github.com/repos/Allia-Consulting/IA-scale/branches/main`.
