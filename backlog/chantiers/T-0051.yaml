@@ -1,0 +1,49 @@
+---
+id: T-0051
+titre: "Cockpit — bandeau 4 : affichage borné à l'année en cours, bouton « Année N+1 », colonne Budget lue dans T_Budget"
+capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
+phase: 4
+type_action: infrastructure
+cran: "édition du code de la web part en branche = cran auto ; LECTURE SEULE de bout en bout — aucune écriture, le budget est une saisie humaine que la machine ne touche jamais (modele-donnees.md v1.30 §5.7) ; PR sur chemin sensible -> porte humaine ; octroi de lecture du dossier au tenant = runbook gardien"
+produit:
+  - "(borne d'affichage) le tableau du bandeau 4 n'affiche plus que l'ANNÉE EN COURS : douze mois x (Budget | Réalisé) + colonne Total, lignes CA total et EBITDA"
+  - "(bouton « Année N+1 ») en haut à droite, bascule sur le budget de l'année à venir (v2.3 §3.4)"
+  - "(colonne Budget) lue dans budgetentreprise.xlsx / table T_Budget, FILTRÉE sur l'année affichée, via l'API Workbook sous l'identité de l'UTILISATEUR CONNECTÉ (Graph délégué) — jamais sous identité machine"
+  - "(colonne Réalisé) INCHANGÉE : projection des fiches missions consolidées — gabarits actifs + référentiel de coûts, lus à la volée (modele-donnees §5.4). Budget et Réalisé ne partagent AUCUNE source"
+  - "(prérequis runbook GARDIEN, bloquant) octroi de l'accès LECTURE du seul dossier « 09 - Budget Allia » à toute la firme : héritage rompu, octroi lecture — le SITE AlliaConsulting-Contratsetadministratif demeure RESTREINT pour Business plan et tréso.xlsx (modele-donnees v1.30 §5.7)"
+  - "(tests) unités sur le filtre d'année, la bascule N/N+1, le rendu du mois vide ; build et CI verts"
+depend_de:
+  - T-0031   # primitives Workbook (lecture de classeurs à tables nommées)
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"   # v2.3 §3.4 (année en cours, bouton N+1, Budget = T_Budget)
+  - "contrats/socle/modele-donnees.md"     # v1.30 §5.7 (domicile, schéma T_Budget, régime d'accès), §5.4 (Réalisé inchangé, convention HT)
+criteres_acceptation:
+  - "La bascule année en cours / N+1 est JUSTE : chaque cellule affichée correspond à la ligne T_Budget du mois de l'année sélectionnée, jamais à un décalage de position"
+  - "Tout écart avec l'ancien affichage est DÉCOMPOSÉ AU CENTIME et expliqué ligne à ligne — aucun écart n'est absorbé par un arrondi"
+  - "Un mois sans budget s'affiche « · » — JAMAIS un zéro inventé (v2.3 §3, modele-donnees v1.30 §5.7). Éprouvé sur le réel : janvier à mars 2026 sont vides dans le classeur déposé, ils doivent s'afficher « · »"
+  - "La colonne Budget est LISIBLE PAR TOUT COLLABORATEUR sous sa propre identité, sans élévation de droits — c'est l'octroi de lecture du dossier qui la rend lisible, jamais un compte de service ni un contournement"
+  - "Business plan et tréso.xlsx demeure ILLISIBLE pour un non-associé : l'octroi porte sur le SEUL dossier « 09 - Budget Allia », le reste du site reste restreint. À VÉRIFIER EXPLICITEMENT après l'octroi, avec un compte non-associé"
+  - "AUCUNE écriture sur budgetentreprise.xlsx : le classeur relu après usage du cockpit porte le MÊME eTag qu'avant (même famille de preuve que l'invariant de saisie, T-0045 / T-0046)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de la vague de conception du 03/08/2026, gravé par tour-de-controle.md v2.3 §3.4 et
+  modele-donnees.md v1.30 §5.7 — les deux mergées.
+  ÉTAT DU RÉEL AU NOMMAGE (mesuré sous identité DÉLÉGUÉE le 04/08/2026, lecture directe du classeur
+  par son itemId — pas un index de recherche) : le classeur EST DÉPOSÉ et PEUPLÉ. Nom réel
+  budgetentreprise.xlsx (SANS tiret), site AlliaConsulting-Contratsetadministratif, dossier
+  « 09 - Budget Allia ». Deux onglets (Lisez-moi, Budget) ; T_Budget porte 36 lignes, une par mois,
+  de 2026-01 à 2028-12 ; EBITDA_Budget est bien une FORMULE, jamais saisi ; la part variable est
+  INCLUSE dans MasseSalariale_Budget au prorata mensuel (contrôle de relecture : janv-2027 -> MS
+  97 987 EUR, EBITDA 23 108 EUR). Les premiers mois de 2026 sont VIDES — la convention du mois vide
+  joue déjà sur le réel, ce n'est pas un défaut à corriger mais un cas à afficher « · ».
+  Le SEUL prérequis bloquant restant est donc l'OCTROI DE LECTURE du dossier, pas le dépôt.
+  DEUX PIÈGES À NE PAS REJOUER, consignés à modele-donnees v1.30 §5.7 :
+  (1) le serveur Workbook (identité MACHINE) NE VOIT PAS ce site — Sites.Selected n'y est pas
+  octroyé, et aucun octroi machine n'est requis puisque le cockpit lit sous identité utilisateur.
+  Ne JAMAIS conclure l'absence de ce classeur depuis le serveur Workbook.
+  (2) l'absence du classeur a été conclue à tort le 03/08 depuis un INDEX DE RECHERCHE filtré, lu
+  comme s'il était un listing de répertoire. Un index n'est pas une mesure : lire l'objet.
+  ÉCART DE POINTEUR OUVERT : tour-de-controle.md v2.3 (promu) écrit « budget-entreprise.xlsx » AVEC
+  tiret ; le nom réel au tenant fait foi. Correction de pointeur à porter en micro-PR dédiée d'une
+  ligne à la prochaine ouverture de tour-de-controle.md — ce chantier CODE contre le nom réel.

@@ -1,0 +1,38 @@
+---
+id: T-0048
+titre: "Cockpit — page Détails staffing (lecture) + code couleur libre par ressource (Ressources-Profil.CodeCouleur)"
+capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
+phase: 4
+type_action: infrastructure
+cran: "édition du code de la web part en branche = cran auto ; l'écriture du CodeCouleur est une ÉDITION HUMAINE DIRECTE sous l'identité Entra de l'utilisateur — HORS du régime des crans (tour-de-controle.md §6, qui gouverne les agents), aucune élévation de droits ; la PR touche outils/tour-de-controle-spfx/** → chemin sensible, porte humaine ; création de la colonne au tenant = runbook gardien"
+produit:
+  - "(prérequis runbook GARDIEN, bloquant) création de la colonne « Code couleur » -> nom interne CodeCouleur sur la Liste « Ressources-Profil » : choix UNIQUE Rouge / Orange / Vert, SANS valeur par défaut, SANS ajout manuel. Poser la colonne sous son nom interne ASCII puis renommer le libellé (modele-donnees.md §2 ter, piège des encodages _x00e9_)"
+  - "(page Détails staffing, LECTURE) bouton « Détails » en haut à droite du bandeau 1 -> page dédiée listant chaque ressource et son TAUX DE STAFFING RÉEL, calculé par la MÊME surface de calcul que les barres du bandeau (aucun second calcul, aucune divergence possible par construction)"
+  - "(geste code couleur) à côté de chaque nom, un menu déroulant Rouge / Orange / Vert écrivant Ressources-Profil.CodeCouleur via SharePoint REST sous l'identité de l'utilisateur connecté, sur le motif des gestes existants (changerEtapeOpportunite, T-0039)"
+  - "(règle gravée dans l'UI) le code couleur est une APPRÉCIATION LIBRE du gardien — AUCUNE règle de calcul, aucune dérivation depuis le taux de staffing : l'écran ne doit ni pré-remplir, ni suggérer, ni recalculer la couleur"
+  - "(tests) unités sur le payload d'écriture et sur l'égalité taux page Détails == taux barres ; build et CI verts"
+depend_de:
+  - T-0014   # cockpit sur listes réelles (lireListe, spHttpClient sous identité utilisateur)
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"   # v2.3 §3.1 (page Détails, menu R/O/V) et §1 (périmètre « listes » étendu à CodeCouleur)
+  - "contrats/socle/modele-donnees.md"     # v1.30 §2 bis Liste « Ressources-Profil » (colonne CodeCouleur), §2 ter (noms internes)
+criteres_acceptation:
+  - "Les taux affichés dans la page Détails sont ÉGAUX à un recalcul INDÉPENDANT, ressource par ressource — tout écart est décomposé, jamais arrondi ni expliqué a posteriori"
+  - "Une couleur choisie est PERSISTÉE dans Ressources-Profil.CodeCouleur et RELUE telle quelle après rechargement de la page"
+  - "L'écriture porte l'identité de l'UTILISATEUR au journal de versions SharePoint — jamais un compte de service, jamais une identité machine"
+  - "AUCUN agent n'écrit cette colonne : l'accès agent de la Liste « Ressources-Profil » reste LECTURE (modele-donnees v1.30 §2 bis) — vérifié au serveur MCP, aucune primitive d'écriture ouverte sur cette liste"
+  - "L'UI ne propose AUCUNE couleur par défaut ni suggérée : une ressource sans appréciation reste sans couleur (l'absence s'affiche comme absence, jamais comme Vert)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de la vague de conception du 03/08/2026, gravé par tour-de-controle.md v2.3 (§1, §3.1) et
+  modele-donnees.md v1.30 (§2 bis, §2 ter) — les deux mergées.
+  Point de doctrine à ne pas éroder : ce chantier ÉTEND le périmètre « listes » du régime « Agir »
+  (v2.3 §1) d'exactement UNE colonne. Ce n'est pas une brèche dans « le cockpit est en lecture seule
+  sur l'économique » : le CodeCouleur n'est PAS une donnée économique — c'est un jugement humain
+  qualitatif, sans règle de calcul, qui ne nourrit aucun agrégat, aucune marge, aucun EBITDA. S'il
+  devait un jour être calculé, dérivé ou agrégé, il changerait de nature et exigerait un nouveau
+  passage par la boucle de promotion.
+  La page Détails est en LECTURE sur les taux : elle ne recalcule rien, elle réutilise la surface de
+  calcul des barres. Deux calculs = deux vérités ; l'égalité doit tenir par construction, pas par
+  vigilance.

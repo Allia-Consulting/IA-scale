@@ -1,0 +1,55 @@
+---
+id: T-0052
+titre: "Émission de facture outillée — modèle Word Allia + cascade « Éditer = émettre » depuis le cockpit"
+capacite: "Cockpit utilisateur (Phase 4) / sous-système de facturation — vague de refonte par l'usage, tour-de-controle.md v2.3"
+phase: 4
+type_action: infrastructure
+cran: "CASCADE DÉTERMINISTE (tour-de-controle.md §1 régime 2) : annonce préalable EXHAUSTIVE des écritures + confirmation explicite obligatoires. L'appel à allouer_num_facture porte le cran VALIDÉ — la confirmation du gardien AU CLIC EST la porte humaine (table-des-crans.yaml v1.17, note d'exécution) ; les préconditions fail-closed du serveur sont INCHANGÉES et demeurent la dernière garde. Les écritures humaines de la cascade (statut « émise » sous identité du cliqueur, génération/upload du Word sous identité utilisateur) sont HORS crans (§6). PR sur chemin sensible -> porte humaine"
+produit:
+  - "(modèle Word) modèle de facture au format Allia, RECONSTRUIT depuis les PDF réels de la mission 1 (Siteflow : F-2026-001, F-2026-002, F-2026-003) — VALIDATION GARDIEN OBLIGATOIRE avant tout usage : un modèle non validé n'émet rien"
+  - "(bandeau 5) échéanciers des gabarits actifs filtrés au statut « à émettre » ET au MOIS À VENIR ; chaque ligne porte le NOM DE LA MISSION (couture CodeMission -> opportunité), jamais un code nu ; le lien vers le PDF dans le dépôt Teams est conservé"
+  - "(cascade « Éditer » = ÉMETTRE) annonce préalable de la liste EXHAUSTIVE des écritures, puis sur confirmation explicite : (1) statut « émise » (+ EtiquetteLocale) écrit sous l'IDENTITÉ DU CLIQUEUR, jamais machine ; (2) allouer_num_facture (cran validé, porte au clic) ; (3) génération du Word depuis le modèle promu — remplissage OOXML CÔTÉ CLIENT, upload sous identité utilisateur, numéro F-AAAA-NNNN posé, dépôt au dossier d'enregistrement des factures ; (4) LienFacture renseigné au registre"
+  - "(fail-closed) annulation = ZÉRO écriture ; échec en cours de cascade = ARRÊT AU PREMIER INCIDENT, état affiché honnêtement, JAMAIS de réparation silencieuse ni de reprise automatique"
+  - "(tests) unités sur le filtre mois à venir, la résolution du nom de mission, le remplissage OOXML, l'ordre des étapes de la cascade et le comportement d'annulation ; build et CI verts"
+depend_de:
+  - T-0030   # registre « Factures » + allouer_num_facture (allocation à l'émission, chronologie légale sans trou)
+  - T-0038   # allocateur CodeMission (couture mission <-> opportunité, motif de l'allocateur atomique)
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"     # v2.3 §3.5 (cascade « Éditer = émettre »), §1 (exception bornée), §5 (écritures)
+  - "contrats/socle/modele-donnees.md"       # v1.30 §2 bis Liste « Factures », §5.2 T_Echeancier, §5.6 (domicile à trancher)
+  - "contrats/socle/table-des-crans.yaml"    # v1.17 (note d'exécution : la confirmation au clic vaut porte du cran validé)
+criteres_acceptation:
+  - "Une facture RÉELLE est émise de bout en bout depuis le cockpit — épreuve cible : la facture de FIN AOÛT 2026. Rien de moins ne vaut preuve : ni un test, ni une simulation, ni un dry-run"
+  - "La NUMÉROTATION EST SANS TROU, vérifiée au registre « Factures » après l'émission : le numéro alloué est (max des NNNN de l'année) + 1, jamais réattribué, jamais recyclé (chronologie légale FR)"
+  - "Le document produit est CONFORME au modèle promu, et le modèle a été validé par le gardien AVANT l'épreuve"
+  - "Toutes les écritures portent l'identité de l'UTILISATEUR au journal — aucune écriture machine, aucun compte de service, aucune élévation de droits"
+  - "Une annulation à l'écran d'annonce laisse le registre, l'échéancier et le dépôt STRICTEMENT INCHANGÉS (relecture après annulation : mêmes eTags)"
+  - "L'invariant « la machine n'écrit jamais la saisie » est VÉRIFIÉ APRÈS l'épreuve : le classeur de saisie de la mission relu porte le même eTag qu'avant (famille de preuve T-0045 / T-0046)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de la vague de conception du 03/08/2026, gravé par tour-de-controle.md v2.3 §3.5 (mergée).
+  Ce chantier exécute l'ABROGATION CONSCIENTE ET BORNÉE du principe v2.1 « aucune création de
+  facture depuis le cockpit ». L'abrogation vaut pour la SEULE cascade d'émission : tout le reste de
+  l'économique demeure en lecture seule et s'édite dans la saisie (v2.3 §1). Si l'implémentation
+  devait élargir cette brèche d'un seul geste, elle sortirait du contrat et exigerait un nouveau
+  passage par la boucle de promotion.
+  À TRANCHER PAR L'ARCHITECTE À L'OUVERTURE DU CHANTIER, et à consigner ici avant la première ligne
+  de code — DOMICILE DE L'ÉCRITURE « ÉMISE ». Deux voies, nommées à modele-donnees v1.30 §5.6 :
+  (a) écriture dans la SAISIE sous identité DÉLÉGUÉE du cliqueur — patron de l'écran de déclaration
+  de temps nommé en T-0046 ; la saisie reste la source, l'agent la re-dérive ensuite ;
+  (b) vérité BASCULÉE au registre « Factures », re-dérivée vers l'échéancier — le registre étant
+  déjà la source de vérité du NumFacture (modele-donnees §2 bis).
+  Le choix n'est pas cosmétique : il décide OÙ VIT LA VÉRITÉ du statut d'émission, donc qui la
+  re-dérive et dans quel sens. Ce qui NE SE NÉGOCIE PAS, quelle que soit la voie retenue :
+  L'INVARIANT « LA MACHINE N'ÉCRIT JAMAIS LA SAISIE ». En voie (a), l'écriture est celle de
+  l'UTILISATEUR sous son identité déléguée — ce n'est pas la machine qui écrit, et le droit
+  (Sites.Selected role=read de l'identité managée) le garantit avant le code : ne JAMAIS ajouter de
+  scope Files.* pour faire tenir cette voie.
+  MATIÈRE DISPONIBLE POUR LE MODÈLE : les trois PDF Siteflow F-2026-001..003 sont le seed documenté
+  de la numérotation (modele-donnees §2 bis, arbitrage du 28/07) ; prochain numéro alloué =
+  F-2026-004.
+  ÉTAT DU RÉEL AU NOMMAGE (04/08/2026) : allouer_num_facture est au canon (table-des-crans, cran
+  validé) et outillé côté serveur, mais n'a JAMAIS ÉTÉ SOLLICITÉ sur le réel — l'épreuve T-0046 du
+  01/08 s'est déroulée intégralement en crans auto, aucune ligne n'étant au statut « émise ». Cette
+  épreuve sera donc le PREMIER exercice réel du cran validé de la chaîne de facturation.

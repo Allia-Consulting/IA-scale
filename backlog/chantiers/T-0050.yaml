@@ -1,0 +1,44 @@
+---
+id: T-0050
+titre: "Cockpit — recrutement : compteurs sur une ligne, NomCandidat affiché, IdentiteEntra/Disponibilite, page Détails"
+capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
+phase: 4
+type_action: infrastructure
+cran: "édition du code de la web part en branche = cran auto ; les gestes (ajout candidat, changement d'étape) sont des ÉDITIONS HUMAINES DIRECTES sous l'identité Entra de l'utilisateur — hors régime des crans (tour-de-controle.md §6) ; la cascade « Acceptée » demeure une CASCADE DÉTERMINISTE (annonce + confirmation), inchangée par ce chantier ; PR sur chemin sensible -> porte humaine ; création des colonnes au tenant = runbook gardien"
+produit:
+  - "(prérequis runbook GARDIEN, bloquant) création sur la Liste « Candidats » des colonnes « Identité Entra » -> IdentiteEntra (texte, UPN) et « Disponibilité » -> Disponibilite (date) — nom interne ASCII d'abord, libellé ensuite (modele-donnees.md §2 ter)"
+  - "(compteurs) E1, E2, E3 et Décisions (candidats en étape Proposition) ramenés SUR UNE SEULE LIGNE (v2.3 §3.3)"
+  - "(affichage) la liste visible affiche NomCandidat ; l'id C-NNNN reste la CLÉ INTERNE et n'est JAMAIS montré à l'écran"
+  - "(filtre) la liste visible EXCLUT les étapes Acceptée et Refusée — un candidat décidé quitte la surface d'action"
+  - "(page Détails) bouton « Détails » -> page de TOUTES les candidatures, étapes décidées comprises : ce qui est masqué reste toujours joignable (règle « liste visible <-> page détails »)"
+  - "(formulaire d'ajout) collecte NomCandidat, Grade, Source, Email, Telephone (optionnel), et désormais IdentiteEntra et Disponibilite ; création en E1 ; Title alloué au motif C-NNN. LE CODE MISSION SORT DU FORMULAIRE — on recrute SANS mission"
+  - "(tests) unités sur le payload d'ajout (présence IdentiteEntra/Disponibilite, ABSENCE de tout champ mission), le filtre d'exclusion Acceptée/Refusée, l'allocation C-NNN ; build et CI verts"
+depend_de:
+  - T-0039   # gestes recrutement du cockpit (ajout candidat, étape en ligne, cascade « Acceptée ») — soldé
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"          # v2.3 §3.3 (une ligne, NomCandidat, Détails, formulaire sans code mission)
+  - "contrats/socle/modele-donnees.md"            # v1.30 §2 bis + §2 ter Liste « Candidats » (IdentiteEntra, Disponibilite)
+  - "contrats/socle/rgpd-recrutement-candidats.md" # cadre INCHANGÉ : rétention 2 ans, horloge « Créé le », pertinence au recrutement
+criteres_acceptation:
+  - "Un candidat passé en Acceptée DISPARAÎT de la liste visible et RESTE consultable dans la page Détails — masquer n'est jamais perdre"
+  - "La création d'un candidat SANS mission est possible de bout en bout : aucun champ mission n'est demandé, aucun n'est écrit, aucun n'est requis"
+  - "L'id C-NNNN n'apparaît nulle part dans le rendu de la liste visible ; NomCandidat s'affiche à sa place"
+  - "IdentiteEntra et Disponibilite sont écrits quand renseignés et restent VIDES quand ils ne le sont pas — jamais une valeur inventée, jamais un UPN forgé depuis le nom"
+  - "MINIMISATION RGPD tenue : les deux colonnes nouvelles sont PERTINENTES au recrutement (identité de rattachement, date de disponibilité) ; la rétention 2 ans et son horloge « Créé le » sont INCHANGÉES — ce chantier n'ajoute aucune donnée personnelle hors périmètre du cadre promu"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de la vague de conception du 03/08/2026, gravé par tour-de-controle.md v2.3 §3.3 et
+  modele-donnees.md v1.30 (§2 bis, §2 ter) — les deux mergées.
+  « On recrute SANS mission » n'est pas un détail d'ergonomie : c'est l'alignement du formulaire sur
+  un invariant déjà tenu ailleurs. L'affectation d'une ressource à une mission naît du DÉPÔT DU
+  CLASSEUR DE SAISIE dans l'espace de la mission (modele-donnees.md §5.6) — jamais d'un formulaire
+  de recrutement. La v2.2 avait déjà retiré l'écriture d'affectation de la cascade « Acceptée »
+  (arbitrage gardien du 26/07, T-0039 volet B) ; retirer le code mission du formulaire d'ajout
+  referme la même porte à l'autre bout de la chaîne.
+  ARRÊT D'USAGE EN VIGUEUR, à respecter (arbitrage gardien du 26/07/2026, T-0039) : le rejeu de la
+  cascade « Acceptée » est borné à C-005, et AUCUN skill RH ne sera construit sans demande d'usage
+  explicite. Ce chantier ne touche PAS la cascade — il touche l'affichage, le filtre et le
+  formulaire d'ajout. Il n'ouvre aucun usage RH nouveau.
+  Scorie connexe NOMMÉE, NON OUVERTE (T-0039) : les Title des candidats 1..7 ne sont pas conformes
+  au motif C-NNN — backfill = clics gardien.

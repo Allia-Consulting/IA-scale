@@ -1,0 +1,42 @@
+---
+id: T-0049
+titre: "Cockpit — pipe : comptes actifs en info-bulle, fenêtre Détails des opportunités, création de compte au fil du geste"
+capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
+phase: 4
+type_action: infrastructure
+cran: "édition du code de la web part en branche = cran auto ; les écritures (opportunité, compte) sont des ÉDITIONS HUMAINES DIRECTES sous l'identité Entra de l'utilisateur — hors régime des crans (tour-de-controle.md §6) ; la cascade « Gagnée » demeure une CASCADE DÉTERMINISTE (annonce exhaustive + confirmation explicite, v2.3 §1 régime 2), inchangée par ce chantier ; PR sur chemin sensible -> porte humaine"
+produit:
+  - "(info-bulle) « comptes actifs » quitte les compteurs de tête et devient une INFO-BULLE du bandeau 2 (v2.3 §3.2) ; les compteurs affichés restent : propositions en cours, montant proposé, pipe pondéré (pondérations FIGÉES : Proposition 60 %, Qualification 15 %)"
+  - "(fenêtre Détails) bouton « Détails » -> fenêtre dédiée des OPPORTUNITÉS OUVERTES, soit exactement les étapes Qualification + Proposition ; éditable (étape, montant) comme l'était la table de la première page"
+  - "(retrait) la table des opportunités NE VIT PLUS sur la première page — elle n'existe que derrière « Détails » (règle « liste visible <-> page détails », v2.3 §3)"
+  - "(création de compte au fil du geste) dans « nouvelle opportunité », le sélecteur de compte permet de CRÉER un compte : Title alloué au motif CPT-NNN (max des ^CPT-(\\d+)$ existants + 1), NomCompte saisi, Statut initial Prospect — valeur À CONFIRMER AU PREMIER USAGE RÉEL, la fiche ne la fige pas"
+  - "(inchangé) le passage en Gagnée continue d'ouvrir la cascade proposant la création de la mission et de son espace"
+  - "(tests) unités sur l'allocation CPT-NNN, le payload de création de compte, le filtre Qualification+Proposition, le calcul du pipe pondéré ; build et CI verts"
+depend_de:
+  - T-0026   # brique CRM (Listes « Comptes » et « CRM », schémas et couture CodeMission)
+  - T-0035   # gestes pipe CRM branchés au cockpit (nouvelle opportunité, étape, montant)
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"   # v2.3 §3.2 (info-bulle, fenêtre Détails, création de compte)
+  - "contrats/socle/modele-donnees.md"     # §2 bis Listes « Comptes » (Title CPT-NNN, Statut) et « CRM » (Etape, Montant, Compte en lookup)
+criteres_acceptation:
+  - "PRÉALABLE tenu : le geste « nouvelle opportunité » pose bien le Title O-NNN (défaut nommé au plan §13.2, constaté le 24/07 sur les items 4 et 5 de la Liste « CRM ») — un compte créé par un geste qui ne sait pas poser son propre identifiant stable reproduirait le même défaut sur les Comptes"
+  - "Un compte créé au fil du geste EXISTE dans la Liste « Comptes » avec un Title CPT-NNN conforme, un NomCompte non vide et un Statut valide ; l'opportunité créée dans la foulée POINTE dessus par son lookup Compte"
+  - "La première page NE PORTE PLUS la table des opportunités"
+  - "La fenêtre Détails liste EXACTEMENT les étapes Qualification + Proposition — ni Gagnée, ni Perdue"
+  - "Le pipe pondéré affiché est recalculable à la main depuis les lignes listées, aux pondérations figées 60 % / 15 %"
+  - "Aucune donnée personnelle n'entre dans la Liste « Comptes » : le référentiel porte des ORGANISATIONS, jamais des interlocuteurs (décision gardien du 05/07/2026, modele-donnees §2 bis)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de la vague de conception du 03/08/2026, gravé par tour-de-controle.md v2.3 §3.2 (mergée).
+  SÉQUENCE — le correctif du Title O-NNN du geste « nouvelle opportunité » (plan.md §13.2, reste
+  d'hygiène CRM nommé le 24/07, non ouvert) doit être joué AVANT ce chantier, en PR SPFx dédiée :
+  même surface, même geste, et surtout même classe de défaut. Ouvrir la création de COMPTE sur un
+  geste qui ne pose pas correctement l'identifiant stable des OPPORTUNITÉS, c'est dupliquer le
+  défaut sur une seconde liste au lieu de le refermer. Le correctif n'est pas un chantier distinct :
+  c'est le premier commit de celui-ci, ou une micro-PR qui le précède.
+  Le statut initial « Prospect » du compte créé est le choix par défaut de l'arbitrage du 03/08 ; il
+  est À CONFIRMER au premier usage réel (v2.3 §3.2 le dit ainsi). S'il s'avère faux à l'usage, c'est
+  une correction d'une valeur, pas une reconception.
+  Hygiène connexe NOMMÉE, NON OUVERTE ici (plan.md §13) : promotion tracée Zone-de-proposition ->
+  CRM, et clics gardien d'hygiène tenant.

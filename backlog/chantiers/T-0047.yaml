@@ -1,0 +1,37 @@
+---
+id: T-0047
+titre: "Cockpit — bandeau titre « actions du jour » + retrait du bandeau indicateurs d'organisation"
+capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
+phase: 4
+type_action: infrastructure
+cran: "édition du code de la web part en branche = cran auto (editer_fichier_en_branche, tour-de-controle.md §6) ; la PR touche outils/tour-de-controle-spfx/** → chemin sensible, porte humaine, pas d'auto-merge ; déploiement du .sppkg = runbook humain (gardien)"
+produit:
+  - "(bandeau titre) libellé « X chose(s) appelle(nt) à ton action aujourd'hui » + bulle « X action(s) » — tour-de-controle.md v2.3 §3, bandeau titre"
+  - "(compteur) une ACTION est exactement : (i) une facture à éditer sous la responsabilité de l'utilisateur, ou (ii) une étape CRM à faire avancer à échéance. Déclencheur : échéance ATTEINTE OU DÉPASSÉE — facture dès l'entrée dans le mois ; opportunité dès CRM.Echeance <= aujourd'hui. Responsabilité : CRM.Responsable pour les opportunités, couture CodeMission pour les factures"
+  - "(exclusion explicite) les décisions de recrutement NE COMPTENT PAS dans le bandeau titre — elles vivent au bandeau 3 (v2.3 §3.3)"
+  - "(retrait) suppression complète du bandeau « indicateurs d'organisation » : composants/appels dans src/webparts/tourDeControle/components/TourDeControle.tsx (bloc commenté « Indicateurs d'organisation (T-0020-d) »), module pur kpi-organisation.ts, sa suite kpi-organisation.test.ts, et les lectures devenues orphelines dans listes-reelles.ts — vérifier qu'aucune autre surface ne les consomme avant suppression"
+  - "(tests) unités sur le calcul du compteur : 0 action, N actions, échéance du jour (bord inclus), échéance dépassée, opportunité non responsable de l'utilisateur ; build et CI verts"
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"   # v2.3 §3 (bandeau titre, exclusion recrutement) et §1 (lecture seule sur l'économique)
+  - "contrats/socle/modele-donnees.md"     # §2 bis Liste « CRM » (Echeance, Responsable, CodeMission)
+criteres_acceptation:
+  - "Le compteur est JUSTE sur cas réels, à 0 comme à N, et se DÉCOMPOSE ligne à ligne : chaque unité comptée est nommable (quelle facture, quelle opportunité, quelle échéance) — un compteur non décomposable est un refus"
+  - "Le bord est éprouvé : une échéance TOMBANT AUJOURD'HUI compte (atteinte), une échéance à demain ne compte pas"
+  - "Une décision de recrutement en cours ne fait PAS bouger le compteur"
+  - "Le bandeau « indicateurs d'organisation » est absent du DOM rendu ; aucune référence morte ne subsiste au build (pas de module orphelin, pas d'import inutilisé, suite de tests du module retirée avec lui)"
+  - "Aucune écriture : le bandeau titre est un compteur de LECTURE — l'exploration ne déclenche jamais une écriture (v2.3 §1 « creuser »)"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de la vague de conception du 03/08/2026 (point d'étape cockpit), gravée par tour-de-controle.md
+  v2.3 (PR #297, mergée). Le bandeau titre est la traduction du parti-pris « la première page ne
+  montre que l'ACTIONNABLE » (règle « liste visible <-> page détails », v2.3 §3).
+  ATTENTION — le bandeau retiré est le LIVRABLE DE T-0020-d (les 3 KPI d'organisation, Phase 2,
+  sous-item du chantier-chapeau T-0020 SOLDÉ le 13/07/2026). Ce chantier RETIRE l'artefact par une
+  décision NOUVELLE et datée (arbitrage gardien du 03/08 : « aucun usage », v2.3 §3 point 7) ; il ne
+  REQUALIFIE PAS T-0020 ni T-0020-d, qui restent soldés — on ne requalifie jamais un soldé
+  (CLAUDE.md). Le retrait est un fait nouveau qui s'ajoute à l'histoire, il ne la réécrit pas.
+  État du réel au nommage (04/08/2026) : le bandeau est bien construit et vivant — quatre fichiers
+  le portent (TourDeControle.tsx ligne ~237, kpi-organisation.ts, kpi-organisation.test.ts,
+  listes-reelles.ts) ; cockpit en version package-solution 1.5.2.0.
