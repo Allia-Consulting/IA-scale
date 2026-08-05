@@ -4,7 +4,7 @@ titre: "Cockpit — bandeau titre « actions du jour » + retrait du bandeau ind
 capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
 phase: 4
 type_action: infrastructure
-cran: "édition du code de la web part en branche = cran auto (editer_fichier_en_branche, tour-de-controle.md §6) ; la PR touche outils/tour-de-controle-spfx/** → chemin sensible, porte humaine, pas d'auto-merge ; déploiement du .sppkg = runbook humain (gardien)"
+cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du gardien, rayon firme entière (tour-de-controle.md §6) ; détail en note
 produit:
   - "(bandeau titre) libellé « X chose(s) appelle(nt) à ton action aujourd'hui » + bulle « X action(s) » — tour-de-controle.md v2.3 §3, bandeau titre"
   - "(compteur) une ACTION est exactement : (i) une facture à éditer sous la responsabilité de l'utilisateur, ou (ii) une étape CRM à faire avancer à échéance. Déclencheur : échéance ATTEINTE OU DÉPASSÉE — facture dès l'entrée dans le mois ; opportunité dès CRM.Echeance <= aujourd'hui. Responsabilité : CRM.Responsable pour les opportunités, couture CodeMission pour les factures"
@@ -35,3 +35,19 @@ note: >
   État du réel au nommage (04/08/2026) : le bandeau est bien construit et vivant — quatre fichiers
   le portent (TourDeControle.tsx ligne ~237, kpi-organisation.ts, kpi-organisation.test.ts,
   listes-reelles.ts) ; cockpit en version package-solution 1.5.2.0.
+
+  SUR LE CRAN — bloc AJOUTÉ le 05/08/2026 ; rien de ce qui précède n'est réécrit. Le champ cran
+  ci-dessus porte désormais la valeur du vocabulaire contrôlé (auto | notifie | valide |
+  anonymisation) : valide. Elle qualifie l'EFFET DU CHANTIER AU TENANT — refaire la PAGE D'ENTRÉE
+  du site pour toute la firme ; or « promouvoir une évolution du cockpit » est un cran VALIDÉ,
+  porte du gardien, rayon d'impact firme entière (tour-de-controle.md §6), ce que corrobore
+  rayon_impact: firme ci-dessus et le précédent T-0014 (cockpit, cran valide). Ce qui n'est PAS le
+  cran du chantier, et que la prose antérieure mêlait : l'édition du code en branche est un cran
+  auto (editer_fichier_en_branche) — c'est le MOYEN, pas l'effet ; le déploiement du .sppkg est un
+  RUNBOOK HUMAIN du gardien (§6), jamais une action d'agent ; la porte de merge du chemin sensible
+  outils/tour-de-controle-spfx/** est un mécanisme de la CI (impact.py, T-0043), pas un cran.
+  Aucune écriture nulle part : le bandeau titre est un compteur de LECTURE (critère ci-dessus).
+  Prose antérieure du champ, reportée ici sans perte : « édition du code de la web part en branche
+  = cran auto (editer_fichier_en_branche, tour-de-controle.md §6) ; la PR touche
+  outils/tour-de-controle-spfx/** → chemin sensible, porte humaine, pas d'auto-merge ; déploiement
+  du .sppkg = runbook humain (gardien) ».

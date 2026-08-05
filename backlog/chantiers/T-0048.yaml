@@ -4,7 +4,7 @@ titre: "Cockpit — page Détails staffing (lecture) + code couleur libre par re
 capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
 phase: 4
 type_action: infrastructure
-cran: "édition du code de la web part en branche = cran auto ; l'écriture du CodeCouleur est une ÉDITION HUMAINE DIRECTE sous l'identité Entra de l'utilisateur — HORS du régime des crans (tour-de-controle.md §6, qui gouverne les agents), aucune élévation de droits ; la PR touche outils/tour-de-controle-spfx/** → chemin sensible, porte humaine ; création de la colonne au tenant = runbook gardien"
+cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du gardien, rayon firme entière (tour-de-controle.md §6) ; détail en note
 produit:
   - "(prérequis runbook GARDIEN, bloquant) création de la colonne « Code couleur » -> nom interne CodeCouleur sur la Liste « Ressources-Profil » : choix UNIQUE Rouge / Orange / Vert, SANS valeur par défaut, SANS ajout manuel. Poser la colonne sous son nom interne ASCII puis renommer le libellé (modele-donnees.md §2 ter, piège des encodages _x00e9_)"
   - "(page Détails staffing, LECTURE) bouton « Détails » en haut à droite du bandeau 1 -> page dédiée listant chaque ressource et son TAUX DE STAFFING RÉEL, calculé par la MÊME surface de calcul que les barres du bandeau (aucun second calcul, aucune divergence possible par construction)"
@@ -36,3 +36,22 @@ note: >
   La page Détails est en LECTURE sur les taux : elle ne recalcule rien, elle réutilise la surface de
   calcul des barres. Deux calculs = deux vérités ; l'égalité doit tenir par construction, pas par
   vigilance.
+
+  SUR LE CRAN — bloc AJOUTÉ le 05/08/2026 ; rien de ce qui précède n'est réécrit. Le champ cran
+  ci-dessus porte désormais la valeur du vocabulaire contrôlé (auto | notifie | valide |
+  anonymisation) : valide. Elle qualifie l'EFFET DU CHANTIER AU TENANT — « promouvoir une évolution
+  du cockpit » est un cran VALIDÉ, porte du gardien, rayon d'impact firme entière
+  (tour-de-controle.md §6), ce que corrobore rayon_impact: firme ci-dessus. Ici l'effet est
+  d'autant moins local que le chantier ÉTEND d'une colonne le périmètre « Agir » du cockpit
+  (v2.3 §1) : un élargissement de périmètre relève de la porte du gardien, jamais de l'agent seul.
+  Ce qui n'est PAS le cran du chantier, et que la prose antérieure mêlait : l'écriture du
+  CodeCouleur est une ÉDITION HUMAINE DIRECTE sous l'identité Entra de l'utilisateur, HORS du
+  régime des crans (§6, qui gouverne les agents — AUCUN agent n'écrit cette colonne, critère
+  ci-dessus) ; l'édition du code en branche est un cran auto (editer_fichier_en_branche), le moyen
+  et non l'effet ; la création de la colonne au tenant est un RUNBOOK GARDIEN ; la porte de merge
+  du chemin sensible outils/tour-de-controle-spfx/** est un mécanisme de la CI, pas un cran.
+  Prose antérieure du champ, reportée ici sans perte : « édition du code de la web part en branche
+  = cran auto ; l'écriture du CodeCouleur est une ÉDITION HUMAINE DIRECTE sous l'identité Entra de
+  l'utilisateur — HORS du régime des crans (tour-de-controle.md §6, qui gouverne les agents),
+  aucune élévation de droits ; la PR touche outils/tour-de-controle-spfx/** → chemin sensible,
+  porte humaine ; création de la colonne au tenant = runbook gardien ».

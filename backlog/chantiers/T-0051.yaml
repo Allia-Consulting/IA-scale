@@ -4,7 +4,7 @@ titre: "Cockpit — bandeau 4 : affichage borné à l'année en cours, bouton «
 capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
 phase: 4
 type_action: infrastructure
-cran: "édition du code de la web part en branche = cran auto ; LECTURE SEULE de bout en bout — aucune écriture, le budget est une saisie humaine que la machine ne touche jamais (modele-donnees.md v1.30 §5.7) ; PR sur chemin sensible -> porte humaine ; octroi de lecture du dossier au tenant = runbook gardien"
+cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du gardien, rayon firme entière (tour-de-controle.md §6) ; détail en note
 produit:
   - "(borne d'affichage) le tableau du bandeau 4 n'affiche plus que l'ANNÉE EN COURS : douze mois x (Budget | Réalisé) + colonne Total, lignes CA total et EBITDA"
   - "(bouton « Année N+1 ») en haut à droite, bascule sur le budget de l'année à venir (v2.3 §3.4)"
@@ -47,3 +47,21 @@ note: >
   ÉCART DE POINTEUR OUVERT : tour-de-controle.md v2.3 (promu) écrit « budget-entreprise.xlsx » AVEC
   tiret ; le nom réel au tenant fait foi. Correction de pointeur à porter en micro-PR dédiée d'une
   ligne à la prochaine ouverture de tour-de-controle.md — ce chantier CODE contre le nom réel.
+
+  SUR LE CRAN — bloc AJOUTÉ le 05/08/2026 ; rien de ce qui précède n'est réécrit. Le champ cran
+  ci-dessus porte désormais la valeur du vocabulaire contrôlé (auto | notifie | valide |
+  anonymisation) : valide. Elle qualifie l'EFFET DU CHANTIER AU TENANT — « promouvoir une évolution
+  du cockpit » est un cran VALIDÉ, porte du gardien, rayon d'impact firme entière
+  (tour-de-controle.md §6), ce que corrobore rayon_impact: firme ci-dessus. La LECTURE SEULE
+  n'abaisse PAS ce cran : le chantier rend le BUDGET DE LA FIRME (CA, EBITDA) lisible par tout
+  collaborateur, ce qui est un élargissement d'audience à rayon firme entière — et l'octroi de
+  lecture du dossier « 09 - Budget Allia » qui le permet est un RUNBOOK GARDIEN (modifier des
+  droits est proscrit à l'agent, table-des-crans.yaml). Ce qui n'est PAS le cran du chantier, et que
+  la prose antérieure mêlait : l'édition du code en branche est un cran auto
+  (editer_fichier_en_branche), le moyen et non l'effet ; la porte de merge du chemin sensible est un
+  mécanisme de la CI, pas un cran. L'absence d'écriture reste un INVARIANT du chantier, éprouvé par
+  l'eTag (critère ci-dessus) — elle est une garde, pas une justification de cran.
+  Prose antérieure du champ, reportée ici sans perte : « édition du code de la web part en branche
+  = cran auto ; LECTURE SEULE de bout en bout — aucune écriture, le budget est une saisie humaine
+  que la machine ne touche jamais (modele-donnees.md v1.30 §5.7) ; PR sur chemin sensible -> porte
+  humaine ; octroi de lecture du dossier au tenant = runbook gardien ».

@@ -4,7 +4,7 @@ titre: "Sous-système de facturation — registre canonique des factures et allo
 capacite: "Capacités habilitantes / Gestion financière — Facturation & encaissement"
 phase: 1
 type_action: infrastructure
-cran: validé   # crée une source de vérité financière + une séquence légale : irréversible dans ses effets comptables, sortie de firme possible (factures)
+cran: valide   # crée une source de vérité financière + une séquence légale : irréversible dans ses effets comptables, sortie de firme possible (factures)
 produit:
   - "(liste SharePoint canon) registre 'Factures' — source de vérité du NumFacture, allouant une numérotation séquentielle globale cabinet F-AAAA-NNNN unique, continue et sans trou (exigence légale FR de chronologie ininterrompue)"
   - "(agent) réconciliation bidirectionnelle classeur de saisie ↔ liste Factures : allocation atomique du numéro côté liste (contrôle de concurrence optimiste IF-MATCH/ETag, cf. helper ecrireListe S33), puis réécriture du numéro alloué dans le classeur Excel en face de l'étiquette locale de la ligne"
