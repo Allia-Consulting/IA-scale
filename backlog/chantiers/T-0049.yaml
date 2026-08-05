@@ -4,7 +4,7 @@ titre: "Cockpit — pipe : comptes actifs en info-bulle, fenêtre Détails des o
 capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
 phase: 4
 type_action: infrastructure
-cran: "édition du code de la web part en branche = cran auto ; les écritures (opportunité, compte) sont des ÉDITIONS HUMAINES DIRECTES sous l'identité Entra de l'utilisateur — hors régime des crans (tour-de-controle.md §6) ; la cascade « Gagnée » demeure une CASCADE DÉTERMINISTE (annonce exhaustive + confirmation explicite, v2.3 §1 régime 2), inchangée par ce chantier ; PR sur chemin sensible -> porte humaine"
+cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du gardien, rayon firme entière (tour-de-controle.md §6) ; détail en note
 produit:
   - "(info-bulle) « comptes actifs » quitte les compteurs de tête et devient une INFO-BULLE du bandeau 2 (v2.3 §3.2) ; les compteurs affichés restent : propositions en cours, montant proposé, pipe pondéré (pondérations FIGÉES : Proposition 60 %, Qualification 15 %)"
   - "(fenêtre Détails) bouton « Détails » -> fenêtre dédiée des OPPORTUNITÉS OUVERTES, soit exactement les étapes Qualification + Proposition ; éditable (étape, montant) comme l'était la table de la première page"
@@ -40,3 +40,23 @@ note: >
   une correction d'une valeur, pas une reconception.
   Hygiène connexe NOMMÉE, NON OUVERTE ici (plan.md §13) : promotion tracée Zone-de-proposition ->
   CRM, et clics gardien d'hygiène tenant.
+
+  SUR LE CRAN — bloc AJOUTÉ le 05/08/2026 ; rien de ce qui précède n'est réécrit. Le champ cran
+  ci-dessus porte désormais la valeur du vocabulaire contrôlé (auto | notifie | valide |
+  anonymisation) : valide. Elle qualifie l'EFFET DU CHANTIER AU TENANT — « promouvoir une évolution
+  du cockpit » est un cran VALIDÉ, porte du gardien, rayon d'impact firme entière
+  (tour-de-controle.md §6), ce que corrobore rayon_impact: firme ci-dessus ; et ce chantier ouvre
+  une SECONDE liste source (« Comptes ») à la création depuis le cockpit, ce qui n'est pas un effet
+  local. Ce qui n'est PAS le cran du chantier, et que la prose antérieure mêlait : les écritures
+  (opportunité, compte) sont des ÉDITIONS HUMAINES DIRECTES sous l'identité Entra de l'utilisateur,
+  hors du régime des crans (§6) ; l'édition du code en branche est un cran auto
+  (editer_fichier_en_branche), le moyen et non l'effet ; la porte de merge du chemin sensible est un
+  mécanisme de la CI, pas un cran. La cascade « Gagnée » demeure une CASCADE DÉTERMINISTE (annonce
+  exhaustive + confirmation explicite, v2.3 §1 régime 2), INCHANGÉE par ce chantier : elle ne
+  contribue donc pas au cran ci-dessus — ses propres actions d'agent gardent leurs crans (T-0038
+  allouer_code_mission et T-0040 creer_ligne_mission, notifie l'un et l'autre).
+  Prose antérieure du champ, reportée ici sans perte : « édition du code de la web part en branche
+  = cran auto ; les écritures (opportunité, compte) sont des ÉDITIONS HUMAINES DIRECTES sous
+  l'identité Entra de l'utilisateur — hors régime des crans (tour-de-controle.md §6) ; la cascade
+  « Gagnée » demeure une CASCADE DÉTERMINISTE (annonce exhaustive + confirmation explicite, v2.3 §1
+  régime 2), inchangée par ce chantier ; PR sur chemin sensible -> porte humaine ».

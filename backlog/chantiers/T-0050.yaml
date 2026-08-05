@@ -4,7 +4,7 @@ titre: "Cockpit — recrutement : compteurs sur une ligne, NomCandidat affiché,
 capacite: "Cockpit utilisateur (Phase 4) — vague de refonte par l'usage, tour-de-controle.md v2.3"
 phase: 4
 type_action: infrastructure
-cran: "édition du code de la web part en branche = cran auto ; les gestes (ajout candidat, changement d'étape) sont des ÉDITIONS HUMAINES DIRECTES sous l'identité Entra de l'utilisateur — hors régime des crans (tour-de-controle.md §6) ; la cascade « Acceptée » demeure une CASCADE DÉTERMINISTE (annonce + confirmation), inchangée par ce chantier ; PR sur chemin sensible -> porte humaine ; création des colonnes au tenant = runbook gardien"
+cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du gardien, rayon firme entière (tour-de-controle.md §6) ; détail en note
 produit:
   - "(prérequis runbook GARDIEN, bloquant) création sur la Liste « Candidats » des colonnes « Identité Entra » -> IdentiteEntra (texte, UPN) et « Disponibilité » -> Disponibilite (date) — nom interne ASCII d'abord, libellé ensuite (modele-donnees.md §2 ter)"
   - "(compteurs) E1, E2, E3 et Décisions (candidats en étape Proposition) ramenés SUR UNE SEULE LIGNE (v2.3 §3.3)"
@@ -42,3 +42,27 @@ note: >
   formulaire d'ajout. Il n'ouvre aucun usage RH nouveau.
   Scorie connexe NOMMÉE, NON OUVERTE (T-0039) : les Title des candidats 1..7 ne sont pas conformes
   au motif C-NNN — backfill = clics gardien.
+
+  SUR LE CRAN — bloc AJOUTÉ le 05/08/2026 ; rien de ce qui précède n'est réécrit. Le champ cran
+  ci-dessus porte désormais la valeur du vocabulaire contrôlé (auto | notifie | valide |
+  anonymisation) : valide. Elle qualifie l'EFFET DU CHANTIER AU TENANT — « promouvoir une évolution
+  du cockpit » est un cran VALIDÉ, porte du gardien, rayon d'impact firme entière
+  (tour-de-controle.md §6), ce que corrobore rayon_impact: firme ci-dessus. Deux raisons
+  supplémentaires de ne PAS abaisser ce cran : le chantier fait apparaître NomCandidat à l'écran là
+  où le cockpit ne montrait que des agrégats (T-0014-b), et il ajoute deux colonnes de données
+  personnelles au tenant — la minimisation RGPD est tenue et le cadre promu inchangé (critère
+  ci-dessus, rgpd-recrutement-candidats.md), mais c'est une décision de gardien, pas d'agent. Ce qui
+  n'est PAS le cran du chantier, et que la prose antérieure mêlait : les gestes (ajout candidat,
+  changement d'étape) sont des ÉDITIONS HUMAINES DIRECTES sous l'identité Entra de l'utilisateur,
+  hors du régime des crans (§6) ; l'édition du code en branche est un cran auto
+  (editer_fichier_en_branche), le moyen et non l'effet ; la création des colonnes au tenant est un
+  RUNBOOK GARDIEN ; la porte de merge du chemin sensible est un mécanisme de la CI, pas un cran. La
+  cascade « Acceptée » demeure une CASCADE DÉTERMINISTE, INCHANGÉE par ce chantier — elle ne
+  contribue donc pas au cran ci-dessus, et l'ARRÊT D'USAGE du 26/07/2026 rappelé plus haut
+  s'applique tel quel.
+  Prose antérieure du champ, reportée ici sans perte : « édition du code de la web part en branche
+  = cran auto ; les gestes (ajout candidat, changement d'étape) sont des ÉDITIONS HUMAINES DIRECTES
+  sous l'identité Entra de l'utilisateur — hors régime des crans (tour-de-controle.md §6) ; la
+  cascade « Acceptée » demeure une CASCADE DÉTERMINISTE (annonce + confirmation), inchangée par ce
+  chantier ; PR sur chemin sensible -> porte humaine ; création des colonnes au tenant = runbook
+  gardien ».
