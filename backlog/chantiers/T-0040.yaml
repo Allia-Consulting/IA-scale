@@ -1,16 +1,28 @@
 ---
 id: T-0040
-titre: "Chaîne d'ouverture de mission complète : la cascade « Gagnée » crée aussi le classeur de saisie (pas seulement le gabarit)"
+titre: "La cascade « Gagnée » ouvre l'OSSATURE de la mission : CodeMission + ligne de la Liste « Missions » + espace (le classeur de saisie reste un dépôt HUMAIN)"
 capacite: "Cœur de métier — ouverture de mission / couture CRM → pilotage"
 phase: 4
 type_action: infrastructure
-cran: valide   # écrit une nouvelle surface de mission au tenant (classeur de saisie) — rayon firme, porte gardien
-produit: []    # NOMMAGE SEUL — aucun outil, aucun canon, aucune écriture tenant
-depend_de:
-  - T-0042   # l'initialisation du classeur de saisie (template → valeurs mission) est la brique manquante
-contrats_concernes: []
+cran: "l'outil creer_ligne_mission est à cran NOTIFIE (table-des-crans.yaml v1.18, miroir exact de allouer_code_mission) ; l'édition du code du serveur MCP et de la web part en branche est à cran auto, mais la PR touche outils/** et contrats/socle/** → chemin sensible, porte humaine"
+produit:
+  - "(outil serveur, NOUVEAU) primitive MCP creer_ligne_mission — création d'UNE ligne dans la Liste « Missions ». Cible FIGÉE côté serveur (GRAPH_MISSIONS_LIST_ID, par symétrie stricte avec GRAPH_CRM_LIST_ID) : l'appelant ne choisit ni la liste, ni les colonnes. Six colonnes écrites et AUCUNE autre : Title, CodeMission, NomClient, EnCours_x002f_Termin_x00e9_e_x00, DateDebut, DateFin (noms internes relevés au tenant le 05/08/2026, modele-donnees.md v1.31 §2 bis)"
+  - "(dérivation des six valeurs, AUCUNE saisie humaine) CodeMission = l'entier que vient d'allouer allouer_code_mission ; Title = « Projet » + CRM.NomOpportunite ; NomClient = Comptes.NomCompte résolu depuis le lookup CRM.Compte ; statut = « En cours » (valeur de choix réelle au tenant — noter l'asymétrie avec le libellé « En Cours / Terminée / Suspendue ») ; DateDebut = 1er du mois de la bascule ; DateFin = 31 décembre de l'année de la bascule. La machine pose un ÉTAT INITIAL COHÉRENT, elle ne le FIGE pas : les six valeurs restent éditables à la main ensuite"
+  - "(préconditions fail-closed) Etape == « Gagnée » ET CodeMission renseigné ET AUCUNE ligne de la Liste « Missions » ne portant déjà ce CodeMission — si l'une échoue : refus explicite, ZÉRO écriture. Le doublon est impossible par construction"
+  - "(branchement cockpit) la cascade « Gagnée » du bandeau 2 (tour-de-controle.md v2.5 §3) écrit, en UN SEUL geste confirmé et dans cet ordre : (1) allouer_code_mission, (2) creer_ligne_mission, (3) création de l'espace de mission — annonce exhaustive préalable + confirmation explicite (§1 régime 2)"
+  - "(atomicité et STOP) si creer_ligne_mission échoue APRÈS l'allocation du code : arrêt au premier incident, état affiché honnêtement, JAMAIS de réparation silencieuse ni de reprise automatique. Le code alloué n'est JAMAIS recyclé (il reste porté par l'opportunité) ; la ligne Missions se rattrape par un geste explicite"
+  - "(tests unitaires) dérivation des six valeurs (dont le 1er du mois et le 31/12 sur des bascules de bord de mois et de bord d'année) ; chacune des trois préconditions fail-closed prise isolément ; anti-doublon CodeMission ; comportement d'ANNULATION à l'écran d'annonce (zéro écriture) ; build et CI verts"
+depend_de: []
+contrats_concernes:
+  - "contrats/socle/tour-de-controle.md"      # v2.5 §3 bandeau 2 — les trois écritures de la cascade « Gagnée »
+  - "contrats/socle/modele-donnees.md"        # v1.31 §2 bis — écriture agent bornée sur la Liste « Missions », schéma réel relevé au tenant
+  - "contrats/socle/table-des-crans.yaml"     # v1.18 — type d'action creer_ligne_mission, cran notifie
 criteres_acceptation:
-  - "À définir à l'ouverture : une bascule « Gagnée » ouvre la mission de bout en bout — CodeMission + espace (T-0038, déjà fait) ET gabarit ET classeur de saisie initialisé"
+  - "Une bascule « Gagnée » RÉELLE produit, en UN SEUL geste confirmé : le CodeMission alloué, la ligne de la Liste « Missions » aux SIX valeurs dérivées justes, et l'espace de mission"
+  - "« Missions actives » s'incrémente de EXACTEMENT 1 et RIEN D'AUTRE ne bouge au cockpit : le bandeau 4 (rentabilité) est décomposé au centime avant/après et doit être identique"
+  - "Une ANNULATION à l'écran d'annonce laisse ZÉRO écriture — vérifié sur les trois cibles (CRM, Liste « Missions », espace)"
+  - "Un CodeMission déjà porté par une ligne de la Liste « Missions » provoque un REFUS explicite, jamais un doublon"
+  - "Le classeur de saisie n'est PAS créé par la cascade : l'invariant « la machine n'écrit jamais la saisie » est vérifié au serveur MCP (aucune primitive d'écriture ouverte sur la couche de saisie, T-0045)"
 rayon_impact: firme
 statut: à_faire
 note: >
@@ -23,3 +35,33 @@ note: >
   l'initialiser à la main pour éprouver T-0039 volet B. Chantier à instruire :
   refermer la chaîne. Dépend de T-0042 (initialisation du classeur). Nommage
   seul, non ouvert.
+
+  --- REQUALIFICATION du 05/08/2026 (S49), par arbitrage gardien ---
+  CONSTAT D'USAGE du 05/08/2026, mesuré au tenant : la Liste « Missions » ne portait que DEUX
+  lignes (Projet Siteflow CM 1, Projet Datalab CM 2). La mission 4 — opportunité O-003
+  « Cockpit M365 », Gagnée depuis le 24/07 à 10:05:40, CodeMission = 4 alloué par la machine
+  (allouer_code_mission, T-0038) à 10:09:10 — n'y avait JAMAIS eu de ligne. D'où « Missions
+  actives : 2 » au cockpit : kpi-organisation.ts::compterMissionsActives compte la Liste
+  « Missions » au statut « En cours », PAS le CRM. Une mission vivante au CRM et à l'économique
+  était donc invisible du registre. Rattrapage joué le 05/08 sous identité déléguée du gardien
+  (ligne id 4 : Projet Cockpit M365 | 4 | Arabelle Solutions | En cours | 2026-07-01 →
+  2026-12-31) ; contrôle après : « Missions actives : 3 », bandeau 4 BYTE-IDENTIQUE (CA cumul
+  55 054 €, EBITDA budget total 105 389 €, EBITDA réalisé 50 101 €). Normalisations jouées dans
+  la foulée : Responsable posé sur O-003 (était vide), casse « Arabelle solutions » →
+  « Arabelle Solutions » sur Missions id 1.
+
+  ARBITRAGE GARDIEN du 05/08/2026 : « Dès que la ligne CRM passe en Gagnée, la machine crée la
+  ligne mission. Je dépose ensuite l'Excel à mon rythme, en me basant sur le numéro attribué. »
+  Le chantier change donc d'OBJET : il ne s'agit plus d'outiller le classeur de saisie, mais
+  d'ouvrir l'OSSATURE de la mission (CodeMission + ligne Liste « Missions » + espace). Le
+  classeur de saisie SORT du périmètre : il redevient un DÉPÔT HUMAIN, au rythme du gardien,
+  nommé d'après le CodeMission alloué — l'invariant « la machine n'écrit jamais la saisie » en
+  sort RENFORCÉ, pas contourné.
+
+  RETRAIT DE DÉPENDANCE (05/08/2026) : T-0042 est retiré de depend_de. L'initialisation outillée
+  du classeur de saisie sort du CHEMIN CRITIQUE de l'ouverture de mission, puisque le dépôt
+  redevient humain. Ce retrait ne requalifie PAS T-0042 lui-même, qui reste ce qu'il est et
+  suit sa propre trajectoire.
+
+  Gravé au canon par tour-de-controle.md v2.5 (§3 bandeau 2), modele-donnees.md v1.31 (§2 bis)
+  et table-des-crans.yaml v1.18 (type d'action creer_ligne_mission, cran notifie).
