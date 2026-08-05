@@ -4,7 +4,7 @@ titre: "La cascade « Gagnée » ouvre l'OSSATURE de la mission : CodeMission + 
 capacite: "Cœur de métier — ouverture de mission / couture CRM → pilotage"
 phase: 4
 type_action: infrastructure
-cran: "l'outil creer_ligne_mission est à cran NOTIFIE (table-des-crans.yaml v1.18, miroir exact de allouer_code_mission) ; l'édition du code du serveur MCP et de la web part en branche est à cran auto, mais la PR touche outils/** et contrats/socle/** → chemin sensible, porte humaine"
+cran: notifie   # cran de l'outil creer_ligne_mission (table-des-crans.yaml v1.18, miroir exact de allouer_code_mission) ; détail en note
 produit:
   - "(outil serveur, NOUVEAU) primitive MCP creer_ligne_mission — création d'UNE ligne dans la Liste « Missions ». Cible FIGÉE côté serveur (GRAPH_MISSIONS_LIST_ID, par symétrie stricte avec GRAPH_CRM_LIST_ID) : l'appelant ne choisit ni la liste, ni les colonnes. Six colonnes écrites et AUCUNE autre : Title, CodeMission, NomClient, EnCours_x002f_Termin_x00e9_e_x00, DateDebut, DateFin (noms internes relevés au tenant le 05/08/2026, modele-donnees.md v1.31 §2 bis)"
   - "(dérivation des six valeurs, AUCUNE saisie humaine) CodeMission = l'entier que vient d'allouer allouer_code_mission ; Title = « Projet » + CRM.NomOpportunite ; NomClient = Comptes.NomCompte résolu depuis le lookup CRM.Compte ; statut = « En cours » (valeur de choix réelle au tenant — noter l'asymétrie avec le libellé « En Cours / Terminée / Suspendue ») ; DateDebut = 1er du mois de la bascule ; DateFin = 31 décembre de l'année de la bascule. La machine pose un ÉTAT INITIAL COHÉRENT, elle ne le FIGE pas : les six valeurs restent éditables à la main ensuite"
@@ -65,3 +65,11 @@ note: >
 
   Gravé au canon par tour-de-controle.md v2.5 (§3 bandeau 2), modele-donnees.md v1.31 (§2 bis)
   et table-des-crans.yaml v1.18 (type d'action creer_ligne_mission, cran notifie).
+
+  SUR LE CRAN : le champ cran ci-dessus porte la valeur du vocabulaire contrôlé — notifie, celui
+  de l'outil creer_ligne_mission, miroir exact de allouer_code_mission (réversible, interne, mais
+  l'ouverture de la mission au registre de la firme est largement visible). Il DESCEND de valide,
+  qui qualifiait l'objet ABANDONNÉ du chantier (créer le classeur de saisie au tenant). Deux
+  portes le complètent, qui ne sont pas des crans d'agent : l'édition du code du serveur MCP et de
+  la web part en branche est un cran auto, mais la PR qui la porte touche outils/** et
+  contrats/socle/** — chemins sensibles, donc PORTE HUMAINE au merge.
