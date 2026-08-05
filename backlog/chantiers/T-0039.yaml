@@ -4,7 +4,7 @@ titre: "Gestes recrutement du cockpit — ajout candidat, changement d'étape en
 capacite: "Généralisation ; cockpit utilisateur (Phase 4) / T-0035 point 4 — pipe recrutement"
 phase: 4
 type_action: infrastructure
-cran: "gestes = éditions humaines directes sous identité Entra de l'utilisateur (hors régime des crans — tour-de-controle.md §6) ; cascade « Acceptée » = cascade déterministe (annonce exhaustive + confirmation explicite obligatoires, §1 régime 2) ; la PR touche outils/tour-de-controle-spfx/** → porte humaine, pas d'auto-merge"
+cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du gardien, rayon firme entière (tour-de-controle.md §6) ; détail en note
 produit:
   - "(geste « ajouter un candidat ») formulaire minimal du bandeau Recrutement : NomCandidat, Grade, Source, Email, Telephone (optionnel) ; création dans la Liste « Candidats » via SharePoint REST sous identité utilisateur ; Etape posée à E1 ; Title alloué au motif C-NNN (max des ^C-(\\d+)$ existants + 1) — le défaut Title du geste CRM (plan §13.2) n'est PAS reproduit"
   - "(geste « changement d'étape en ligne ») liste déroulante Etape par ligne candidat (E1/E2/E3/Proposition/Acceptée/Refusée), MERGE SharePoint REST — motif changerEtapeOpportunite ; la bascule vers « Acceptée » ne s'écrit JAMAIS directement : elle ouvre la cascade"
@@ -33,3 +33,28 @@ note_epreuve: >
   deployed=true, page vivante). Rejeu volontairement borné à C-005 (arrêt d'usage gardien, cf. arbitrages).
   Journal d'épreuve : docs/epreuves/2026-07-26-t0039-gestes-recrutement.md (PR #264, mergée). Manques
   nommés en marge de l'épreuve : T-0040..T-0043.
+note: >
+  SUR LE CRAN — bloc AJOUTÉ le 05/08/2026 ; rien de ce qui précède n'est réécrit, et ni statut:
+  soldé ni note_epreuve (ratification du gardien du 26/07/2026) ne sont touchés. Le champ cran
+  ci-dessus porte désormais la valeur du vocabulaire contrôlé (auto | notifie | valide |
+  anonymisation) : valide. Elle qualifie l'EFFET DU CHANTIER AU TENANT — T-0039 s'intitule
+  « Gestes recrutement du cockpit » : c'est une ÉVOLUTION DU COCKPIT, cas que tour-de-controle.md
+  §6 tranche littéralement (« Promouvoir une évolution du cockpit : cran validé, porte du gardien
+  — rayon d'impact firme entière »), au même titre que les sept fiches normalisées le 05/08
+  (PR #303) et que le précédent T-0014.
+  Ce n'est PAS une relecture rétroactive d'une fiche soldée : §6 était en vigueur le 26/07 — la
+  prose du champ le citait elle-même — donc on applique ici la règle D'ALORS, on n'en invente pas
+  une nouvelle. Seule la FORME du champ change (une valeur-clé au lieu d'une phrase) ; le régime
+  applicable au chantier est inchangé, et l'incident du 26/07 (PR #263 auto-mergée sans porte
+  humaine) reste ce qu'il était.
+  Ce qui n'est PAS le cran du chantier, et que la prose antérieure mêlait : les éditions humaines
+  depuis le cockpit sont HORS RÉGIME DES CRANS (gestes de l'utilisateur sous ses propres droits
+  Entra — la table des crans qualifie les actions de l'agent, pas celles de l'humain à l'écran) ;
+  la cascade « Acceptée » est une CASCADE DÉTERMINISTE (annonce exhaustive + confirmation
+  explicite obligatoires, §1 régime 2), c'est-à-dire un régime d'exécution et non un cran ; la
+  porte de merge du chemin sensible outils/tour-de-controle-spfx/** est un MÉCANISME DE LA CI
+  (impact.py, T-0043), pas un cran.
+  Prose antérieure du champ, reportée ici sans perte : « gestes = éditions humaines directes sous
+  identité Entra de l'utilisateur (hors régime des crans — tour-de-controle.md §6) ; cascade
+  « Acceptée » = cascade déterministe (annonce exhaustive + confirmation explicite obligatoires,
+  §1 régime 2) ; la PR touche outils/tour-de-controle-spfx/** → porte humaine, pas d'auto-merge ».
