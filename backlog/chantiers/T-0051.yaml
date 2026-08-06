@@ -8,12 +8,13 @@ cran: valide   # promouvoir une évolution du cockpit = cran validé, porte du g
 produit:
   - "(borne d'affichage) le tableau du bandeau 4 n'affiche plus que l'ANNÉE EN COURS : douze mois x (Budget | Réalisé) + colonne Total, lignes CA total et EBITDA"
   - "(bouton « Année N+1 ») en haut à droite, bascule sur le budget de l'année à venir (v2.3 §3.4)"
-  - "(colonne Budget) lue dans budgetentreprise.xlsx / table T_Budget, FILTRÉE sur l'année affichée, via l'API Workbook sous l'identité de l'UTILISATEUR CONNECTÉ (Graph délégué) — jamais sous identité machine"
+  - "(colonne Budget) lue dans la Liste « Budget » du site AlliaConsuling (dérivé alimenté par T-0053), FILTRÉE sur l'année affichée, sous l'identité de l'UTILISATEUR CONNECTÉ — même patron de lecture que « CRM » et « Missions ». Le cockpit ne lit PLUS le classeur : celui-ci est réservé (modele-donnees v1.32 §5.7, arbitrage gardien du 06/08/2026)"
   - "(colonne Réalisé) INCHANGÉE : projection des fiches missions consolidées — gabarits actifs + référentiel de coûts, lus à la volée (modele-donnees §5.4). Budget et Réalisé ne partagent AUCUNE source"
-  - "(prérequis runbook GARDIEN, bloquant) octroi de l'accès LECTURE du seul dossier « 09 - Budget Allia » à toute la firme : héritage rompu, octroi lecture — le SITE AlliaConsulting-Contratsetadministratif demeure RESTREINT pour Business plan et tréso.xlsx (modele-donnees v1.30 §5.7)"
+  - "(prérequis, bloquant) T-0053 livré et éprouvé : la Liste « Budget » existe et est alimentée. L'octroi de lecture du dossier « 09 - Budget Allia » à la firme est ABROGÉ — jamais joué, jamais à jouer (modele-donnees v1.32 §5.7)"
   - "(tests) unités sur le filtre d'année, la bascule N/N+1, le rendu du mois vide ; build et CI verts"
 depend_de:
   - T-0031   # primitives Workbook (lecture de classeurs à tables nommées)
+  - T-0053   # projection du budget vers la Liste « Budget » — sans elle, rien à lire
 contrats_concernes:
   - "contrats/socle/tour-de-controle.md"   # v2.3 §3.4 (année en cours, bouton N+1, Budget = T_Budget)
   - "contrats/socle/modele-donnees.md"     # v1.30 §5.7 (domicile, schéma T_Budget, régime d'accès), §5.4 (Réalisé inchangé, convention HT)
@@ -21,8 +22,8 @@ criteres_acceptation:
   - "La bascule année en cours / N+1 est JUSTE : chaque cellule affichée correspond à la ligne T_Budget du mois de l'année sélectionnée, jamais à un décalage de position"
   - "Tout écart avec l'ancien affichage est DÉCOMPOSÉ AU CENTIME et expliqué ligne à ligne — aucun écart n'est absorbé par un arrondi"
   - "La distinction ZÉRO RÉEL / ABSENT est tenue sur VALEURS Graph, jamais sur l'affichage : un montant budgété 0 s'affiche 0 ; « · » est RÉSERVÉ à l'ABSENT (mois sans ligne, cellule sans valeur) — jamais un zéro inventé pour un absent, jamais un zéro réel travesti en absence (modele-donnees §5.7 ; plan v0.11 §18.5). Éprouvé sur le réel : janvier à mars 2026 portent des ZÉROS budgétés RÉELS (Graph renvoie 0 — mesure du 04/08/2026 sous identité déléguée), ils doivent s'afficher 0"
-  - "La colonne Budget est LISIBLE PAR TOUT COLLABORATEUR sous sa propre identité, sans élévation de droits — c'est l'octroi de lecture du dossier qui la rend lisible, jamais un compte de service ni un contournement"
-  - "Business plan et tréso.xlsx demeure ILLISIBLE pour un non-associé : l'octroi porte sur le SEUL dossier « 09 - Budget Allia », le reste du site reste restreint. À VÉRIFIER EXPLICITEMENT après l'octroi, avec un compte non-associé"
+  - "La colonne Budget est LISIBLE PAR TOUT COLLABORATEUR sous sa propre identité, sans élévation de droits — c'est la Liste « Budget » (dérivé) qui la rend lisible, jamais un accès au classeur, jamais un compte de service côté cockpit"
+  - "budgetentreprise.xlsx ET les deux classeurs BP demeurent ILLISIBLES pour un non-associé — garanti non par un octroi mais par la composition des groupes du site (Visiteurs vide, Membres = 2) et par la séparation du 06/08/2026 (BP déplacés en « 10 - Business plan »). À VÉRIFIER EXPLICITEMENT avec un compte non-associé, en même temps que la lisibilité de la liste"
   - "AUCUNE écriture sur budgetentreprise.xlsx : le classeur relu après usage du cockpit porte le MÊME eTag qu'avant (même famille de preuve que l'invariant de saisie, T-0045 / T-0046)"
 rayon_impact: firme
 statut: à_faire
@@ -96,3 +97,30 @@ note: >
   hypothèse. La MESURE DE RÉFÉRENCE au niveau valeur demeure celle du 04/08/2026 (plan v0.11 §18.5,
   Graph renvoie 0), et le critère corrigé impose le contrôle de bascule SUR VALEURS Graph : c'est
   là que la preuve définitive s'exécutera, AVANT toute livraison.
+
+  RÉGIME D'ACCÈS RÉVISÉ — bloc AJOUTÉ le 06/08/2026 (S50) ; rien de ce qui précède n'est
+  réécrit. Arbitrage gardien du 06/08 gravé à modele-donnees v1.32 §5.7 (PR #306) : le dossier
+  « 09 - Budget Allia » N'EST PAS ouvert à la firme et ne le sera pas ; le classeur reste
+  réservé à deux personnes. Le prérequis d'octroi qui bloquait ce chantier depuis le 03/08 est
+  donc ABROGÉ, pas levé — il n'a jamais été joué. La donnée budget reste affichée à toute la
+  firme SANS élévation de droits, par PROJECTION DÉRIVÉE (patron des gabarits ERP) : T-0053
+  alimente une Liste « Budget » sur AlliaConsuling, que CE chantier lit sous l'identité de
+  l'utilisateur. Ce chantier redevient donc PUREMENT COCKPIT — aucune lecture de classeur,
+  aucune primitive serveur, aucun octroi.
+  FAITS MESURÉS le 06/08/2026 (identité déléguée, lecture d'objet) : groupes du site
+  Contrats-et-administratif = Membres 2 utilisateurs, Propriétaires les 2 mêmes, Visiteurs
+  VIDE ; héritage du dossier rompu par le gardien (permissions uniques) ; BP allia.xlsx et
+  Business plan et tréso.xlsx déplacés vers « 10 - Business plan », itemId préservés, adresse
+  probante de budgetentreprise.xlsx INCHANGÉE.
+  Éléments antérieurs, reportés ici sans perte : « (colonne Budget) lue dans
+  budgetentreprise.xlsx / table T_Budget, FILTRÉE sur l'année affichée, via l'API Workbook sous
+  l'identité de l'UTILISATEUR CONNECTÉ (Graph délégué) — jamais sous identité machine » ;
+  « (prérequis runbook GARDIEN, bloquant) octroi de l'accès LECTURE du seul dossier
+  « 09 - Budget Allia » à toute la firme : héritage rompu, octroi lecture — le SITE
+  AlliaConsulting-Contratsetadministratif demeure RESTREINT pour Business plan et tréso.xlsx
+  (modele-donnees v1.30 §5.7) » ; « La colonne Budget est LISIBLE PAR TOUT COLLABORATEUR sous
+  sa propre identité, sans élévation de droits — c'est l'octroi de lecture du dossier qui la
+  rend lisible, jamais un compte de service ni un contournement » ; « Business plan et
+  tréso.xlsx demeure ILLISIBLE pour un non-associé : l'octroi porte sur le SEUL dossier
+  « 09 - Budget Allia », le reste du site reste restreint. À VÉRIFIER EXPLICITEMENT après
+  l'octroi, avec un compte non-associé ».
