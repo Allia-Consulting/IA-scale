@@ -77,3 +77,35 @@ note: >
   serveur sont INCHANGÉES et demeurent la dernière garde. Les écritures humaines de la cascade
   (statut « émise » sous identité du cliqueur, génération/upload du Word sous identité utilisateur)
   sont HORS crans (§6). PR sur chemin sensible -> porte humaine ».
+
+  DOMICILE TRANCHÉ — bloc AJOUTÉ le 06/08/2026 (S50), par arbitrage gardien ; il SOLDE la
+  question « à trancher par l'architecte » posée plus haut, sans la réécrire. La règle du
+  gardien : « le fichier Excel déposé présente la facturation qui fait foi ; ensuite le
+  comptable fait l'acte de comptabilité ». Conséquence : NI la voie (a) NI la voie (b) telles
+  que posées — la SAISIE fait foi, et le registre « Factures » porte le NUMÉRO, jamais la
+  vérité de ce qui est dû. La cascade « Éditer = émettre » ne crée donc AUCUNE seconde vérité :
+  elle alloue le numéro, génère le Word, le dépose, renseigne LienFacture. Le statut « émise »
+  de l'onglet Facturation reste une SAISIE HUMAINE dans le classeur, au rythme du responsable —
+  le cockpit ne l'écrit pas, la machine encore moins (modele-donnees v1.33 §2 bis (g)).
+
+  L'AFFIRMATION « allouer_num_facture n'a JAMAIS ÉTÉ SOLLICITÉ sur le réel » CI-DESSUS EST
+  DÉMENTIE, et l'était à sa rédaction : le registre porte F-2026-0004 (2026-07-datalab,
+  15 400 €), créée le 31/07/2026 à 16:55:13 par « Application SharePoint » — la seule écriture
+  MACHINE du registre ; les six autres lignes portent l'identité déléguée du gardien. Corrigé
+  par renvoi d'ici, non réécrit plus haut. L'épreuve reste néanmoins le PREMIER exercice réel du
+  cran validé DEPUIS LE COCKPIT.
+
+  DEUX PRÉALABLES BLOQUANTS AJOUTÉS (modele-donnees v1.33 §2 bis) : (1) correctif
+  d'idempotence — la clé passe de la PRESTATION au GESTE (CleEmission) : sans lui, une
+  réémission recevrait l'ANCIEN numéro en silence, et la cascade produirait un faux-vert ;
+  (2) colonne CleEmission au registre — runbook gardien.
+
+  TOLÉRANCE DE LECTURE DES STATUTS (arbitrage gardien du 06/08) : le filtre du bandeau 5
+  tolère casse, accents et la faute de frappe « a emmettre » relevée au réel ; il ne réécrit
+  JAMAIS la saisie. Un filtre strict rendrait le bandeau VIDE — huit lignes existent.
+
+  CIBLE DE L'ÉPREUVE, IDENTIFIÉE AU RÉEL le 06/08/2026 (saisie-1-siteflow.xlsx, onglet
+  Facturation, lecture d'objet sous identité déléguée) : ligne « 2026-08-siteflow », MoisCA
+  2026-08, MontantHT 16 830 € (formule =18,7*900), échéance 01/09/2026, statut « a emmettre ».
+  C'est LA facture de fin août. Les huit lignes de l'onglet portent des étiquettes mensuelles
+  « 2026-MM-siteflow » ; mai à juillet sont au statut émis.
