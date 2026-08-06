@@ -67,7 +67,7 @@ cas:
     type: invariant
     description: "Allocation (T-0030) — ligne émise AVEC EtiquetteLocale et sans NumFacture : appel gouverné allouer_num_facture, numéro rendu posé dans le jeu régénéré puis écrit dans T_Echeancier.NumFacture au repeuplement."
     contient:
-      - "allouer_num_facture(code_mission, etiquette_locale, mois_ca, montant_ht, echeance)"
+      - "allouer_num_facture(code_mission, etiquette_locale, mois_ca, montant_ht, echeance, cle_emission)"
       - "posé dans le jeu régénéré"
       - "écrit dans `T_Echeancier.NumFacture`"
   - id: allocation-emise-sans-etiquette-12
@@ -78,9 +78,10 @@ cas:
       - "ne jamais forger un numéro localement"
   - id: allocation-idempotence-13
     type: invariant
-    description: "Allocation (T-0030) — re-dérivation : l'outil est idempotent par clé (CodeMission, EtiquetteLocale) ; il rend le numéro existant sans écrire (pas de double allocation)."
+    description: "Allocation (T-0030, v1.33 §2 bis (d)) — re-dérivation : l'outil est idempotent par la clé de GESTE ; ce skill étant REJOUABLE, sa cle_emission est STABLE et dérivée de la ligne, si bien qu'une re-dérivation rend le numéro existant sans écrire (aucun numéro brûlé). La clé ne porte PLUS sur (CodeMission, EtiquetteLocale)."
     contient:
-      - "IDEMPOTENT par clé `(CodeMission, EtiquetteLocale)`"
+      - "idempotent **sur elle**, PLUS sur `(CodeMission, EtiquetteLocale)`"
+      - "consolidation:<CodeMission>:<EtiquetteLocale>"
       - "rend le numéro existant sans écrire"
   - id: allocation-report-existant-14
     type: invariant
