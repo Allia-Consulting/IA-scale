@@ -1,0 +1,59 @@
+---
+id: T-0053
+titre: "Projection du budget entreprise — le serveur lit T_Budget et alimente la Liste « Budget » ; le classeur reste réservé"
+capacite: "Cockpit utilisateur (Phase 4) / couture économique — régime d'accès du budget (modele-donnees v1.32 §5.7)"
+phase: 4
+type_action: infrastructure
+cran: valide   # effet au tenant = rendre le budget de la firme lisible par TOUS (rayon firme) ; détail en note
+produit:
+  - "(ÉPREUVE PRÉALABLE, FAIL-CLOSED — avant toute ligne de code) mesurer que l'identité MACHINE lit ENCORE budgetentreprise.xlsx MALGRÉ les permissions uniques posées sur « 09 - Budget Allia » le 06/08/2026 : lecture réelle par driveId/itemId (adresse probante §5.7), JAMAIS une déduction. ROUGE = STOP du chantier : la projection exigerait d'ajouter l'application aux autorisations du dossier — RUNBOOK GARDIEN, à instruire avant de coder"
+  - "(prérequis runbook GARDIEN, bloquant) création de la Liste « Budget » sur le site AlliaConsuling : Mois (date, 1er du mois) · CA_Budget · MasseSalariale_Budget · CoutsStructure_Budget · EBITDA_Budget (nombres). Nom interne ASCII d'abord, libellé ensuite (modele-donnees §2 ter, piège des encodages _x00e9_)"
+  - "(outil serveur, NOUVEAU) primitive MCP projeter_budget — lit T_Budget dans budgetentreprise.xlsx (cible FIGÉE côté serveur par variables d'environnement, jamais choisie par l'appelant) et RAFRAÎCHIT la Liste « Budget » (cible FIGÉE, GRAPH_BUDGET_LIST_ID, patron de GRAPH_CRM_LIST_ID). LECTURE SEULE sur le classeur : aucune primitive d'écriture n'est ouverte sur lui, jamais"
+  - "(règle de projection) une ligne de liste par ligne T_Budget, clé = Mois ; un mois ABSENT de la table est ABSENT de la liste (jamais créé à zéro) ; un montant VIDE reste VIDE ; un ZÉRO RÉEL est projeté 0 — la distinction se tient sur VALEURS Graph, jamais sur l'affichage (plan v0.11 §18.5)"
+  - "(canon) modele-donnees §2 bis — entrée Liste « Budget » (DÉRIVÉ ; écriture agent bornée au SEUL outil projeter_budget, colonnes énumérées, aucune autre) + §2 ter noms internes RELEVÉS au tenant ; table-des-crans — type d'action projeter_budget"
+  - "(tests) unités sur la projection (mois absent, montant vide, zéro réel, mois retiré de la source), idempotence d'un second passage, invariant de non-écriture ; build et CI verts"
+depend_de:
+  - T-0031   # primitives Workbook (lecture de classeurs à tables nommées)
+contrats_concernes:
+  - "contrats/socle/modele-donnees.md"    # v1.32 §5.7 (régime révisé, projection dérivée) ; §2 bis et §2 ter à compléter
+  - "contrats/socle/table-des-crans.yaml" # type d'action projeter_budget
+criteres_acceptation:
+  - "Le classeur budgetentreprise.xlsx relu APRÈS un passage porte le MÊME eTag qu'avant : la machine ne l'écrit JAMAIS (famille de preuve T-0045 / T-0046)"
+  - "Chaque ligne de la Liste « Budget » est ÉGALE à sa ligne T_Budget, cellule par cellule, AU CENTIME — tout écart est une anomalie, jamais un arrondi"
+  - "Un mois ABSENT de T_Budget est ABSENT de la liste ; un montant VIDE reste VIDE ; un ZÉRO RÉEL vaut 0 — éprouvé sur janvier à mars 2026, qui portent des zéros budgétés RÉELS"
+  - "Un second passage sans changement de source ne modifie AUCUNE ligne : idempotence vérifiée par les eTags de la liste, jamais par le seul compte de lignes"
+  - "La Liste « Budget » est LISIBLE par tout collaborateur sous sa propre identité, et budgetentreprise.xlsx lui demeure ILLISIBLE — les DEUX vérifiés avec un compte non-associé"
+  - "Aucune primitive d'écriture sur le classeur n'existe au serveur MCP — vérifié au CODE, pas seulement au comportement"
+rayon_impact: firme
+statut: à_faire
+note: >
+  Né de l'arbitrage gardien du 06/08/2026 (S50), gravé à modele-donnees v1.32 §5.7 (PR #306,
+  mergée) : le budget reste une SOURCE RÉSERVÉE (deux personnes) tandis que la DONNÉE s'affiche à
+  toute la firme au cockpit, par projection dérivée — patron des gabarits ERP (§5.1). Ce chantier
+  porte la projection ; T-0051 porte le bandeau qui la lit.
+
+  POURQUOI CE DÉCOUPAGE : projection et bandeau vivent sur deux chemins sensibles distincts
+  (outils/mcp-graph/ et outils/tour-de-controle-spfx/) et sortent par deux runbooks de
+  déploiement différents (image Azure ; paquet .sppkg à l'App Catalog). Les mêler produirait une
+  PR à cheval, impossible à éprouver par morceaux.
+
+  ÉTAT DU DROIT — MESURÉ, et contraire à ce que le contrat a longtemps dit : l'identité managée
+  id-allia-mcp-graph porte Sites.Selected role=WRITE sur Contrats-et-administratif depuis T-0031
+  (architecture.md, registre des octrois), corroboré par l'usage (gabarits ERP créés et régénérés
+  sur ce site depuis le 17/07 ; inscrire_cout_structure y écrit depuis le 01/08). AUCUN octroi
+  nouveau n'est requis, ni côté source ni côté destination (write aussi sur AlliaConsuling,
+  T-0002a-bis). Corollaire à ne pas euphémiser : l'invariant « la machine n'écrit jamais le
+  budget » n'est PAS garanti par le droit — il l'est par le CODE (primitives à cible figée). Le
+  dernier critère d'acceptation ci-dessus est donc une GARDE, pas une formalité.
+
+  POINT NON ACQUIS, première épreuve du chantier : les permissions uniques posées sur le dossier
+  le 06/08 peuvent bloquer un jeton app-only malgré Sites.Selected. À MESURER, jamais à déduire.
+
+  SUR LE CRAN : le champ cran porte une valeur du vocabulaire contrôlé — valide. Elle qualifie
+  l'EFFET AU TENANT : rendre le budget de la firme (CA, EBITDA) lisible par tout collaborateur
+  est un élargissement d'audience à rayon firme entière, porte du gardien. Ce qui n'est PAS le
+  cran du chantier : le cran de l'OUTIL projeter_budget sera auto (écriture d'un DÉRIVÉ à cible
+  figée, réversible, interne, local — patron reconcilier_gabarit_pilotage), à graver en
+  table-des-crans ; l'édition du code en branche est un cran auto, le moyen et non l'effet ; la
+  création de la liste au tenant est un RUNBOOK GARDIEN ; la porte de merge du chemin sensible
+  est un mécanisme de la CI.
