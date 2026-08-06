@@ -20,7 +20,7 @@ contrats_concernes:
 criteres_acceptation:
   - "La bascule année en cours / N+1 est JUSTE : chaque cellule affichée correspond à la ligne T_Budget du mois de l'année sélectionnée, jamais à un décalage de position"
   - "Tout écart avec l'ancien affichage est DÉCOMPOSÉ AU CENTIME et expliqué ligne à ligne — aucun écart n'est absorbé par un arrondi"
-  - "Un mois sans budget s'affiche « · » — JAMAIS un zéro inventé (v2.3 §3, modele-donnees v1.30 §5.7). Éprouvé sur le réel : janvier à mars 2026 sont vides dans le classeur déposé, ils doivent s'afficher « · »"
+  - "La distinction ZÉRO RÉEL / ABSENT est tenue sur VALEURS Graph, jamais sur l'affichage : un montant budgété 0 s'affiche 0 ; « · » est RÉSERVÉ à l'ABSENT (mois sans ligne, cellule sans valeur) — jamais un zéro inventé pour un absent, jamais un zéro réel travesti en absence (modele-donnees §5.7 ; plan v0.11 §18.5). Éprouvé sur le réel : janvier à mars 2026 portent des ZÉROS budgétés RÉELS (Graph renvoie 0 — mesure du 04/08/2026 sous identité déléguée), ils doivent s'afficher 0"
   - "La colonne Budget est LISIBLE PAR TOUT COLLABORATEUR sous sa propre identité, sans élévation de droits — c'est l'octroi de lecture du dossier qui la rend lisible, jamais un compte de service ni un contournement"
   - "Business plan et tréso.xlsx demeure ILLISIBLE pour un non-associé : l'octroi porte sur le SEUL dossier « 09 - Budget Allia », le reste du site reste restreint. À VÉRIFIER EXPLICITEMENT après l'octroi, avec un compte non-associé"
   - "AUCUNE écriture sur budgetentreprise.xlsx : le classeur relu après usage du cockpit porte le MÊME eTag qu'avant (même famille de preuve que l'invariant de saisie, T-0045 / T-0046)"
@@ -65,3 +65,34 @@ note: >
   = cran auto ; LECTURE SEULE de bout en bout — aucune écriture, le budget est une saisie humaine
   que la machine ne touche jamais (modele-donnees.md v1.30 §5.7) ; PR sur chemin sensible -> porte
   humaine ; octroi de lecture du dossier au tenant = runbook gardien ».
+
+  SUR LE CRITÈRE CORRIGÉ — bloc AJOUTÉ le 06/08/2026 (S50) ; rien de ce qui précède n'est
+  réécrit. Le critère « janvier à mars 2026 […] s'affichent « · » » était FAUX à sa rédaction :
+  la mesure du 04/08/2026 sous identité déléguée, consignée au plan v0.11 §18.5, dit des ZÉROS
+  budgétés RÉELS (Graph renvoie 0, pas une absence) ; la convention « · » ne couvre que
+  l'ABSENT (modele-donnees §5.7). Laissé en l'état, le chantier livrait un affichage faux.
+  Re-lecture du 06/08/2026 (identité déléguée, adressage itemId) : structure confirmée —
+  36 lignes 2026-01→2028-12, EBITDA_Budget en formule =IF(COUNT(…)=0,"",…) ; PIÈGE relevé :
+  l'AFFICHAGE du classeur rend lui-même « · » sur ces cellules (format comptable) — l'affichage
+  ne tranche JAMAIS zéro/absent, seule la VALEUR Graph fait foi, et c'est sur VALEURS que le
+  contrôle de bascule s'exécutera. La phrase du 04/08 ci-dessus (« Les premiers mois de 2026
+  sont VIDES ») reste telle quelle — corrigée PAR RENVOI d'ici, jamais réécrite.
+  Critère antérieur, reporté sans perte : « Un mois sans budget s'affiche « · » — JAMAIS un
+  zéro inventé (v2.3 §3, modele-donnees v1.30 §5.7). Éprouvé sur le réel : janvier à mars 2026
+  sont vides dans le classeur déposé, ils doivent s'afficher « · » »
+
+  PROVENANCE ET STATUT ÉPISTÉMIQUE DE LA RE-LECTURE DU 06/08 — bloc AJOUTÉ le 06/08/2026 (S50) ;
+  rien de ce qui précède n'est réécrit. La re-lecture citée au bloc précédent est une MESURE de la
+  session S50 (Cowork), sous identité DÉLÉGUÉE DU GARDIEN via le connecteur M365, par lecture
+  d'objet driveId/itemId — la voie probante consignée en mémoire de projet ; l'agent d'exécution de
+  la PR qui porte ces blocs ne pouvait PAS la reproduire (identité déléguée hors de portée locale,
+  identité machine sans octroi sur ce site — piège (1) ci-dessus). Statut ligne par ligne, à ne
+  jamais aplatir : MESURÉ le 06/08 — structure T_Budget (36 lignes 2026-01→2028-12), EBITDA_Budget
+  en formule =IF(COUNT(…)=0,"",…), affichage « · » sur janv→mars 2026. CORROBORÉ par déduction sur
+  ce rendu, les cellules sont donc NUMÉRIQUES — l'EBITDA de janv→mars rend « · » là où sa formule
+  rendrait une CHAÎNE VIDE si B:D étaient vides, et avr-2026 rend « (5 000 €) » : l'arithmétique a
+  tourné. INFÉRENCE, non mesurée ce jour — l'ATTRIBUTION de ce « · » au FORMAT DE CELLULE (« format
+  comptable ») ; elle n'a pas été mesurée au niveau valeur le 06/08 et ne s'invoque que comme
+  hypothèse. La MESURE DE RÉFÉRENCE au niveau valeur demeure celle du 04/08/2026 (plan v0.11 §18.5,
+  Graph renvoie 0), et le critère corrigé impose le contrôle de bascule SUR VALEURS Graph : c'est
+  là que la preuve définitive s'exécutera, AVANT toute livraison.
