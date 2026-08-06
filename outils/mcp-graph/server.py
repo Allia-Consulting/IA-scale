@@ -1734,13 +1734,19 @@ def _num_facture_en_couple(title: Any) -> tuple[str, int] | None:
     return m.group(1), int(m.group(2))
 
 
+_RE_JOUR_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
 def _scanner_registre_factures(client_http: httpx.Client, url_items: str) -> list[dict[str, Any]]:
     """Lit TOUT le registre « Factures » (pagination @odata.nextLink complète) → descripteurs.
 
-    Chaque descripteur : {item_id, annee, seq, code_mission, etiquette, title}. Un Title non conforme
-    laisse annee/seq à None (l'item compte pour la clé d'idempotence, pas pour la séquence). Lecture
-    seule ; ne décide, n'écrit rien ; honore Retry-After sur 429/503 (via `_get_crm_avec_backoff`,
-    GET générique malgré son nom historique)."""
+    Chaque descripteur : {item_id, annee, seq, code_mission, etiquette, title, cle_emission,
+    date_emission}. Un Title non conforme laisse annee/seq à None (l'item compte pour la clé
+    d'idempotence, pas pour la séquence). `cle_emission` porte la colonne `CleEmission` du registre —
+    None si la colonne est absente ou vide (le cas AVANT le runbook gardien qui la crée) ;
+    `date_emission` sert le seul CONTRÔLE D'ORDRE (§2 bis (e)), jamais une décision d'écriture.
+    Lecture seule ; ne décide, n'écrit rien ; honore Retry-After sur 429/503 (via
+    `_get_crm_avec_backoff`, GET générique malgré son nom historique)."""
     descripteurs: list[dict[str, Any]] = []
     params = {"$expand": "fields", "$select": "id", "$top": "999"}
     page = _get_crm_avec_backoff(client_http, url_items, params=params)
@@ -1751,6 +1757,8 @@ def _scanner_registre_factures(client_http: httpx.Client, url_items: str) -> lis
             f = it.get("fields") or {}
             couple = _num_facture_en_couple(f.get("Title"))
             etq = f.get("EtiquetteLocale")
+            cle_em = f.get("CleEmission")
+            date_em = f.get("DateEmission")
             descripteurs.append(
                 {
                     "item_id": it.get("id"),
@@ -1759,6 +1767,8 @@ def _scanner_registre_factures(client_http: httpx.Client, url_items: str) -> lis
                     "code_mission": _code_mission_en_entier(f.get("CodeMission")),
                     "etiquette": etq.strip() if isinstance(etq, str) else None,
                     "title": str(f.get("Title")).strip() if f.get("Title") is not None else None,
+                    "cle_emission": cle_em.strip() if isinstance(cle_em, str) and cle_em.strip() else None,
+                    "date_emission": str(date_em).strip() if date_em is not None else None,
                 }
             )
         suivant = corps.get("@odata.nextLink")
@@ -1766,6 +1776,51 @@ def _scanner_registre_factures(client_http: httpx.Client, url_items: str) -> lis
             break
         page = _get_crm_avec_backoff(client_http, suivant)
     return descripteurs
+
+
+_CLE_EMISSION_MAX = 200  # borne haute de garde ; AUCUNE contrainte de format (l'appelant choisit)
+
+
+def _jour_iso_ou_none(valeur: Any) -> str | None:
+    """Rend « AAAA-MM-JJ » depuis une date Graph ISO (avec ou sans heure), sinon None.
+
+    TOLÉRANT PAR DESSEIN : ce prédicat ne sert QUE le contrôle d'ordre (§2 bis (e)), un
+    SIGNALEMENT — une date illisible est donc ignorée, jamais devinée et jamais bloquante."""
+    if not isinstance(valeur, str) or len(valeur.strip()) < 10:
+        return None
+    jour = valeur.strip()[:10]
+    return jour if _RE_JOUR_ISO.match(jour) else None
+
+
+def _anomalie_ordre_factures(
+    descripteurs: list[dict[str, Any]], annee: str, mon: dict[str, Any]
+) -> dict[str, Any] | None:
+    """CONTRÔLE D'ORDRE (modele-donnees v1.33 §2 bis (e)) : sur une année, `DateEmission` doit être
+    NON DÉCROISSANTE avec `NNNN`. Rend le descripteur de la première violation, ou None.
+
+    SIGNALEMENT SEUL : jamais un refus, jamais une correction, JAMAIS la réécriture d'un numéro déjà
+    alloué (le canon l'interdit). Les `DateEmission` NULLES ou illisibles sont TOLÉRÉES et ignorées —
+    les lignes de seed historiques n'en portent pas."""
+    ma_seq = mon.get("seq")
+    ma_date = _jour_iso_ou_none(mon.get("date_emission"))
+    if ma_seq is None or ma_date is None:
+        return None
+    for d in descripteurs:
+        if d.get("annee") != annee or d.get("seq") is None or str(d["item_id"]) == str(mon["item_id"]):
+            continue
+        sa_date = _jour_iso_ou_none(d.get("date_emission"))
+        if sa_date is None:
+            continue
+        if d["seq"] < ma_seq and sa_date > ma_date:
+            return {
+                "motif": "DateEmission décroissante avec NNNN sur la même année",
+                "numero_anterieur": d.get("title"),
+                "date_emission_anterieure": sa_date,
+                "mon_numero": mon.get("title"),
+                "ma_date_emission": ma_date,
+                "item_id_anterieur": d.get("item_id"),
+            }
+    return None
 
 
 def _post_item_avec_backoff(client_http: httpx.Client, url: str, fields: dict):
@@ -1781,15 +1836,19 @@ def _post_item_avec_backoff(client_http: httpx.Client, url: str, fields: dict):
 
 
 def _valider_entrees_num_facture(
-    code_mission: Any, etiquette_locale: Any, mois_ca: Any, montant_ht: Any, echeance: Any
-) -> tuple[int, str, str, Any, str]:
+    code_mission: Any, etiquette_locale: Any, mois_ca: Any, montant_ht: Any, echeance: Any,
+    cle_emission: Any,
+) -> tuple[int, str, str, Any, str, str]:
     """Valide et normalise les entrées AVANT tout réseau (fail-closed, jamais d'à-peu-près).
 
     Préconditions strictes (modele-donnees §2 bis) : `code_mission` entier ≥ 1, `etiquette_locale`
-    non vide ; `mois_ca` / `echeance` chaînes non vides ; `montant_ht` nombre > 0. Toute condition
+    non vide ; `mois_ca` / `echeance` chaînes non vides ; `montant_ht` nombre > 0 ; `cle_emission`
+    chaîne non vide (identifiant du GESTE de confirmation, §2 bis (d)) — SANS contrainte de format,
+    l'appelant choisit sa forme (UUID ou autre), seule la vacuité est un refus. Toute condition
     douteuse = ValueError explicite, avant toute ouverture de client httpx.
 
-    Retourne (code_int, etiquette, mois_ca, montant, echeance) — `montant` en int si intégral."""
+    Retourne (code_int, etiquette, mois_ca, montant, echeance, cle_emission) — `montant` en int si
+    intégral, `cle_emission` STRIPPÉE."""
     code_int = _code_mission_en_entier(code_mission)
     if code_int is None:
         raise ValueError(
@@ -1803,6 +1862,18 @@ def _valider_entrees_num_facture(
         raise ValueError("`mois_ca` doit être une chaîne non vide (mois de rattachement du CA).")
     if not isinstance(echeance, str) or not echeance.strip():
         raise ValueError("`echeance` doit être une chaîne non vide (date d'échéance).")
+    if not isinstance(cle_emission, str) or not cle_emission.strip():
+        raise ValueError(
+            "`cle_emission` doit être une chaîne non vide : l'identifiant du GESTE de confirmation, "
+            "sur lequel porte l'idempotence (modele-donnees v1.33 §2 bis (d)). Son absence est un "
+            "REFUS, jamais une dégradation silencieuse — sans elle, un rejeu brûlerait un numéro. "
+            "Rien écrit (fail-closed)."
+        )
+    if len(cle_emission.strip()) > _CLE_EMISSION_MAX:
+        raise ValueError(
+            f"`cle_emission` dépasse {_CLE_EMISSION_MAX} caractères "
+            f"(reçu : {len(cle_emission.strip())}). Rien écrit (fail-closed)."
+        )
     try:
         montant = float(montant_ht)
     except (TypeError, ValueError):
@@ -1811,7 +1882,8 @@ def _valider_entrees_num_facture(
         raise ValueError(f"`montant_ht` doit être strictement positif (reçu : {montant}).")
     if montant.is_integer():
         montant = int(montant)  # évite « 12000.0 » dans le registre
-    return code_int, etiquette_locale.strip(), mois_ca.strip(), montant, echeance.strip()
+    return (code_int, etiquette_locale.strip(), mois_ca.strip(), montant, echeance.strip(),
+            cle_emission.strip())
 
 
 @mcp.tool()
@@ -1823,6 +1895,7 @@ def allouer_num_facture(
     mois_ca: str,
     montant_ht: float,
     echeance: str,
+    cle_emission: str,
 ) -> dict[str, Any]:
     """Alloue le NumFacture légal « F-AAAA-NNNN » d'une échéance ÉMISE et l'inscrit au registre « Factures ».
 
@@ -1830,6 +1903,12 @@ def allouer_num_facture(
     était pensée comme un geste humain ; cet outil (T-0030) l'automatise en écriture SERVEUR à cible
     FIGÉE, cran VALIDÉ — l'allocation grave une séquence légale irréversible (numérotation continue
     des factures, exigence FR) et la facture sort de la firme, d'où la porte humaine.
+
+    RÈGLE MÉTIER (arbitrage gardien du 06/08/2026, modele-donnees v1.33 §2 bis (a)→(e)) : **une
+    émission = un numéro NEUF**, y compris pour un avoir, une refacturation ou une réécriture de la
+    même prestation. Un numéro n'est jamais réutilisé ni rendu à un second geste. L'outil ne lit
+    AUCUN statut préalable — il POSE `Statut = « émise »` et `DateEmission` à la création : il n'y a
+    donc aucune précondition de statut, contrairement à ce que la prose du canon a longtemps dit.
 
     Cible FIGÉE côté serveur par GRAPH_SITE_ID + GRAPH_FACTURES_LIST_ID (`_config_factures()`) : comme
     `create_list_item` fige sa liste, cette fonction n'accepte AUCUN identifiant de liste de
@@ -1839,9 +1918,18 @@ def allouer_num_facture(
         - PRÉCONDITIONS FAIL-CLOSED, vérifiées AVANT tout réseau : `code_mission` entier ≥ 1,
           `etiquette_locale` non vide, `mois_ca` / `echeance` non vides, `montant_ht` nombre > 0 —
           sinon ValueError, RIEN n'est écrit ;
-        - IDEMPOTENCE par clé (CodeMission, EtiquetteLocale) : si le registre porte déjà cette clé,
-          on REND son NumFacture existant SANS créer ni réallouer (T-0030 : une re-ingestion ne
-          réalloue jamais un numéro déjà attribué) ;
+        - IDEMPOTENCE DE GESTE par `CleEmission` (modele-donnees v1.33 §2 bis (d)) : si le registre
+          porte déjà cette clé de geste, on REND son NumFacture existant SANS créer ni réallouer —
+          un REJEU (double clic, retry réseau, réponse perdue) ne brûle aucun numéro. La clé ne
+          porte PLUS sur la prestation : deux factures partageant (CodeMission, EtiquetteLocale)
+          sont le cas NOMINAL d'un avoir, d'une refacturation ou d'une réécriture (§2 bis (a)) — une
+          NOUVELLE confirmation alloue donc un numéro NEUF ;
+        - GARDE ANTI-FAUX-VERT : si l'élément relu ne porte pas la `CleEmission` écrite, la colonne
+          est absente du registre — l'idempotence serait INOPÉRANTE en silence : RuntimeError
+          explicite, aucune suppression, runbook gardien ;
+        - CONTRÔLE D'ORDRE (§2 bis (e)) : `DateEmission` doit être non décroissante avec `NNNN` sur
+          l'année ; une violation est SIGNALÉE au retour (`anomalie_ordre`) — jamais corrigée, et
+          jamais par réécriture d'un numéro déjà alloué ;
         - ALLOCATION : `NNNN = max des NNNN de l'ANNÉE en cours + 1` (0001 si aucun) ; l'élément est
           créé avec `Statut = « émise »` et `DateEmission` = date du jour (posés côté serveur, jamais
           par l'appelant — allocation UNIQUEMENT à l'émission) ;
@@ -1859,27 +1947,34 @@ def allouer_num_facture(
 
     Args:
         code_mission: identifiant stable de la mission (entier ≥ 1) — couture avec le gabarit.
-        etiquette_locale: étiquette locale libre, unique par mission (ex. « 2026-07-siteflow ») —
-            clé de réconciliation (CodeMission, EtiquetteLocale) avec la ligne de saisie.
+        etiquette_locale: étiquette locale libre (ex. « 2026-07-siteflow ») — clé de
+            réconciliation avec la ligne de saisie. Elle n'est PLUS une clé d'unicité : la même
+            prestation peut être facturée plusieurs fois (avoir, refacturation, réécriture).
         mois_ca: mois de rattachement du CA (chaîne, ex. date ISO « 2026-07-01 »).
         montant_ht: montant HT en euros (nombre > 0).
         echeance: date d'échéance (chaîne, ex. date ISO).
+        cle_emission: identifiant UNIQUE du GESTE de confirmation (obligatoire, chaîne non vide,
+            forme libre) — c'est SUR ELLE que porte l'idempotence. Même clé = même numéro rendu ;
+            clé nouvelle = numéro NEUF alloué.
 
     Returns:
         dict {"num_facture", "item_id", "idempotent", "tentatives"} — le numéro F-AAAA-NNNN alloué
-        (ou existant si idempotent), l'id d'élément du registre, si le résultat vient d'une clé déjà
-        présente, et le nombre de tentatives de stabilisation consommées.
+        (ou existant si idempotent), l'id d'élément du registre, si le résultat vient d'une clé de
+        geste déjà présente, et le nombre de tentatives de stabilisation consommées. La clé
+        "anomalie_ordre" n'apparaît QUE si le contrôle d'ordre (§2 bis (e)) a relevé une violation —
+        le retour nominal ne la porte pas.
 
     Raises:
-        ValueError: précondition non tenue (entrée invalide).
-        RuntimeError: création sans id, doublon de clé non résoluble sans suppression, ou
-            stabilisation impossible après 3 tentatives — réconciliation gardien requise.
+        ValueError: précondition non tenue (entrée invalide, `cle_emission` absente ou vide).
+        RuntimeError: création sans id, colonne `CleEmission` absente du registre, doublon de clé de
+            geste non résoluble sans suppression, ou stabilisation impossible après 3 tentatives —
+            réconciliation gardien requise.
         ConfigManquante: GRAPH_SITE_ID / GRAPH_FACTURES_LIST_ID absentes.
     """
     _verifier_appelant(ctx)
 
-    code_int, etiquette, mois_ca, montant, echeance = _valider_entrees_num_facture(
-        code_mission, etiquette_locale, mois_ca, montant_ht, echeance
+    code_int, etiquette, mois_ca, montant, echeance, cle = _valider_entrees_num_facture(
+        code_mission, etiquette_locale, mois_ca, montant_ht, echeance, cle_emission
     )
 
     cfg = _config_factures()
@@ -1888,13 +1983,14 @@ def allouer_num_facture(
     maintenant = datetime.now(timezone.utc)
     annee = maintenant.strftime("%Y")
     date_emission = maintenant.strftime("%Y-%m-%d")
-    cle = (code_int, etiquette)
+    # IDEMPOTENCE DE GESTE (§2 bis (d)) : la clé est la CONFIRMATION (`cle`, déjà normalisée par le
+    # validateur), JAMAIS la prestation — deux émissions de la même prestation sont légitimes (§2 bis (a)).
 
     MAX_TENTATIVES = 3
     with httpx.Client(timeout=30) as client_http:
-        # --- 1. IDEMPOTENCE : une clé (CodeMission, EtiquetteLocale) déjà présente REND son numéro ---
+        # --- 1. IDEMPOTENCE DE GESTE : une CleEmission déjà présente REND son numéro (rejeu) ---
         registre = _scanner_registre_factures(client_http, base_items)
-        deja = [d for d in registre if (d["code_mission"], d["etiquette"]) == cle]
+        deja = [d for d in registre if d["cle_emission"] == cle]
         if deja:
             # Ordre total déterministe sur item_id (si un doublon historique existait déjà).
             canonique = min(deja, key=lambda d: str(d["item_id"]))
@@ -1917,6 +2013,7 @@ def allouer_num_facture(
             "Echeance": echeance,
             "DateEmission": date_emission,  # posé ICI : allocation = émission
             "Statut": "émise",              # posé ICI : jamais choisi par l'appelant
+            "CleEmission": cle,             # clé du GESTE : socle de l'idempotence (§2 bis (d))
         }
         rep_post = _post_item_avec_backoff(client_http, base_items, champs)
         rep_post.raise_for_status()
@@ -1930,6 +2027,24 @@ def allouer_num_facture(
         # --- 3. POST-VÉRIFICATION ANTI-COURSE, bornée (tie-break déterministe par item_id) ---
         num_courant = num_facture
         derniere_cause = None
+
+        def _rendre(numero: str, tentative: int, releve: list[dict[str, Any]],
+                    mon_: dict[str, Any]) -> dict[str, Any]:
+            """Retour nominal, augmenté du CONTRÔLE D'ORDRE (§2 bis (e)) — signalement, jamais refus."""
+            res: dict[str, Any] = {
+                "num_facture": numero,
+                "item_id": item_id,
+                "idempotent": False,
+                "tentatives": tentative,
+            }
+            anomalie = _anomalie_ordre_factures(releve, annee, mon_)
+            if anomalie:
+                res["anomalie_ordre"] = anomalie
+                logger.warning(
+                    "allouer_num_facture — ANOMALIE D'ORDRE signalée (jamais corrigée) : %s", anomalie
+                )
+            return res
+
         for tentative in range(1, MAX_TENTATIVES + 1):
             apres = _scanner_registre_factures(client_http, base_items)
             mon = next((d for d in apres if str(d["item_id"]) == str(item_id)), None)
@@ -1939,21 +2054,30 @@ def allouer_num_facture(
                     "réconciliation gardien requise."
                 )
 
-            # 3a. DOUBLON DE CLÉ (double émission concurrente de la MÊME échéance).
-            memes_cle = [d for d in apres if (d["code_mission"], d["etiquette"]) == cle]
+            # 3z. GARDE ANTI-FAUX-VERT : la CleEmission écrite doit être RELUE. SharePoint ignore
+            # silencieusement un champ inconnu — sans cette garde, l'idempotence de geste serait
+            # INOPÉRANTE sans que rien ne le signale (classe de défaut d'`impact.py` sans PyYAML).
+            if mon["cle_emission"] != cle:
+                raise RuntimeError(
+                    f"`CleEmission` non relue sur l'élément « {item_id} » (attendu {cle!r}, relu "
+                    f"{mon['cle_emission']!r}) : la colonne est ABSENTE du registre « Factures » ou "
+                    "n'a pas été écrite. L'idempotence de geste est INOPÉRANTE — un rejeu allouerait "
+                    f"un second numéro. L'élément EXISTE et porte le numéro « {mon['title']} » ; "
+                    "aucune suppression n'est faite. RUNBOOK GARDIEN requis : créer la colonne "
+                    "`CleEmission` (texte) au registre (modele-donnees v1.33 §2 bis (d))."
+                )
+
+            # 3a. DOUBLON DE CLÉ DE GESTE (deux exécutions concurrentes du MÊME geste). Deux
+            # factures de même (CodeMission, EtiquetteLocale) ne sont PLUS une anomalie (§2 bis (a)).
+            memes_cle = [d for d in apres if d["cle_emission"] == cle]
             if len(memes_cle) > 1:
                 canonique = min(memes_cle, key=lambda d: str(d["item_id"]))
                 if str(canonique["item_id"]) == str(item_id):
-                    return {
-                        "num_facture": mon["title"],
-                        "item_id": item_id,
-                        "idempotent": False,
-                        "tentatives": tentative,
-                    }
+                    return _rendre(mon["title"], tentative, apres, mon)
                 # Perdant : aucune primitive de suppression (proscrit) → FAIL-CLOSED explicite.
                 raise RuntimeError(
-                    f"Doublon de clé (CodeMission={code_int}, EtiquetteLocale={etiquette!r}) créé "
-                    f"concurremment : élément « {item_id} » en trop, canonique « {canonique['item_id']} » "
+                    f"Doublon de CLÉ D'ÉMISSION ({cle!r}) créé concurremment — deux exécutions du "
+                    f"MÊME geste : élément « {item_id} » en trop, canonique « {canonique['item_id']} » "
                     f"(numéro {canonique['title']}). Réconciliation GARDIEN requise (l'outil ne "
                     "supprime jamais, aucun numéro recyclé)."
                 )
@@ -1961,20 +2085,10 @@ def allouer_num_facture(
             # 3b. DOUBLON DE NUMÉRO (course sur NNNN entre missions distinctes).
             memes_num = [d for d in apres if d["annee"] == annee and d["title"] == num_courant]
             if len(memes_num) <= 1:
-                return {
-                    "num_facture": num_courant,
-                    "item_id": item_id,
-                    "idempotent": False,
-                    "tentatives": tentative,
-                }
+                return _rendre(num_courant, tentative, apres, mon)
             canonique = min(memes_num, key=lambda d: str(d["item_id"]))
             if str(canonique["item_id"]) == str(item_id):
-                return {
-                    "num_facture": num_courant,
-                    "item_id": item_id,
-                    "idempotent": False,
-                    "tentatives": tentative,
-                }
+                return _rendre(num_courant, tentative, apres, mon)
             # Perdant sur le numéro : RENUMÉROTER MON item vers un nouveau max+1 (PATCH If-Match).
             # Le numéro contesté reste porté par l'item canonique (pas de trou) ; mon item prend le
             # suivant. `apres` inclut mon item : max des NNNN de l'année = le contesté, donc +1.

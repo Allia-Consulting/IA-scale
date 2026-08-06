@@ -1222,12 +1222,32 @@ class _FauxClientFactures:
         return _RepWb(st, {})
 
 
-def _item_fact(item_id, title, code_mission, etiquette, statut="émise"):
-    """Fabrique un item de registre {"id", "fields"} pour piloter _FauxClientFactures."""
-    return {
-        "id": item_id,
-        "fields": {"Title": title, "CodeMission": code_mission, "EtiquetteLocale": etiquette, "Statut": statut},
-    }
+_CLE_GESTE = "geste-001"   # clé de geste de `_entrees_ok()` — le geste « nominal » des tests
+_AUTO = object()           # sentinelle : CleEmission dérivée de l'item_id
+
+
+def _item_fact(item_id, title, code_mission, etiquette, statut="émise", cle_emission=_AUTO,
+               date_emission=None):
+    """Fabrique un item de registre {"id", "fields"} pour piloter _FauxClientFactures.
+
+    `CleEmission` est par défaut DÉRIVÉE de l'item_id (« geste-<id> ») : deux items simulés ne
+    partagent donc JAMAIS la clé de geste par accident — sans quoi l'idempotence de geste ferait
+    court-circuiter les tests de séquence. Passer `cle_emission=None` simule la COLONNE ABSENTE du
+    registre, le cas que la garde anti-faux-vert doit attraper. `date_emission` n'est posée que pour
+    exercer le contrôle d'ORDRE (§2 bis (e)) : les seeds réels n'en portent pas."""
+    cle = f"geste-{item_id}" if cle_emission is _AUTO else cle_emission
+    champs = {"Title": title, "CodeMission": code_mission, "EtiquetteLocale": etiquette, "Statut": statut}
+    if cle is not None:
+        champs["CleEmission"] = cle
+    if date_emission is not None:
+        champs["DateEmission"] = date_emission
+    return {"id": item_id, "fields": champs}
+
+
+def _item_mien(item_id, title, code_mission="5", etiquette="2026-07-siteflow", **kw):
+    """L'item tel qu'il EXISTE APRÈS notre POST : il porte NOTRE clé de geste (`_entrees_ok`)."""
+    kw.setdefault("cle_emission", _CLE_GESTE)
+    return _item_fact(item_id, title, code_mission, etiquette, **kw)
 
 
 class _FauxDatetime:
@@ -1254,13 +1274,14 @@ def _posts(client):
 
 def _entrees_ok():
     return dict(code_mission=5, etiquette_locale="2026-07-siteflow", mois_ca="2026-07-01",
-                montant_ht=12000, echeance="2026-08-31")
+                montant_ht=12000, echeance="2026-08-31", cle_emission=_CLE_GESTE)
 
 
-def test_allouer_num_facture_idempotence_cle_existante_rend_meme_numero(_sans_porte, _factures_2026, monkeypatch):
-    """(42) IDEMPOTENCE : une clé (CodeMission, EtiquetteLocale) déjà présente → on REND son
-    NumFacture existant, SANS aucun POST (re-ingestion ne réalloue jamais, T-0030)."""
-    registre = [_item_fact("42", "F-2026-003", "5", "2026-07-siteflow")]
+def test_allouer_num_facture_rejeu_du_meme_geste_rend_le_meme_numero(_sans_porte, _factures_2026, monkeypatch):
+    """(42) IDEMPOTENCE DE GESTE (v1.33 §2 bis (d)) : la MÊME `cle_emission` déjà au registre → on
+    REND son NumFacture existant, SANS aucun POST. C'est le REJEU (double clic, retry réseau,
+    réponse perdue) : aucun numéro n'est brûlé par un incident technique."""
+    registre = [_item_fact("42", "F-2026-003", "5", "2026-07-siteflow", cle_emission=_CLE_GESTE)]
     client = _FauxClientFactures(scans=[registre])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
@@ -1268,13 +1289,45 @@ def test_allouer_num_facture_idempotence_cle_existante_rend_meme_numero(_sans_po
     res = fn(None, **_entrees_ok())
 
     assert res == {"num_facture": "F-2026-003", "item_id": "42", "idempotent": True, "tentatives": 0}
-    assert not _posts(client), "aucune création si la clé est déjà au registre (idempotence)."
+    assert not _posts(client), "clé de GESTE déjà au registre → aucune création (rejeu)."
+
+
+def test_allouer_num_facture_meme_prestation_cles_de_geste_differentes_deux_numeros_neufs(
+    _sans_porte, _factures_2026, monkeypatch
+):
+    """(42 bis) LA RÈGLE MÉTIER, arbitrage gardien du 06/08/2026 (v1.33 §2 bis (a)) : deux émissions
+    de la MÊME prestation (même CodeMission, même EtiquetteLocale) sous des `cle_emission`
+    DIFFÉRENTES reçoivent DEUX numéros DISTINCTS et CROISSANTS — avoir, refacturation, réécriture.
+    C'est le cas que l'ancienne idempotence par prestation rendait IMPOSSIBLE (elle rendait
+    silencieusement l'ancien numéro) : ce test encode l'arbitrage, il ne doit jamais disparaître."""
+    seed = _item_fact("40", "F-2026-0003", "5", "2026-07-siteflow", cle_emission="geste-000")
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    # 1re émission : geste-001 → numéro NEUF (le seed n'est PAS rendu, malgré la prestation identique).
+    apres_1 = [seed, _item_mien("NEW-1", "F-2026-0004")]
+    client_1 = _FauxClientFactures(scans=[[seed], apres_1], post_id="NEW-1")
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client_1)
+    res_1 = fn(None, **_entrees_ok())
+
+    # 2de émission : MÊME prestation, geste-002 → encore un numéro NEUF.
+    entrees_2 = {**_entrees_ok(), "cle_emission": "geste-002"}
+    apres_2 = apres_1 + [_item_mien("NEW-2", "F-2026-0005", cle_emission="geste-002")]
+    client_2 = _FauxClientFactures(scans=[apres_1, apres_2], post_id="NEW-2")
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client_2)
+    res_2 = fn(None, **entrees_2)
+
+    assert res_1["num_facture"] == "F-2026-0004" and res_1["idempotent"] is False
+    assert res_2["num_facture"] == "F-2026-0005" and res_2["idempotent"] is False
+    assert res_1["num_facture"] != res_2["num_facture"], "une émission = un numéro NEUF (§2 bis (a))."
+    assert _posts(client_1) and _posts(client_2), "chaque geste CRÉE : aucun numéro n'est réutilisé."
+    assert _posts(client_1)[0]["fields"]["CleEmission"] == _CLE_GESTE
+    assert _posts(client_2)[0]["fields"]["CleEmission"] == "geste-002"
 
 
 def test_allouer_num_facture_premiere_de_l_annee_est_0001(_sans_porte, _factures_2026, monkeypatch):
     """(43) Registre vide pour l'année → premier numéro = F-2026-0001, créé avec Statut « émise »."""
     client = _FauxClientFactures(
-        scans=[[], [_item_fact("NEW-1", "F-2026-0001", "5", "2026-07-siteflow")]],
+        scans=[[], [_item_mien("NEW-1", "F-2026-0001")]],
     )
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
@@ -1288,6 +1341,8 @@ def test_allouer_num_facture_premiere_de_l_annee_est_0001(_sans_porte, _factures
     assert champs["Statut"] == "émise", "l'allocation pose Statut « émise » côté serveur."
     assert champs["DateEmission"] == "2026-07-28", "DateEmission = date du jour, posée côté serveur."
     assert champs["CodeMission"] == "5" and champs["EtiquetteLocale"] == "2026-07-siteflow"
+    assert champs["CleEmission"] == _CLE_GESTE, "la clé de GESTE est écrite au registre (§2 bis (d))."
+    assert "anomalie_ordre" not in res, "retour NOMINAL : aucune anomalie d'ordre signalée."
 
 
 def test_allouer_num_facture_max_plus_un_de_l_annee(_sans_porte, _factures_2026, monkeypatch):
@@ -1297,7 +1352,7 @@ def test_allouer_num_facture_max_plus_un_de_l_annee(_sans_porte, _factures_2026,
         _item_fact("2", "F-2026-0001", "1", "a"),
         _item_fact("3", "F-2026-0003", "2", "b"),
     ]
-    apres = avant + [_item_fact("NEW-1", "F-2026-0004", "5", "2026-07-siteflow")]
+    apres = avant + [_item_mien("NEW-1", "F-2026-0004")]
     client = _FauxClientFactures(scans=[avant, apres])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
@@ -1310,7 +1365,7 @@ def test_allouer_num_facture_max_plus_un_de_l_annee(_sans_porte, _factures_2026,
 
 def test_allouer_num_facture_cible_figee_liste_factures(_sans_porte, _factures_2026, monkeypatch):
     """(45) L'écriture (POST) ne vise QUE le registre « Factures » figé (FACT-1), jamais ailleurs."""
-    client = _FauxClientFactures(scans=[[], [_item_fact("NEW-1", "F-2026-0001", "5", "2026-07-siteflow")]])
+    client = _FauxClientFactures(scans=[[], [_item_mien("NEW-1", "F-2026-0001")]])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
 
@@ -1326,6 +1381,10 @@ def test_allouer_num_facture_cible_figee_liste_factures(_sans_porte, _factures_2
     ("etiquette_locale", ""), ("etiquette_locale", "   "),
     ("mois_ca", ""), ("echeance", ""),
     ("montant_ht", 0), ("montant_ht", -5), ("montant_ht", "pasunnombre"),
+    # v1.33 §2 bis (d) : la clé de GESTE est OBLIGATOIRE — son absence est un refus, jamais une
+    # dégradation silencieuse (sans elle, un rejeu brûlerait un second numéro).
+    ("cle_emission", ""), ("cle_emission", "   "), ("cle_emission", None), ("cle_emission", 42),
+    ("cle_emission", "x" * 201),
 ])
 def test_allouer_num_facture_preconditions_refusees_avant_reseau(_sans_porte, champ, valeur, monkeypatch):
     """(46) Précondition non tenue → ValueError, AVANT toute ouverture de client httpx (fail-closed)."""
@@ -1364,13 +1423,13 @@ def test_allouer_num_facture_course_sur_numero_renumerote_le_perdant(_sans_porte
     # après création : mon NEW-9 a pris 0004, mais l'item 3 concurrent l'a aussi → doublon.
     apres_course = avant + [
         _item_fact("3", "F-2026-0004", "7", "concurrent"),
-        _item_fact("NEW-9", "F-2026-0004", "5", "2026-07-siteflow"),
+        _item_mien("NEW-9", "F-2026-0004"),
     ]
     # après renumérotage de NEW-9 → 0005 : plus de doublon.
     apres_propre = [
         _item_fact("2", "F-2026-0003", "2", "b"),
         _item_fact("3", "F-2026-0004", "7", "concurrent"),
-        _item_fact("NEW-9", "F-2026-0005", "5", "2026-07-siteflow"),
+        _item_mien("NEW-9", "F-2026-0005"),
     ]
     client = _FauxClientFactures(
         scans=[avant, apres_course, apres_propre],
@@ -1395,7 +1454,7 @@ def test_allouer_num_facture_course_sur_numero_canonique_garde(_sans_porte, _fac
     F-2026-0004 ; aucun renumérotage (aucun PATCH), succès direct."""
     avant = [_item_fact("2", "F-2026-0003", "2", "b")]
     apres_course = [
-        _item_fact("1", "F-2026-0004", "5", "2026-07-siteflow"),  # mon item, plus petit id
+        _item_mien("1", "F-2026-0004"),  # mon item, plus petit id
         _item_fact("2", "F-2026-0003", "2", "b"),
         _item_fact("9", "F-2026-0004", "7", "concurrent"),        # concurrent, plus grand id
     ]
@@ -1410,12 +1469,13 @@ def test_allouer_num_facture_course_sur_numero_canonique_garde(_sans_porte, _fac
         "l'item canonique GARDE son numéro : aucun renumérotage."
 
 
-def test_allouer_num_facture_doublon_cle_perdant_fail_closed(_sans_porte, _factures_2026, monkeypatch):
-    """(50) DOUBLON DE CLÉ créé concurremment et mon item NON canonique → RuntimeError explicite,
-    AUCUNE suppression (l'outil n'en a pas la primitive) : réconciliation gardien signalée."""
+def test_allouer_num_facture_doublon_cle_de_geste_perdant_fail_closed(_sans_porte, _factures_2026, monkeypatch):
+    """(50) DOUBLON DE CLÉ DE GESTE créé concurremment (deux exécutions du MÊME geste) et mon item
+    NON canonique → RuntimeError explicite, AUCUNE suppression (l'outil n'en a pas la primitive) :
+    réconciliation gardien signalée. Note : un doublon de PRESTATION n'est plus une anomalie."""
     apres = [
-        _item_fact("1", "F-2026-0004", "5", "2026-07-siteflow"),   # concurrent canonique (petit id)
-        _item_fact("NEW-9", "F-2026-0005", "5", "2026-07-siteflow"),  # le mien, même clé, plus grand id
+        _item_mien("1", "F-2026-0004"),      # concurrent canonique (petit id), MÊME clé de geste
+        _item_mien("NEW-9", "F-2026-0005"),  # le mien, même clé de geste, plus grand id
     ]
     client = _FauxClientFactures(scans=[[], apres], post_id="NEW-9")
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
@@ -1426,6 +1486,71 @@ def test_allouer_num_facture_doublon_cle_perdant_fail_closed(_sans_porte, _factu
     # Fail-closed : jamais de DELETE (l'outil ne supprime pas).
     assert not [m for (m, _u, _c) in client.appels if m == "DELETE"], \
         "aucune suppression : l'orphelin est signalé pour réconciliation gardien, jamais purgé."
+
+
+def test_allouer_num_facture_colonne_cle_emission_absente_fail_closed(_sans_porte, _factures_2026, monkeypatch):
+    """(50 bis) GARDE ANTI-FAUX-VERT (v1.33 §2 bis (d)) : SharePoint ignore SILENCIEUSEMENT un champ
+    inconnu. Si l'élément relu ne porte pas la `CleEmission` écrite, la colonne est absente du
+    registre et l'idempotence de geste est INOPÉRANTE — un rejeu allouerait un second numéro. On
+    exige un RuntimeError EXPLICITE (élément existant nommé, runbook gardien), et AUCUNE
+    suppression. Sans cette garde, la conformité au canon serait un faux-vert : c'est la classe de
+    défaut d'`impact.py` sans PyYAML, qu'on ne rejoue pas."""
+    # L'item relu N'A PAS de CleEmission (cle_emission=None) : colonne absente du registre.
+    apres = [_item_fact("NEW-1", "F-2026-0001", "5", "2026-07-siteflow", cle_emission=None)]
+    client = _FauxClientFactures(scans=[[], apres])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    with pytest.raises(RuntimeError) as exc:
+        fn(None, **_entrees_ok())
+
+    message = str(exc.value)
+    assert "CleEmission" in message, "la cause est NOMMÉE : la colonne du registre."
+    assert "F-2026-0001" in message and "NEW-1" in message, \
+        "l'élément créé EXISTE et son numéro est dit — rien n'est caché au gardien."
+    assert "RUNBOOK GARDIEN" in message.upper(), "le remède est nommé (créer la colonne)."
+    assert not [m for (m, _u, _c) in client.appels if m == "DELETE"], \
+        "aucune suppression : l'outil n'en a pas la primitive."
+
+
+def test_allouer_num_facture_anomalie_ordre_signalee_sans_refus(_sans_porte, _factures_2026, monkeypatch):
+    """(50 ter) CONTRÔLE D'ORDRE (v1.33 §2 bis (e)) : une facture de NNNN INFÉRIEUR portant une
+    DateEmission POSTÉRIEURE à la nôtre viole l'ordre. Le canon exige un SIGNALEMENT — jamais un
+    refus, jamais une correction, jamais la réécriture d'un numéro déjà alloué : la fonction rend
+    donc NORMALEMENT son numéro, avec la clé `anomalie_ordre` en plus."""
+    # Notre DateEmission est celle de l'horloge figée : 2026-07-28. L'item 0003 est POSTÉRIEUR (30/07).
+    anterieur = _item_fact("1", "F-2026-0003", "2", "b", date_emission="2026-07-30T00:00:00Z")
+    apres = [anterieur, _item_mien("NEW-1", "F-2026-0004", date_emission="2026-07-28")]
+    client = _FauxClientFactures(scans=[[anterieur], apres])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res["num_facture"] == "F-2026-0004", "le numéro est rendu NORMALEMENT (aucun refus)."
+    assert res["idempotent"] is False
+    anomalie = res.get("anomalie_ordre")
+    assert anomalie, "la violation d'ordre est SIGNALÉE au retour."
+    assert anomalie["numero_anterieur"] == "F-2026-0003" and anomalie["mon_numero"] == "F-2026-0004"
+    assert not [m for (m, _u, c) in client.appels if m == "PATCH"], \
+        "JAMAIS de réécriture d'un numéro pour « réparer » l'ordre (§2 bis (e))."
+
+
+def test_allouer_num_facture_ordre_respecte_ne_signale_rien(_sans_porte, _factures_2026, monkeypatch):
+    """(50 quater) CONTRE-CAS du contrôle d'ordre : dates croissantes avec NNNN → AUCUNE clé
+    `anomalie_ordre` au retour. Un contrôle qui crie toujours ne vaut rien ; celui-ci se tait quand
+    l'ordre est tenu. Une DateEmission NULLE (seed historique) est tolérée et ignorée."""
+    anterieur = _item_fact("1", "F-2026-0003", "2", "b", date_emission="2026-07-20")
+    seed_sans_date = _item_fact("2", "F-2026-002", "9", "seed")  # aucune DateEmission → ignoré
+    apres = [anterieur, seed_sans_date, _item_mien("NEW-1", "F-2026-0004", date_emission="2026-07-28")]
+    client = _FauxClientFactures(scans=[[anterieur, seed_sans_date], apres])
+    monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
+    fn = _sous_jacente(server.allouer_num_facture)
+
+    res = fn(None, **_entrees_ok())
+
+    assert res["num_facture"] == "F-2026-0004"
+    assert "anomalie_ordre" not in res, "ordre tenu (et seed sans date toléré) → aucun signalement."
 
 
 # --------------------------------------------------------------------------------------------
@@ -1458,21 +1583,26 @@ def test_code_mission_en_entier_tolere_le_double_graph(brut, attendu):
     assert server._code_mission_en_entier(brut) == attendu
 
 
-def test_allouer_num_facture_idempotence_code_mission_double_graph_et_seed_3_chiffres(_sans_porte, _factures_2026, monkeypatch):
-    """(52) IDEMPOTENCE quand Graph sérialise CodeMission en DOUBLE (1.0) et que le seed porte un
-    NumFacture sur 3 chiffres (F-2026-001) : l'appel avec la clé existante REND le Title du seed,
-    idempotent True, AUCUN POST. C'est l'incident du 31/07 (avant 0.19.1 : clé non matchée →
-    écriture d'un doublon F-2026-0001)."""
-    registre = [_item_fact("4", "F-2026-001", 1.0, "2026-05-siteflow")]  # CodeMission = double Graph
-    client = _FauxClientFactures(scans=[registre])
+def test_allouer_num_facture_seed_de_meme_prestation_ne_court_circuite_plus(_sans_porte, _factures_2026, monkeypatch):
+    """(52) RENVERSEMENT v1.33 : un seed de la MÊME prestation (CodeMission sérialisé en double
+    Graph 1.0, NumFacture sur 3 chiffres) ne court-circuite PLUS l'allocation — la clé d'idempotence
+    est le GESTE, pas la prestation. L'appel reçoit un numéro NEUF (max des NNN + 1 = 0002), le seed
+    reste intact. Avant v1.33, ce même appel rendait « F-2026-001 » en silence, ce qui contredisait
+    « une émission = un numéro » (§2 bis (a) et (c))."""
+    seed = _item_fact("4", "F-2026-001", 1.0, "2026-05-siteflow", cle_emission="geste-seed")
+    apres = [seed, _item_mien("NEW-1", "F-2026-0002", code_mission=1, etiquette="2026-05-siteflow",
+                              cle_emission="geste-avoir")]
+    client = _FauxClientFactures(scans=[[seed], apres])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
 
     res = fn(None, code_mission=1, etiquette_locale="2026-05-siteflow",
-             mois_ca="2026-05-01", montant_ht=15300, echeance="2026-06-01")
+             mois_ca="2026-05-01", montant_ht=15300, echeance="2026-06-01",
+             cle_emission="geste-avoir")
 
-    assert res == {"num_facture": "F-2026-001", "item_id": "4", "idempotent": True, "tentatives": 0}
-    assert not _posts(client), "clé (1, 2026-05-siteflow) déjà au registre → aucune création."
+    assert res["num_facture"] == "F-2026-0002" and res["idempotent"] is False
+    assert _posts(client), "geste NOUVEAU sur une prestation déjà facturée → création (avoir)."
+    assert server._code_mission_en_entier(1.0) == 1, "le double Graph reste toléré à la lecture."
 
 
 def test_allouer_num_facture_sequence_compte_les_seeds_3_chiffres(_sans_porte, _factures_2026, monkeypatch):
@@ -1483,13 +1613,14 @@ def test_allouer_num_facture_sequence_compte_les_seeds_3_chiffres(_sans_porte, _
         _item_fact("2", "F-2026-002", "1", "2026-06-siteflow"),
         _item_fact("3", "F-2026-003", "1", "2026-07-siteflow"),
     ]
-    apres = avant + [_item_fact("NEW-1", "F-2026-0004", "5", "2026-07-datalab")]
+    apres = avant + [_item_mien("NEW-1", "F-2026-0004", etiquette="2026-07-datalab")]
     client = _FauxClientFactures(scans=[avant, apres])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
 
     res = fn(None, code_mission=5, etiquette_locale="2026-07-datalab",
-             mois_ca="2026-07-01", montant_ht=12000, echeance="2026-08-31")
+             mois_ca="2026-07-01", montant_ht=12000, echeance="2026-08-31",
+             cle_emission=_CLE_GESTE)
 
     assert res["num_facture"] == "F-2026-0004", "max des NNN (3 chiffres) = 3 → 4."
     assert _posts(client)[0]["fields"]["Title"] == "F-2026-0004"
@@ -1502,13 +1633,14 @@ def test_allouer_num_facture_sequence_mixte_3_et_4_chiffres(_sans_porte, _factur
         _item_fact("1", "F-2026-003", "1", "2026-07-siteflow"),
         _item_fact("2", "F-2026-0005", "2", "2026-07-datalab"),
     ]
-    apres = avant + [_item_fact("NEW-1", "F-2026-0006", "3", "2026-07-arabelle")]
+    apres = avant + [_item_mien("NEW-1", "F-2026-0006", code_mission="3", etiquette="2026-07-arabelle")]
     client = _FauxClientFactures(scans=[avant, apres])
     monkeypatch.setattr(server.httpx, "Client", lambda *a, **k: client)
     fn = _sous_jacente(server.allouer_num_facture)
 
     res = fn(None, code_mission=3, etiquette_locale="2026-07-arabelle",
-             mois_ca="2026-07-01", montant_ht=9000, echeance="2026-08-31")
+             mois_ca="2026-07-01", montant_ht=9000, echeance="2026-08-31",
+             cle_emission=_CLE_GESTE)
 
     assert res["num_facture"] == "F-2026-0006", "max(3, 5) = 5 → 6."
     assert _posts(client)[0]["fields"]["Title"] == "F-2026-0006"
